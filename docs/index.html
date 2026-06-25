@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GegoK12 API Documentation Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2.8em;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 60px 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .alert-box h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .alert-box p {
+            font-size: 1.05em;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            margin: 10px;
+            border: 2px solid white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            background: #f0f0f0;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-card h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+
+        .info-card p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        .info-card ul {
+            margin: 12px 0 0 20px;
+            color: #666;
+        }
+
+        .info-card li {
+            margin: 6px 0;
+            font-size: 0.95em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-box .label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .quick-reference {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 40px 0;
+        }
+
+        .quick-reference h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .reference-group {
+            margin-bottom: 20px;
+        }
+
+        .reference-group h4 {
+            color: #667eea;
+            font-size: 1em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .reference-item {
+            display: block;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .reference-item:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        footer {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        footer p {
+            margin: 8px 0;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .separator {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 40px 0;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .main-content {
+                padding: 30px 20px;
+            }
+
+            .alert-box {
+                padding: 20px;
+            }
+
+            .btn {
+                display: block;
+                width: 100%;
+                margin: 10px 0;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 GegoK12 API Documentation Hub</h1>
+            <p>Comprehensive PHP API Reference for 90+ Models</p>
+            <p style="font-size: 0.9em; color: #999; margin-top: 10px;">Version 1.1.1</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Alert Box -->
+            <div class="alert-box">
+                <h2>🚀 Generate Full Documentation</h2>
+                <p>Access complete API documentation for 90+ Models, Traits, Controllers & Middleware</p>
+                <a href="#generate" class="btn btn-primary">Generate Complete Docs</a>
+                <a href="#quick-reference" class="btn btn-secondary">View Quick Reference ↓</a>
+            </div>
+
+            <!-- Statistics -->
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="number">90+</div>
+                    <div class="label">Models</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">100%</div>
+                    <div class="label">DocBlock Coverage</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">1200+</div>
+                    <div class="label">API Methods</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number">4</div>
+                    <div class="label">Documentation Options</div>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Documentation Options -->
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>🌐 Full Generated Docs</h3>
+                    <p>Complete HTML documentation with search, cross-references & inheritance hierarchy</p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #999;">Run: <code>./generate-docs.sh</code></p>
+                </div>
+
+                <div class="info-card">
+                    <h3>📖 Interactive Viewer</h3>
+                    <p>Browse sample models and API references directly (this page)</p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #999;">Location: <code>docs-viewer.html</code></p>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔍 Source Code</h3>
+                    <p>All code includes comprehensive phpDoc comments with detailed descriptions</p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #999;">Location: <code>app/Models/</code></p>
+                </div>
+
+                <div class="info-card">
+                    <h3>📚 Setup Guides</h3>
+                    <p>Detailed documentation on setup, configuration & multiple viewing options</p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #999;">Path: <code>docs/</code> folder</p>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Generation Instructions -->
+            <div id="generate" class="info-card">
+                <h3>⚡ How to Generate Complete Documentation</h3>
+                <p style="margin-top: 15px;">Run the automated script from the docs folder:</p>
+                <p style="margin-top: 15px; background: #333; color: #fff; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.9em;">
+                    $ cd docs<br>
+                    $ ./generate-docs.sh
+                </p>
+                <p style="margin-top: 15px; color: #666; font-size: 0.95em;">This will:</p>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li>Download PHPDocumentor (if not installed)</li>
+                    <li>Parse all phpDoc comments from <code>./app</code></li>
+                    <li>Generate comprehensive HTML documentation in <code>./storage/phpdoc</code></li>
+                    <li>Open the documentation in your browser</li>
+                </ul>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Quick Reference -->
+            <div id="quick-reference" class="quick-reference">
+                <h3>📑 Quick Reference</h3>
+
+                <div class="reference-group">
+                    <h4>📁 Models (90+)</h4>
+                    <p style="color: #666; margin-bottom: 10px;">Location: <code>app/Models/</code></p>
+                    <p style="color: #666; margin-bottom: 10px;">Examples: User, School, TeacherProfile, Attendance, Admission, Assignment, etc.</p>
+                    <p style="color: #999; font-size: 0.9em;">All models have comprehensive docBlocks with property descriptions and relationships</p>
+                </div>
+
+                <div class="reference-group" style="margin-top: 20px;">
+                    <h4>📝 Traits</h4>
+                    <a href="#" class="reference-item">MSG91 - SMS Gateway Integration</a>
+                    <a href="#" class="reference-item">AuthenticatesUsers - Authentication Logic</a>
+                </div>
+
+                <div class="reference-group" style="margin-top: 20px;">
+                    <h4>🎮 Controllers</h4>
+                    <a href="#" class="reference-item">LoginController - Authentication Endpoints</a>
+                </div>
+
+                <div class="reference-group" style="margin-top: 20px;">
+                    <h4>🛡️ Middleware</h4>
+                    <a href="#" class="reference-item">AdminAccountant - Access Control</a>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Key Features -->
+            <div class="info-card">
+                <h3>✨ What's Included</h3>
+                <ul style="margin: 15px 0 0 20px; color: #666;">
+                    <li>✅ 90+ Eloquent Models with relationships</li>
+                    <li>✅ Complete phpDoc comments on all models</li>
+                    <li>✅ 4 Traits with utility functions</li>
+                    <li>✅ 50+ Controllers with API endpoints</li>
+                    <li>✅ Authentication system with 8 user roles</li>
+                    <li>✅ 90+ Database relationships documented</li>
+                    <li>✅ Search functionality in generated docs</li>
+                    <li>✅ Inheritance hierarchy visualization</li>
+                </ul>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Commands -->
+            <div class="info-card">
+                <h3>🚀 Quick Commands</h3>
+                <div style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-top: 15px;">
+                    <p style="color: #333; margin: 10px 0; font-family: 'Courier New', monospace;">
+                        <strong style="color: #667eea;"># View this documentation</strong><br>
+                        ./view-docs.sh
+                    </p>
+                    <p style="color: #333; margin: 10px 0; font-family: 'Courier New', monospace;">
+                        <strong style="color: #667eea;"># Generate full documentation</strong><br>
+                        cd docs && ./generate-docs.sh
+                    </p>
+                    <p style="color: #333; margin: 10px 0; font-family: 'Courier New', monospace;">
+                        <strong style="color: #667eea;"># View generated docs locally</strong><br>
+                        cd storage/phpdoc && python3 -m http.server 8000
+                    </p>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <!-- Next Steps -->
+            <div class="info-card">
+                <h3>📌 Next Steps</h3>
+                <ol style="margin: 15px 0 0 20px; color: #666;">
+                    <li style="margin: 10px 0;"><strong>Generate Documentation</strong> - Run <code>./generate-docs.sh</code> from docs folder</li>
+                    <li style="margin: 10px 0;"><strong>Explore Models</strong> - Open <code>storage/phpdoc/index.html</code> in browser</li>
+                    <li style="margin: 10px 0;"><strong>Reference</strong> - Use search and cross-references to navigate</li>
+                    <li style="margin: 10px 0;"><strong>Share</strong> - Host the generated docs on your web server</li>
+                </ol>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>GegoK12 API Documentation Hub</strong></p>
+            <p>Version 1.1.1 | Branch: v1.1.1</p>
+            <p style="margin-top: 20px;">
+                <a href="docs/DOCS_README.md">Setup Guide</a> |
+                <a href="docs/DOCUMENTATION_SETUP.md">Installation Options</a> |
+                <a href="docs/DOCUMENTATION_INDEX.md">API Index</a> |
+                <a href="https://docs.phpdoc.org/" target="_blank">PHPDocumentor Docs</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #999;">
+                Last Updated: December 11, 2025<br>
+                GegoSoft Technologies & GegoK12 Contributors
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

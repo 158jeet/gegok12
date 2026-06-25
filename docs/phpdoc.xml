@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpdocumentor
+    configVersion="3"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://www.phpdoc.org"
+    xsi:schemaLocation="https://www.phpdoc.org https://raw.githubusercontent.com/phpDocumentor/phpDocumentor/master/resources/schema/phpdoc.xsd"
+>
+    <title>GegoK12 API Documentation</title>
+
+    <paths>
+        <output>storage/phpdoc</output>
+    </paths>
+
+    <versions>
+        <version number="1.0.0">
+            <folder>app</folder>
+        </version>
+    </versions>
+</phpdocumentor>
