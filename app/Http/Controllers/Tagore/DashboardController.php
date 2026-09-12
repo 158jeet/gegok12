@@ -16,7 +16,15 @@ class DashboardController extends Controller
         $roles = $this->roles($userId);
         $isParent = $roles->contains('PARENT');
         $children = $this->childrenForUser($userId, $isParent);
-        $institutions = DB::table('tagore_institutions as i')->join('schools as s', 's.id', '=', 'i.school_id')->where('i.status', 'active')->orderBy('i.display_name')->get(['i.id', 'i.code', 'i.display_name', 's.name as school_name']);
+        $institutions = DB::table('tagore_institutions as i')->join('schools as s', 's.id', '=', 'i.school_id')->where('i.status', 'active');
+        if ($isParent) {
+            $institutions->whereIn('i.id', function ($query) use ($userId) {
+                $query->from('users as u')->join('tagore_parent_students as ps', 'ps.student_id', '=', 'u.id')->join('tagore_institutions as ci', 'ci.school_id', '=', 'u.school_id')->where('ps.parent_user_id', $userId)->where('ps.status', 'active')->select('ci.id');
+            });
+        } elseif (!$roles->contains('OWNER')) {
+            $institutions->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id'));
+        }
+        $institutions = $institutions->orderBy('i.display_name')->get(['i.id', 'i.code', 'i.display_name', 's.name as school_name']);
         $institutionIds = $institutions->pluck('id');
         $studentIds = $children->pluck('student_id');
         $stats = [
@@ -33,11 +41,13 @@ class DashboardController extends Controller
         $userId = (int) $request->user()->id;
         $roles = $this->roles($userId);
         $isParent = $roles->contains('PARENT');
+        $isOwner = $roles->contains('OWNER');
         $isStaff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
         if ($isParent && !DB::table('tagore_parent_students')->where('parent_user_id', $userId)->where('student_id', $studentId)->where('status', 'active')->exists()) abort(403);
         if (!$isParent && !$isStaff && $studentId !== $userId) abort(403);
         $student = DB::table('users as u')->leftJoin('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')->where('u.id', $studentId)->first(['u.id', 'u.name', 'u.school_id', 'i.id as institution_id', 'i.display_name as institution']);
         abort_unless($student, 404);
+        if ($isStaff && !$isOwner && !DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $student->institution_id)->where('status', 'active')->exists()) abort(403);
         $fees = DB::table('tagore_fee_obligations')->where('student_id', $studentId)->orderByDesc('due_date')->get();
         $attendance = DB::table('attendances')->where('user_id', $studentId)->selectRaw("count(*) as total, sum(case when status = 1 then 1 else 0 end) as present")->first();
         $attendancePercent = ($attendance && (int) $attendance->total > 0) ? round(((int) $attendance->present / (int) $attendance->total) * 100, 1) : null;
@@ -50,7 +60,7 @@ class DashboardController extends Controller
     {
         $userId = (int) $request->user()->id;
         abort_unless(DB::table('tagore_parent_students')->where('parent_user_id', $userId)->where('student_id', $studentId)->where('status', 'active')->exists(), 403);
-        $data = $request->validate(['subject' => ['required', 'string', 'max:150'], 'message' => ['required', 'string', 'max:5000'], 'category_id' => ['nullable', 'integer']]);
+        $data = $request->validate(['subject' => ['required', 'string', 'max:150'], 'message' => ['required', 'string', 'max:5000'], 'category_id' => ['nullable', 'integer', 'exists:tagore_feedback_categories,id']]);
         $institutionId = DB::table('tagore_institutions as i')->join('users as u', 'u.school_id', '=', 'i.school_id')->where('u.id', $studentId)->value('i.id');
         abort_unless($institutionId, 422);
         DB::table('tagore_feedback')->insert(['institution_id' => $institutionId, 'submitted_by' => $userId, 'student_id' => $studentId, 'category_id' => $data['category_id'] ?? null, 'subject' => $data['subject'], 'message' => $data['message'], 'priority' => 'normal', 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
