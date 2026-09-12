@@ -89,4 +89,4 @@ Route::get('/get/state/{id}','Api\UserprofileController@state');
 Route::get('/get/city/{id}','Api\UserprofileController@city');
 Route::get('/events/show/details/{id}','Api\EventsController@showdetails');
 
-require base_path('routes/tagore.php');
+require base_path('routes/tagore_api.php');
