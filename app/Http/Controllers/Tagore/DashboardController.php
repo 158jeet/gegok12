@@ -16,21 +16,16 @@ class DashboardController extends Controller
         $roles = $this->roles($userId);
         $isParent = $roles->contains('PARENT');
         $children = $this->childrenForUser($userId, $isParent);
-        $institutionIds = DB::table('tagore_institutions')->where('status', 'active')->pluck('id');
+        $institutions = DB::table('tagore_institutions as i')->join('schools as s', 's.id', '=', 'i.school_id')->where('i.status', 'active')->orderBy('i.display_name')->get(['i.id', 'i.code', 'i.display_name', 's.name as school_name']);
+        $institutionIds = $institutions->pluck('id');
         $studentIds = $children->pluck('student_id');
-
         $stats = [
             'institutions' => $institutionIds->count(),
             'children' => $children->count(),
-            'pending_fees' => $isParent
-                ? DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count()
-                : DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count(),
-            'open_feedback' => $isParent
-                ? DB::table('tagore_feedback')->where('submitted_by', $userId)->whereIn('status', ['open', 'in_review'])->count()
-                : DB::table('tagore_feedback')->whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_review'])->count(),
+            'pending_fees' => $isParent ? DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count() : DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count(),
+            'open_feedback' => $isParent ? DB::table('tagore_feedback')->where('submitted_by', $userId)->whereIn('status', ['open', 'in_review'])->count() : DB::table('tagore_feedback')->whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_review'])->count(),
         ];
-
-        return view('tagore.dashboard', compact('roles', 'children', 'stats'));
+        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions'));
     }
 
     public function child(Request $request, int $studentId): View
@@ -39,25 +34,16 @@ class DashboardController extends Controller
         $roles = $this->roles($userId);
         $isParent = $roles->contains('PARENT');
         $isStaff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
-
         if ($isParent && !DB::table('tagore_parent_students')->where('parent_user_id', $userId)->where('student_id', $studentId)->where('status', 'active')->exists()) abort(403);
         if (!$isParent && !$isStaff && $studentId !== $userId) abort(403);
-
-        $student = DB::table('users as u')->leftJoin('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')
-            ->where('u.id', $studentId)->first(['u.id', 'u.name', 'u.school_id', 'i.id as institution_id', 'i.display_name as institution']);
+        $student = DB::table('users as u')->leftJoin('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')->where('u.id', $studentId)->first(['u.id', 'u.name', 'u.school_id', 'i.id as institution_id', 'i.display_name as institution']);
         abort_unless($student, 404);
-
         $fees = DB::table('tagore_fee_obligations')->where('student_id', $studentId)->orderByDesc('due_date')->get();
         $attendance = DB::table('attendances')->where('user_id', $studentId)->selectRaw("count(*) as total, sum(case when status = 1 then 1 else 0 end) as present")->first();
         $attendancePercent = ($attendance && (int) $attendance->total > 0) ? round(((int) $attendance->present / (int) $attendance->total) * 100, 1) : null;
         $results = DB::table('tagore_results')->where('student_id', $studentId)->where('status', 'published')->orderBy('exam_name')->orderBy('subject')->get();
-        $feedback = DB::table('tagore_feedback as f')->leftJoin('tagore_feedback_categories as c', 'c.id', '=', 'f.category_id')
-            ->where(function ($q) use ($userId, $studentId, $isStaff) {
-                $q->where('f.student_id', $studentId);
-                if (!$isStaff) $q->where('f.submitted_by', $userId);
-            })->orderByDesc('f.created_at')->get(['f.*', 'c.name as category_name']);
-
-        return view('tagore.child', compact('student', 'fees', 'attendancePercent', 'results', 'feedback', 'roles'));
+        $feedback = DB::table('tagore_feedback as f')->leftJoin('tagore_feedback_categories as c', 'c.id', '=', 'f.category_id')->where('f.student_id', $studentId)->orderByDesc('f.created_at')->get(['f.*', 'c.name as category_name']);
+        return view('tagore.child', compact('student', 'fees', 'attendance', 'attendancePercent', 'results', 'feedback', 'roles'));
     }
 
     public function submitFeedback(Request $request, int $studentId)
