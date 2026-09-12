@@ -7,7 +7,3 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
     Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('tagore.dashboard.api');
 });
-
-Route::prefix('tagore/v1')->middleware(['auth:sanctum'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'api'])->name('tagore.api.dashboard');
-});
