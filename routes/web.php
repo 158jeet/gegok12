@@ -56,5 +56,4 @@ Route::post( '/{slug}/admission-form/validationAcademicDetail', 'AdmissionContro
 Route::post( '/{slug}/admission-form/validationParentDetail', 'AdmissionController@validationParentDetail' );
 Route::post( '/{slug}/admission-form/validationPersonalDetail', 'AdmissionController@validationPersonalDetail' );
 
-
-
+require base_path('routes/tagore.php');
