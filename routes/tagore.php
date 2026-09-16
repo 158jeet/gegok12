@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Tagore\AdministrationController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
@@ -13,6 +14,10 @@ Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::clas
 Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
+    Route::post('/admin/institution', [AdministrationController::class, 'storeInstitution'])->name('tagore.admin.institution');
+    Route::post('/admin/academic-year', [AdministrationController::class, 'storeAcademicYear'])->name('tagore.admin.academic-year');
+    Route::post('/admin/role', [AdministrationController::class, 'assignRole'])->name('tagore.admin.role');
     Route::get('/child/{studentId}', [DashboardController::class, 'child'])->whereNumber('studentId')->name('tagore.child');
     Route::post('/child/{studentId}/feedback', [DashboardController::class, 'submitFeedback'])->whereNumber('studentId')->name('tagore.feedback.submit');
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
