@@ -7,6 +7,8 @@ use App\Http\Controllers\Tagore\FeeManagementController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
 Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
     Route::get('/child/{studentId}', [DashboardController::class, 'child'])->whereNumber('studentId')->name('tagore.child');
