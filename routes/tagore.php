@@ -18,6 +18,8 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::post('/payments/confirm', [OnlinePaymentController::class, 'confirm'])->name('tagore.payments.confirm');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
+    Route::post('/accounts/fees/payment/{paymentId}/reconcile', [FeeController::class, 'reconcile'])->whereNumber('paymentId')->name('tagore.fees.reconcile');
+    Route::get('/accounts/fees/payment/{paymentId}/receipt', [FeeController::class, 'receipt'])->whereNumber('paymentId')->name('tagore.fees.receipt');
     Route::get('/accounts/fees/manage', [FeeManagementController::class, 'index'])->name('tagore.fees.manage');
     Route::post('/accounts/fees/manage/structure', [FeeManagementController::class, 'storeStructure'])->name('tagore.fees.manage.structure');
     Route::post('/accounts/fees/manage/demand', [FeeManagementController::class, 'generateDemand'])->name('tagore.fees.manage.demand');
