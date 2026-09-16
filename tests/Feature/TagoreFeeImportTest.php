@@ -9,12 +9,9 @@ class TagoreFeeImportTest extends TestCase
     public function test_fee_layer_files_exist(): void
     {
         foreach ([
-            'app/Services/Tagore/LegacyFeeImportService.php',
-            'app/Services/Tagore/FeeService.php',
-            'app/Http/Controllers/Tagore/FeeImportController.php',
-            'app/Http/Controllers/Tagore/FeeManagementController.php',
-            'resources/views/tagore/fees/import.blade.php',
-            'resources/views/tagore/fees/manage.blade.php',
+            'app/Services/Tagore/LegacyFeeImportService.php', 'app/Services/Tagore/FeeService.php',
+            'app/Http/Controllers/Tagore/FeeImportController.php', 'app/Http/Controllers/Tagore/FeeManagementController.php',
+            'resources/views/tagore/fees/import.blade.php', 'resources/views/tagore/fees/manage.blade.php',
             'database/migrations/2026_09_16_120000_complete_tagore_fee_engine.php',
             'database/migrations/2026_09_16_121000_create_tagore_fee_import_tables.php',
             'database/migrations/2026_09_16_130000_create_tagore_fee_structure_assignments.php',
@@ -24,11 +21,7 @@ class TagoreFeeImportTest extends TestCase
     public function test_fee_routes_are_present(): void
     {
         $routes = file_get_contents(base_path('routes/tagore.php'));
-        foreach ([
-            'tagore.fees.manage', 'tagore.fees.manage.structure', 'tagore.fees.manage.demand',
-            'tagore.fees.manage.assignment', 'tagore.fees.manage.bulk.preview', 'tagore.fees.manage.bulk',
-            'tagore.fees.import', 'tagore.fees.import.preview', 'tagore.fees.import.apply',
-        ] as $route) $this->assertStringContainsString($route, $routes);
+        foreach (['tagore.fees.manage','tagore.fees.manage.structure','tagore.fees.manage.demand','tagore.fees.manage.assignment','tagore.fees.manage.bulk.preview','tagore.fees.manage.bulk','tagore.fees.import','tagore.fees.import.preview','tagore.fees.import.apply'] as $route) $this->assertStringContainsString($route, $routes);
     }
 
     public function test_fee_service_contains_atomic_demand_and_payment_paths(): void
@@ -43,7 +36,7 @@ class TagoreFeeImportTest extends TestCase
         $view = file_get_contents(base_path('resources/views/tagore/fees/manage.blade.php'));
         $migration = file_get_contents(base_path('database/migrations/2026_09_16_130000_create_tagore_fee_structure_assignments.php'));
         foreach (['standard_link_id','student_academics','eligibleStudents','createBulkDemands','whereNotIn'] as $needle) $this->assertStringContainsString($needle, $controller);
-        foreach (['bulk/preview','bulk','assignment_id','Generate'] as $needle) $this->assertStringContainsString($needle, $view);
+        foreach (['bulk.preview','bulk','assignment_id','Generate'] as $needle) $this->assertStringContainsString($needle, $view);
         foreach (['tagore_fee_structure_assignments','standard_link_id','fee_structure_id'] as $needle) $this->assertStringContainsString($needle, $migration);
     }
 
