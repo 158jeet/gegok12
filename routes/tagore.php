@@ -16,6 +16,9 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/accounts/fees/manage', [FeeManagementController::class, 'index'])->name('tagore.fees.manage');
     Route::post('/accounts/fees/manage/structure', [FeeManagementController::class, 'storeStructure'])->name('tagore.fees.manage.structure');
     Route::post('/accounts/fees/manage/demand', [FeeManagementController::class, 'generateDemand'])->name('tagore.fees.manage.demand');
+    Route::post('/accounts/fees/manage/assignment', [FeeManagementController::class, 'storeAssignment'])->name('tagore.fees.manage.assignment');
+    Route::post('/accounts/fees/manage/bulk/preview', [FeeManagementController::class, 'bulkPreview'])->name('tagore.fees.manage.bulk.preview');
+    Route::post('/accounts/fees/manage/bulk', [FeeManagementController::class, 'generateBulk'])->name('tagore.fees.manage.bulk');
     Route::get('/accounts/fees/import', [FeeImportController::class, 'index'])->name('tagore.fees.import');
     Route::post('/accounts/fees/import/preview', [FeeImportController::class, 'preview'])->name('tagore.fees.import.preview');
     Route::post('/accounts/fees/import/{batchId}/apply', [FeeImportController::class, 'apply'])->whereNumber('batchId')->name('tagore.fees.import.apply');
