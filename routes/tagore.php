@@ -8,6 +8,7 @@ use App\Http\Controllers\Tagore\FeeImportController;
 use App\Http\Controllers\Tagore\FeeManagementController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
+use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -22,6 +23,8 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/admin/academic-structure', [AcademicStructureController::class, 'index'])->name('tagore.academic.structure');
     Route::post('/admin/academic-structure/stream', [AcademicStructureController::class, 'storeStream'])->name('tagore.academic.stream');
     Route::post('/admin/academic-structure/section', [AcademicStructureController::class, 'storeSection'])->name('tagore.academic.section');
+    Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
+    Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
     Route::get('/child/{studentId}', [DashboardController::class, 'child'])->whereNumber('studentId')->name('tagore.child');
     Route::post('/child/{studentId}/feedback', [DashboardController::class, 'submitFeedback'])->whereNumber('studentId')->name('tagore.feedback.submit');
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
