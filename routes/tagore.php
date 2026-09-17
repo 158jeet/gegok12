@@ -6,6 +6,7 @@ use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
 use App\Http\Controllers\Tagore\FeeManagementController;
+use App\Http\Controllers\Tagore\LegacyStudentMappingController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
@@ -43,5 +44,7 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::get('/accounts/fees/import', [FeeImportController::class, 'index'])->name('tagore.fees.import');
     Route::post('/accounts/fees/import/preview', [FeeImportController::class, 'preview'])->name('tagore.fees.import.preview');
     Route::post('/accounts/fees/import/{batchId}/apply', [FeeImportController::class, 'apply'])->whereNumber('batchId')->name('tagore.fees.import.apply');
+    Route::get('/accounts/fees/import/{batchId}/mapping', [LegacyStudentMappingController::class, 'index'])->whereNumber('batchId')->name('tagore.fees.import.mapping');
+    Route::post('/accounts/fees/import/{batchId}/mapping/{rowId}', [LegacyStudentMappingController::class, 'store'])->whereNumber('batchId')->whereNumber('rowId')->name('tagore.fees.import.mapping.store');
     Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('tagore.dashboard.api');
 });
