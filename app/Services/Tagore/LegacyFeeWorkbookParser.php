@@ -94,10 +94,17 @@ class LegacyFeeWorkbookParser
                 'FEE AMOUNT' => $this->number($row['D'] ?? 0),
                 'PAYMENTS' => [],
             ];
-            for ($col = 5; $col <= count($row); $col += 3) {
-                $receipt = $row[$this->column($col)] ?? null;
-                $date = $row[$this->column($col + 1)] ?? null;
-                $amount = $this->number($row[$this->column($col + 2)] ?? 0);
+            for ($col = 5; $col + 2 <= count($headers); $col += 3) {
+                $receiptColumn = $this->column($col);
+                $dateColumn = $this->column($col + 1);
+                $amountColumn = $this->column($col + 2);
+                $receiptHeader = strtoupper(trim((string) ($headers[$receiptColumn] ?? '')));
+                $dateHeader = strtoupper(trim((string) ($headers[$dateColumn] ?? '')));
+                $amountHeader = strtoupper(trim((string) ($headers[$amountColumn] ?? '')));
+                if (!$this->looksLikeReceiptHeader($receiptHeader) || !$this->looksLikeDateHeader($dateHeader) || !$this->looksLikeAmountHeader($amountHeader)) continue;
+                $receipt = $row[$receiptColumn] ?? null;
+                $date = $row[$dateColumn] ?? null;
+                $amount = $this->number($row[$amountColumn] ?? 0);
                 if ($amount <= 0) continue;
                 $data['PAYMENTS'][] = ['receipt' => $receipt, 'date' => $date, 'amount' => $amount];
             }
@@ -186,6 +193,21 @@ class LegacyFeeWorkbookParser
         $result = '';
         while ($index > 0) { $index--; $result = chr(65 + ($index % 26)) . $result; $index = intdiv($index, 26); }
         return $result;
+    }
+
+    private function looksLikeReceiptHeader(string $header): bool
+    {
+        return str_contains($header, 'R NO') || str_contains($header, 'RECEIPT');
+    }
+
+    private function looksLikeDateHeader(string $header): bool
+    {
+        return str_contains($header, 'DATE');
+    }
+
+    private function looksLikeAmountHeader(string $header): bool
+    {
+        return str_contains($header, 'AMOUNT') || $header === 'FEE' || $header === 'PAID' || $header === 'RECEIVED';
     }
 
     private function columnIndex(string $column): int
