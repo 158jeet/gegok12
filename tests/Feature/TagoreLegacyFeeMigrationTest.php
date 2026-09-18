@@ -20,12 +20,12 @@ class TagoreLegacyFeeMigrationTest extends TestCase
         }
 
         $source = file_get_contents($service);
-        foreach (['FEE STRUCTURE', 'BUS FEE 26-27', 'OPENING', 'XII SCI FEE STRUCTURE', 'FEE CONCESSION', 'tagore_fee_structures', 'tagore_fee_components', 'tagore_transport_routes', 'tagore_transport_assignments', 'tagore_financial_transactions', 'source_hash', 'stable student identifier'] as $needle) {
+        foreach (['FEE STRUCTURE', 'BUS FEE 26-27', 'OPENING', 'XII SCI FEE STRUCTURE', 'FEE CONCESSION', 'tagore_fee_structures', 'tagore_fee_components', 'tagore_transport_routes', 'tagore_transport_assignments', 'tagore_financial_transactions', 'source_hash', 'studentKey'] as $needle) {
             $this->assertStringContainsString($needle, $source);
         }
 
         $safetySource = file_get_contents($safety);
-        foreach (['tagore_legacy_student_mappings', 'numeric identifier was not accepted', 'exceeds the net fee', 'needs_review'] as $needle) {
+        foreach (['tagore_legacy_student_mappings', 'numeric identifier requires an explicit legacy-student mapping', 'exceeds the net fee', 'needs_review'] as $needle) {
             $this->assertStringContainsString($needle, $safetySource);
         }
     }
