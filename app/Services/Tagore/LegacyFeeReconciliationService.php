@@ -7,6 +7,63 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class LegacyFeeReconciliationService
 {
+    public function report(int $batchId): array
+    {
+        $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
+        abort_unless($batch, 404);
+
+        $rows = DB::table('tagore_fee_import_rows')
+            ->where('batch_id', $batchId)
+            ->where('row_type', 'ledger_reference')
+            ->orderBy('row_number')
+            ->get();
+
+        $items = [];
+        foreach ($rows as $row) {
+            $payload = json_decode((string) $row->raw_json, true) ?: [];
+            $source = $payload['data'] ?? [];
+            $legacy = $this->money($this->value($source, ['BALANCE', 'BALANCE DUE', 'FEE BALANCE', 'DUE', 'OUTSTANDING', 'TOTAL DUE', 'AMOUNT']));
+            $actual = null;
+            if ($row->student_id) {
+                $actualQuery = DB::table('tagore_fee_obligations')
+                    ->where('institution_id', $batch->institution_id)
+                    ->where('student_id', $row->student_id);
+                if ($batch->academic_year_id) $actualQuery->where('academic_year_id', $batch->academic_year_id);
+                $actual = round((float) $actualQuery->sum('outstanding_amount'), 2);
+            }
+            $difference = $actual === null ? null : round($actual - $legacy, 2);
+            $items[] = [
+                'row' => $row->row_number,
+                'source_key' => $row->external_student_key,
+                'student_name' => $this->value($source, ['STUDENT', 'STUDENT NAME', 'NAME']) ?? '—',
+                'student_id' => $row->student_id,
+                'legacy_balance' => $legacy,
+                'tagore_balance' => $actual,
+                'difference' => $difference,
+                'status' => !$row->student_id ? 'unmapped' : (abs((float) $difference) < 0.01 ? 'matched' : 'mismatch'),
+            ];
+        }
+
+        $legacyTotal = round(array_sum(array_column($items, 'legacy_balance')), 2);
+        $tagoreTotal = round(array_sum(array_filter(array_column($items, 'tagore_balance'), fn ($v) => $v !== null)), 2);
+
+        return [
+            'available' => true,
+            'message' => null,
+            'items' => $items,
+            'totals' => [
+                'rows' => count($items),
+                'mapped' => count(array_filter($items, fn ($i) => $i['student_id'] !== null)),
+                'unmapped' => count(array_filter($items, fn ($i) => $i['status'] === 'unmapped')),
+                'matched' => count(array_filter($items, fn ($i) => $i['status'] === 'matched')),
+                'mismatch' => count(array_filter($items, fn ($i) => $i['status'] === 'mismatch')),
+                'legacy_balance' => $legacyTotal,
+                'tagore_balance' => $tagoreTotal,
+                'difference' => round($tagoreTotal - $legacyTotal, 2),
+            ],
+        ];
+    }
+
     public function compare(string $path, int $institutionId, ?int $academicYearId = null): array
     {
         $book = IOFactory::load($path);
