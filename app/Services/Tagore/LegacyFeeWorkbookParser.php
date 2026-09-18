@@ -35,19 +35,29 @@ class LegacyFeeWorkbookParser
     private function busFees(Worksheet $sheet): array
     {
         $rows = $sheet->toArray(null, true, true, true);
-        $header = $this->findRowContaining($rows, ['SN', 'ROUTE NAME', 'AMOUNT']);
+        $header = $this->findRowContaining($rows, ['ROUTE NAME', 'AMOUNT']);
         if ($header === null) return [];
+        $headerValues = $rows[$header];
+        $nameColumns = [];
+        foreach ($headerValues as $col => $value) {
+            $label = strtoupper(trim((string) $value));
+            if (in_array($label, ['ROUTE NAME', 'BUS ROUTE', 'STOP NAME', 'ROUTE'], true)) $nameColumns[] = $col;
+        }
+        if (!$nameColumns) return [];
         $out = [];
         foreach ($rows as $number => $row) {
             if ($number <= $header) continue;
-            foreach ([['A','B','C'], ['E','F','G']] as [$sn, $name, $amount]) {
-                $route = trim((string)($row[$name] ?? ''));
+            foreach ($nameColumns as $nameCol) {
+                $route = trim((string) ($row[$nameCol] ?? ''));
                 if ($route === '') continue;
-                $fee = $this->number($row[$amount] ?? null);
+                $nameIndex = $this->columnIndex($nameCol);
+                $amountCol = $this->findNearestAmountColumn($headerValues, $nameIndex);
+                if ($amountCol === null) continue;
+                $fee = $this->number($row[$amountCol] ?? null);
                 if ($fee <= 0) continue;
                 $out[] = [
                     'type' => 'transport_route', 'row' => $number, 'data' => [
-                        'SN' => $row[$sn] ?? null, 'ROUTE NAME' => $route, 'AMOUNT' => $fee,
+                        'ROUTE NAME' => $route, 'AMOUNT' => $fee,
                     ],
                 ];
             }
@@ -82,18 +92,16 @@ class LegacyFeeWorkbookParser
                 'STUDENT NAME' => $name,
                 "FATHER'S NAME" => $row['C'] ?? null,
                 'FEE AMOUNT' => $this->number($row['D'] ?? 0),
+                'PAYMENTS' => [],
             ];
-            $paymentNo = 1;
-            for ($col = 5; $col <= 15; $col += 3) {
+            for ($col = 5; $col <= count($row); $col += 3) {
                 $receipt = $row[$this->column($col)] ?? null;
                 $date = $row[$this->column($col + 1)] ?? null;
                 $amount = $this->number($row[$this->column($col + 2)] ?? 0);
                 if ($amount <= 0) continue;
-                $data["RECEIPT {$paymentNo}"] = $receipt;
-                $data["DATE {$paymentNo}"] = $date;
-                $data["AMOUNT {$paymentNo}"] = $amount;
-                $paymentNo++;
+                $data['PAYMENTS'][] = ['receipt' => $receipt, 'date' => $date, 'amount' => $amount];
             }
+            $data['RECEIVED'] = array_sum(array_column($data['PAYMENTS'], 'amount'));
             $records[] = ['type' => 'student_fee', 'row' => $number, 'data' => $data];
         }
         return $records;
@@ -105,7 +113,7 @@ class LegacyFeeWorkbookParser
         $header = $this->findRowContaining($rows, ['SRNO', 'STUDENT NAME', 'OP BALANCE']);
         if ($header === null) return [];
         $headers = $this->headers($rows[$header]);
-        return $this->recordsAfter($rows, $header, $headers, 'ledger_snapshot', function ($row) {
+        return $this->recordsAfter($rows, $header, $headers, 'ledger_reference', function ($row) {
             return $this->nonEmpty($row, ['STUDENT NAME']);
         });
     }
@@ -178,5 +186,25 @@ class LegacyFeeWorkbookParser
         $result = '';
         while ($index > 0) { $index--; $result = chr(65 + ($index % 26)) . $result; $index = intdiv($index, 26); }
         return $result;
+    }
+
+    private function columnIndex(string $column): int
+    {
+        $index = 0;
+        foreach (str_split(strtoupper($column)) as $char) $index = ($index * 26) + ord($char) - 64;
+        return $index;
+    }
+
+    private function findNearestAmountColumn(array $headers, int $nameIndex): ?string
+    {
+        $best = null;
+        $distance = PHP_INT_MAX;
+        foreach ($headers as $col => $value) {
+            $label = strtoupper(trim((string) $value));
+            if (!in_array($label, ['AMOUNT', 'FEE', 'BUS FEE', 'ANNUAL FEE', 'TOTAL'], true)) continue;
+            $d = abs($this->columnIndex($col) - $nameIndex);
+            if ($d < $distance) { $distance = $d; $best = $col; }
+        }
+        return $best;
     }
 }
