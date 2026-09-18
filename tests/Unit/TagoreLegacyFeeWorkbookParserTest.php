@@ -76,6 +76,6 @@ class TagoreLegacyFeeWorkbookParserTest extends TestCase
 
         $this->assertCount(1, $records);
         $this->assertSame('ledger_reference', $records[0]['type']);
-        $this->assertSame(2500, (float) $records[0]['data']['BALANCE']);
+        $this->assertEquals(2500, (float) $records[0]['data']['BALANCE']);
     }
 }
