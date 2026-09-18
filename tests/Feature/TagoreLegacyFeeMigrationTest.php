@@ -14,14 +14,25 @@ class TagoreLegacyFeeMigrationTest extends TestCase
         $migration = base_path('database/migrations/2026_09_16_160000_extend_tagore_legacy_fee_import.php');
         $controller = base_path('app/Http/Controllers/Tagore/FeeImportController.php');
         $view = base_path('resources/views/tagore/fees/import.blade.php');
+        $parser = base_path('app/Services/Tagore/LegacyFeeWorkbookParser.php');
 
-        foreach ([$service, $safety, $mappingMigration, $migration, $controller, $view] as $file) {
+        foreach ([$service, $safety, $mappingMigration, $migration, $controller, $view, $parser] as $file) {
             $this->assertFileExists($file);
         }
 
         $source = file_get_contents($service);
         foreach (['FEE STRUCTURE', 'BUS FEE 26-27', 'OPENING', 'XII SCI FEE STRUCTURE', 'FEE CONCESSION', 'tagore_fee_structures', 'tagore_fee_components', 'tagore_transport_routes', 'tagore_transport_assignments', 'tagore_financial_transactions', 'source_hash', 'studentKey'] as $needle) {
             $this->assertStringContainsString($needle, $source);
+        }
+
+        $parserSource = file_get_contents($parser);
+        foreach (['BUS FEE 26-27', 'findNearestAmountColumn', 'PAYMENTS', 'ledger_reference'] as $needle) {
+            $this->assertStringContainsString($needle, $parserSource);
+        }
+
+        $migrationSource = file_get_contents($service);
+        foreach (['workbookParser', 'LegacyFeeWorkbookParser', 'legacyPayments'] as $needle) {
+            $this->assertStringContainsString($needle, $migrationSource);
         }
 
         $safetySource = file_get_contents($safety);
