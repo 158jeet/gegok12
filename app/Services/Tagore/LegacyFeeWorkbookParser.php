@@ -94,14 +94,15 @@ class LegacyFeeWorkbookParser
                 'FEE AMOUNT' => $this->number($row['D'] ?? 0),
                 'PAYMENTS' => [],
             ];
-            for ($col = 5; $col + 2 <= count($headers); $col += 3) {
-                $receiptColumn = $this->column($col);
-                $dateColumn = $this->column($col + 1);
-                $amountColumn = $this->column($col + 2);
-                $receiptHeader = strtoupper(trim((string) ($headers[$receiptColumn] ?? '')));
+            foreach ($headers as $receiptColumn => $receiptHeaderValue) {
+                $receiptHeader = strtoupper(trim((string) $receiptHeaderValue));
+                if (!$this->looksLikeReceiptHeader($receiptHeader)) continue;
+                $receiptIndex = $this->columnIndex($receiptColumn);
+                $dateColumn = $this->column($receiptIndex + 1);
+                $amountColumn = $this->column($receiptIndex + 2);
                 $dateHeader = strtoupper(trim((string) ($headers[$dateColumn] ?? '')));
                 $amountHeader = strtoupper(trim((string) ($headers[$amountColumn] ?? '')));
-                if (!$this->looksLikeReceiptHeader($receiptHeader) || !$this->looksLikeDateHeader($dateHeader) || !$this->looksLikeAmountHeader($amountHeader)) continue;
+                if (!$this->looksLikeDateHeader($dateHeader) || !$this->looksLikeAmountHeader($amountHeader)) continue;
                 $receipt = $row[$receiptColumn] ?? null;
                 $date = $row[$dateColumn] ?? null;
                 $amount = $this->number($row[$amountColumn] ?? 0);
