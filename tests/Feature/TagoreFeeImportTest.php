@@ -13,14 +13,14 @@ class TagoreFeeImportTest extends TestCase
             'app/Http/Controllers/Tagore/FeeImportController.php','app/Http/Controllers/Tagore/FeeManagementController.php','app/Http/Controllers/Tagore/OnlinePaymentController.php','app/Http/Controllers/Tagore/FeeController.php','app/Http/Controllers/Tagore/ParentDashboardController.php','app/Http/Controllers/Tagore/AdministrationController.php',
             'resources/views/tagore/fees/import.blade.php','resources/views/tagore/fees/manage.blade.php','resources/views/tagore/payments/checkout.blade.php','resources/views/tagore/fees/accounts.blade.php','resources/views/tagore/fees/receipt.blade.php','resources/views/tagore/parent-dashboard.blade.php','resources/views/tagore/administration.blade.php',
             'database/migrations/2026_09_16_120000_complete_tagore_fee_engine.php','database/migrations/2026_09_16_121000_create_tagore_fee_import_tables.php',
-            'database/migrations/2026_09_16_130000_create_tagore_fee_structure_assignments.php','database/migrations/2026_09_16_140000_create_tagore_payment_order_allocations.php',
+            'database/migrations/2026_09_16_130000_create_tagore_fee_structure_assignments.php','database/migrations/2026_09_16_140000_create_tagore_payment_order_allocations.php','app/Services/Tagore/LegacyFeeReconciliationService.php','app/Http/Controllers/Tagore/LegacyFeeReconciliationController.php','resources/views/tagore/fees/reconciliation.blade.php',
         ] as $path) $this->assertFileExists(base_path($path));
     }
 
     public function test_fee_routes_are_present(): void
     {
         $routes=file_get_contents(base_path('routes/tagore.php'));
-        foreach(['tagore.fees.manage','tagore.fees.manage.structure','tagore.fees.manage.demand','tagore.fees.manage.assignment','tagore.fees.manage.bulk.preview','tagore.fees.manage.bulk','tagore.fees.import','tagore.fees.import.preview','tagore.fees.import.apply','tagore.payments.initiate','tagore.payments.confirm','tagore.fees.reconcile','tagore.fees.receipt','tagore.parent.dashboard','tagore.admin','tagore.admin.institution','tagore.admin.academic-year','tagore.admin.role','payments/webhook'] as $route) $this->assertStringContainsString($route,$routes);
+        foreach(['tagore.fees.manage','tagore.fees.manage.structure','tagore.fees.manage.demand','tagore.fees.manage.assignment','tagore.fees.manage.bulk.preview','tagore.fees.manage.bulk','tagore.fees.import','tagore.fees.import.preview','tagore.fees.import.apply','tagore.payments.initiate','tagore.payments.confirm','tagore.fees.reconcile','tagore.fees.receipt','tagore.fees.import.reconciliation','tagore.parent.dashboard','tagore.admin','tagore.admin.institution','tagore.admin.academic-year','tagore.admin.role','payments/webhook'] as $route) $this->assertStringContainsString($route,$routes);
     }
 
     public function test_fee_service_contains_atomic_demand_and_payment_paths(): void
@@ -73,3 +73,13 @@ class TagoreFeeImportTest extends TestCase
         foreach(['Add Institution','Add Academic Year','Assign Role','Active Role Assignments','GegoK12 school'] as $needle) $this->assertStringContainsString($needle,$view);
     }
 }
+
+    public function test_legacy_import_is_mapping_safe_and_ledger_reconciliation_only(): void
+    {
+        $service=file_get_contents(base_path('app/Services/Tagore/LegacyFeeMigrationService.php'));
+        $safety=file_get_contents(base_path('app/Services/Tagore/LegacyFeeImportSafetyService.php'));
+        $recon=file_get_contents(base_path('app/Services/Tagore/LegacyFeeReconciliationService.php'));
+        foreach(['ALL LEDGER','ledger_reference','explicit legacy-student mapping','ONE_TIME_TOTAL'] as $needle) $this->assertStringContainsString($needle,$service);
+        foreach(['requires an explicit legacy-student mapping','Import batch contains skipped source rows','errors>0'] as $needle) $this->assertStringContainsString($needle,$safety);
+        foreach(['tagore_fee_obligations','outstanding_amount','source_total','mismatch'] as $needle) $this->assertStringContainsString($needle,$recon);
+    }
