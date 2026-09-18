@@ -72,7 +72,6 @@ class TagoreFeeImportTest extends TestCase
         foreach(['storeInstitution','storeAcademicYear','assignRole','tagore_institutions','academic_years','tagore_user_roles','OWNER','school_id'] as $needle) $this->assertStringContainsString($needle,$controller);
         foreach(['Add Institution','Add Academic Year','Assign Role','Active Role Assignments','GegoK12 school'] as $needle) $this->assertStringContainsString($needle,$view);
     }
-}
 
     public function test_legacy_import_is_mapping_safe_and_ledger_reconciliation_only(): void
     {
@@ -83,3 +82,5 @@ class TagoreFeeImportTest extends TestCase
         foreach(['requires an explicit legacy-student mapping','Import batch contains skipped source rows','where(\'status\',\'error\')'] as $needle) $this->assertStringContainsString($needle,$safety);
         foreach(['tagore_fee_obligations','outstanding_amount','source_total','mismatch'] as $needle) $this->assertStringContainsString($needle,$recon);
     }
+
+}
