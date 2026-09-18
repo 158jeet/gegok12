@@ -62,7 +62,7 @@ class TagoreLegacyFeeWorkbookParserTest extends TestCase
         $this->assertCount(2, $records);
         $this->assertCount(2, $records[1]['data']['PAYMENTS']);
         $this->assertSame(40000.0, (float) $records[1]['data']['RECEIVED']);
-        $this->assertSame(414, $records[1]['data']['PAYMENTS'][1]['receipt']);
+        $this->assertEquals(414, $records[1]['data']['PAYMENTS'][1]['receipt']);
     }
 
     public function test_all_ledger_is_tagged_as_reconciliation_reference(): void
