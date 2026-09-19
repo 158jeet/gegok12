@@ -51,4 +51,29 @@ class TagoreLegacyFeeMigrationTest extends TestCase
         $this->assertStringContainsString('LegacyFeeImportSafetyService', $controller);
         $this->assertStringContainsString('mimes:xlsx,xls,csv', $controller);
     }
+    public function test_student_master_and_confidence_matcher_are_wired_without_name_only_auto_mapping(): void
+    {
+        $parser = file_get_contents(base_path('app/Services/Tagore/LegacyFeeWorkbookParser.php'));
+        $migration = file_get_contents(base_path('app/Services/Tagore/LegacyFeeMigrationService.php'));
+        $matcher = file_get_contents(base_path('app/Services/Tagore/LegacyStudentMatcher.php'));
+        $controller = file_get_contents(base_path('app/Http/Controllers/Tagore/LegacyStudentMappingController.php'));
+        $routes = file_get_contents(base_path('routes/tagore.php'));
+
+        foreach (['STUDENTS', "'student_master'"] as $needle) {
+            $this->assertStringContainsString($needle, $parser);
+        }
+        foreach (["$type==='student_master'", "'status'=>'reference'", "case'student_master'"] as $needle) {
+            $this->assertStringContainsString($needle, $migration);
+        }
+        foreach (['confidence', 'registration', 'name_father', 'applyHighConfidence', 'student_parent_links'] as $needle) {
+            $this->assertStringContainsString($needle, $matcher);
+        }
+        $this->assertStringContainsString("($best['confidence'] ?? 0) < 90", $matcher);
+        $this->assertStringContainsString("!$item['source_key']", $matcher);
+        $this->assertStringContainsString('mapping.suggestions', $routes);
+        $this->assertStringContainsString('mapping.auto', $routes);
+        $this->assertStringContainsString('LegacyStudentMatcher', $controller);
+    }
+
+
 }
