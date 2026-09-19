@@ -65,7 +65,7 @@ class TagoreLegacyFeeMigrationTest extends TestCase
         foreach (["\$type==='student_master'", "'status'=>'reference'", "case'student_master'"] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
-        foreach (['confidence', 'registration', 'name_father', 'applyHighConfidence', 'student_parent_links'] as $needle) {
+        foreach (['confidence', 'registration', 'SR NO', 'name_father', 'applyHighConfidence', 'student_parent_links'] as $needle) {
             $this->assertStringContainsString($needle, $matcher);
         }
         $this->assertStringContainsString("(\$best['confidence'] ?? 0) < 90", $matcher);
