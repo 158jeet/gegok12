@@ -116,7 +116,7 @@ class LegacyStudentMatcher
         $name = $this->norm($this->value($data, ['STUDENT NAME', 'STUDENT', 'NAME']));
         $father = $this->norm($this->value($data, ["FATHER'S NAME", 'FATHER NAME', 'FATHER']));
         $mobile = $this->norm($this->value($data, ['MOBILE', 'MOBILE NO', 'CONTACT', 'PHONE']));
-        $registration = $this->norm($this->value($data, ['REG NO', 'REGISTRATION NO', 'REGISTRATION NUMBER', 'STUDENT ID', 'ADM NO', 'ADMISSION NO', 'ADMISSION NUMBER']));
+        $registration = $this->norm($this->value($data, ['SR NO', 'SRNO', 'REG NO', 'REGISTRATION NO', 'REGISTRATION NUMBER', 'STUDENT ID', 'ADM NO', 'ADMISSION NO', 'ADMISSION NUMBER']));
         $dob = $this->date($this->value($data, ['DOB', 'DATE OF BIRTH', 'BIRTH DATE']));
 
         $out = [];
