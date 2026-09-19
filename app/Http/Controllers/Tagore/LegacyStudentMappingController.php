@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Services\Tagore\LegacyStudentMatcher;
 
 class LegacyStudentMappingController extends Controller
 {
@@ -25,6 +26,24 @@ class LegacyStudentMappingController extends Controller
         $schoolId = DB::table('tagore_institutions')->where('id', $batch->institution_id)->value('school_id');
         $students = DB::table('users')->where('school_id', $schoolId)->where('usergroup_id', 6)->orderBy('name')->get(['id','name']);
         return view('tagore.fees.mapping', compact('batch','rows','students'));
+    }
+
+    public function suggestions(Request $request, int $batchId): View
+    {
+        $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
+        abort_unless($batch, 404);
+        $this->authorize((int) $request->user()->id, (int) $batch->institution_id);
+        $report = app(LegacyStudentMatcher::class)->preview($batchId);
+        return view('tagore.fees.mapping-suggestions', compact('batch', 'report'));
+    }
+
+    public function autoMatch(Request $request, int $batchId)
+    {
+        $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
+        abort_unless($batch, 404);
+        $this->authorize((int) $request->user()->id, (int) $batch->institution_id);
+        $result = app(LegacyStudentMatcher::class)->applyHighConfidence($batchId, (int) $request->user()->id);
+        return back()->with('success', 'High-confidence legacy student matches applied: '.$result['mapped'].'.');
     }
 
     public function store(Request $request, int $batchId, int $rowId)
