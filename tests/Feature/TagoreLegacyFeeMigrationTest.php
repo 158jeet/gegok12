@@ -62,14 +62,14 @@ class TagoreLegacyFeeMigrationTest extends TestCase
         foreach (['STUDENTS', "'student_master'"] as $needle) {
             $this->assertStringContainsString($needle, $parser);
         }
-        foreach (["$type==='student_master'", "'status'=>'reference'", "case'student_master'"] as $needle) {
+        foreach (["\$type==='student_master'", "'status'=>'reference'", "case'student_master'"] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
         foreach (['confidence', 'registration', 'name_father', 'applyHighConfidence', 'student_parent_links'] as $needle) {
             $this->assertStringContainsString($needle, $matcher);
         }
-        $this->assertStringContainsString("($best['confidence'] ?? 0) < 90", $matcher);
-        $this->assertStringContainsString("!$item['source_key']", $matcher);
+        $this->assertStringContainsString("(\$best['confidence'] ?? 0) < 90", $matcher);
+        $this->assertStringContainsString("!\$item['source_key']", $matcher);
         $this->assertStringContainsString('mapping.suggestions', $routes);
         $this->assertStringContainsString('mapping.auto', $routes);
         $this->assertStringContainsString('LegacyStudentMatcher', $controller);
