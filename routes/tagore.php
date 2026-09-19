@@ -47,6 +47,8 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::post('/accounts/fees/import/{batchId}/apply', [FeeImportController::class, 'apply'])->whereNumber('batchId')->name('tagore.fees.import.apply');
     Route::get('/accounts/fees/import/{batchId}/reconciliation', [LegacyFeeReconciliationController::class, 'show'])->whereNumber('batchId')->name('tagore.fees.import.reconciliation');
     Route::get('/accounts/fees/import/{batchId}/mapping', [LegacyStudentMappingController::class, 'index'])->whereNumber('batchId')->name('tagore.fees.import.mapping');
+    Route::get('/accounts/fees/import/{batchId}/mapping/suggestions', [LegacyStudentMappingController::class, 'suggestions'])->whereNumber('batchId')->name('tagore.fees.import.mapping.suggestions');
+    Route::post('/accounts/fees/import/{batchId}/mapping/auto', [LegacyStudentMappingController::class, 'autoMatch'])->whereNumber('batchId')->name('tagore.fees.import.mapping.auto');
     Route::post('/accounts/fees/import/{batchId}/mapping/{rowId}', [LegacyStudentMappingController::class, 'store'])->whereNumber('batchId')->whereNumber('rowId')->name('tagore.fees.import.mapping.store');
     Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('tagore.dashboard.api');
 });
