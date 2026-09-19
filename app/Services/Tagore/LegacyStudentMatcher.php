@@ -60,12 +60,20 @@ class LegacyStudentMatcher
             $applied = 0;
             foreach ($report['items'] as $item) {
                 $best = $item['best'];
-                if (!$best || ($best['confidence'] ?? 0) < 90 || $item['existing_mapping'] !== null) continue;
-                if (($best['reason'] ?? '') === 'registration' || ($best['confidence'] ?? 0) >= 90) {
-                    $this->map($report['batch'], $item['row_id'], (int) $best['student_id'], $actorId, (string) $item['source_key']);
-                    $applied++;
-                }
+                if (!$best || ($best['confidence'] ?? 0) < 90 || $item['existing_mapping'] !== null || !$item['source_key']) continue;
+                $this->map($report['batch'], $item['row_id'], (int) $best['student_id'], $actorId, (string) $item['source_key']);
+                $applied++;
             }
+
+            $errors = DB::table('tagore_fee_import_rows')->where('batch_id', $batchId)->where('status', 'error')->count();
+            $ready = DB::table('tagore_fee_import_rows')->where('batch_id', $batchId)->where('status', 'ready')->count();
+            DB::table('tagore_fee_import_batches')->where('id', $batchId)->update([
+                'error_count' => $errors,
+                'success_count' => $ready,
+                'status' => $errors ? 'needs_review' : 'ready',
+                'updated_at' => now(),
+            ]);
+
             return ['mapped' => $applied, 'report' => $this->preview($batchId)];
         });
     }
