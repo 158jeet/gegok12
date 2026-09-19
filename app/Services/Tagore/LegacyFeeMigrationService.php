@@ -16,7 +16,7 @@ class LegacyFeeMigrationService
     {
         $book=IOFactory::load($path); $items=[];
         foreach($book->getWorksheetIterator() as $sheet){
-            $type=$this->sheetType($sheet->getTitle()); if(!$type || $type==='students') continue;
+            $type=$this->sheetType($sheet->getTitle()); if(!$type) continue;
             foreach($this->workbookParser->parse($sheet) as $parsed){
                 $items[]=[
                     'type'=>$parsed['type'] ?? $type,
@@ -35,7 +35,13 @@ class LegacyFeeMigrationService
         ]);
         $ready=0;$errors=0;
         foreach($items as $item){
-            $row=$item['data']; $type=$item['type']; [$student,$matchError]=$this->matchStudent($institutionId,$row);
+            $row=$item['data']; $type=$item['type'];
+            if($type==='student_master') {
+                $hash=hash('sha256',$institutionId.'|'.($academicYearId??'').'|'.$type.'|'.$item['sheet'].'|'.$item['row'].'|'.json_encode($row,JSON_UNESCAPED_UNICODE));
+                DB::table('tagore_fee_import_rows')->insert(['batch_id'=>$batch,'row_type'=>$type,'source_hash'=>$hash,'row_number'=>$item['row'],'external_student_key'=>$this->studentKey($row),'student_id'=>null,'gross_amount'=>0,'discount_amount'=>0,'concession_amount'=>0,'paid_amount'=>0,'opening_balance'=>null,'status'=>'reference','error_message'=>null,'raw_json'=>json_encode(['sheet'=>$item['sheet'],'data'=>$row],JSON_UNESCAPED_UNICODE),'created_at'=>now(),'updated_at'=>now()]);
+                continue;
+            }
+            [$student,$matchError]=$this->matchStudent($institutionId,$row);
             $error=in_array($type,['fee_structure','transport_route'],true)?$this->nonStudentError($type,$row):null;
             if(in_array($type,['student_fee','concession','opening_balance','ledger_reference'],true)&&!$student) $error=$matchError;
             $status=$error?'error':($this->meaningful($type,$row)?'ready':'skipped');
@@ -60,7 +66,7 @@ class LegacyFeeMigrationService
             if($batch->status!=='ready') throw ValidationException::withMessages(['batch'=>'Import batch is not ready.']);
             $rows=DB::table('tagore_fee_import_rows')->where('batch_id',$batchId)->where('status','ready')->lockForUpdate()->get();
             $c=['fee_structures'=>0,'student_fees'=>0,'payments'=>0,'opening_balances'=>0,'concessions'=>0,'transport_routes'=>0,'transport_assignments'=>0];
-            foreach($rows as $r){$p=json_decode($r->raw_json,true)?:[];$row=$p['data']??$p;switch($r->row_type){case'fee_structure':$this->feeStructure($batch,$r,$row,$c);break;case'transport_route':$this->transport($batch,$r,$row,$c);break;case'opening_balance':$this->openingApply($batch,$r,$actorId,$c);break;case'student_fee':$this->studentFee($batch,$r,$row,$actorId,$c);break;case'concession':$this->concession($batch,$r,$row,$actorId,$c);break;case'ledger_reference':break;}DB::table('tagore_fee_import_rows')->where('id',$r->id)->update(['status'=>'applied','updated_at'=>now()]);}
+            foreach($rows as $r){$p=json_decode($r->raw_json,true)?:[];$row=$p['data']??$p;switch($r->row_type){case'fee_structure':$this->feeStructure($batch,$r,$row,$c);break;case'transport_route':$this->transport($batch,$r,$row,$c);break;case'opening_balance':$this->openingApply($batch,$r,$actorId,$c);break;case'student_fee':$this->studentFee($batch,$r,$row,$actorId,$c);break;case'concession':$this->concession($batch,$r,$row,$actorId,$c);break;case'ledger_reference':case'student_master':break;}DB::table('tagore_fee_import_rows')->where('id',$r->id)->update(['status'=>'applied','updated_at'=>now()]);}
             DB::table('tagore_fee_import_batches')->where('id',$batchId)->update(['status'=>'applied','updated_at'=>now()]); return$c;
         });
     }
@@ -69,7 +75,7 @@ class LegacyFeeMigrationService
     {
         $t=strtoupper(trim($title)); return match($t){
             'FEE STRUCTURE'=>'fee_structure','BUS FEE 26-27','BUS FEE 2026-27'=>'transport_route','OPENING','OPENING BALANCE','OPENING BALANCES'=>'opening_balance',
-            'XII SCI FEE STRUCTURE','XII SCIENCE FEE STRUCTURE'=>'student_fee','FEE CONCESSION','FEE CONCESSIONS'=>'concession','STUDENTS'=>'students','ALL LEDGER'=>'ledger_reference',default=>null};
+            'XII SCI FEE STRUCTURE','XII SCIENCE FEE STRUCTURE'=>'student_fee','FEE CONCESSION','FEE CONCESSIONS'=>'concession','STUDENTS'=>'student_master','ALL LEDGER'=>'ledger_reference',default=>null};
     }
 
     private function recognizedSheets($book):array{$out=[];foreach($book->getWorksheetIterator() as $s){if($this->sheetType($s->getTitle()))$out[]=$s->getTitle();}return array_values(array_unique($out));}
@@ -149,7 +155,7 @@ class LegacyFeeMigrationService
     private function matchStudent(int $institution,array $row):array{$school=DB::table('tagore_institutions')->where('id',$institution)->value('school_id');if(!$school)return[null,'Institution is not linked to a GegoK12 school.'];$key=$this->studentKey($row);if($key!==null&&ctype_digit($key)){ $mapped=DB::table('tagore_legacy_student_mappings')->where('institution_id',$institution)->where('source_system','legacy_erp')->where('source_key',$key)->value('student_id');if($mapped)return[(int)$mapped,null];return[null,'Legacy numeric identifier requires an explicit legacy-student mapping.'];}$name=trim((string)$this->v($row,['STUDENT','STUDENT NAME','NAME']));if($name==='')return[null,'Student identifier and name are missing.'];$m=DB::table('users')->where('school_id',$school)->where('usergroup_id',6)->whereRaw('lower(trim(name))=?',[strtolower($name)])->pluck('id');if($m->count()===1)return[(int)$m->first(),null];if($m->count()>1)return[null,'Multiple exact-name matches; manual mapping required.'];return[null,'Student could not be matched by stable ID or exact name.'];}
     private function studentKey(array $row):?string{$v=$this->v($row,['REG NO','REGISTRATION NO','REGISTRATION NUMBER','STUDENT ID','ADM NO','ADMISSION NO','ADMISSION NUMBER']);return$v===null?null:trim((string)$v);}
     private function nonStudentError(string $type,array $row):?string{if($type==='fee_structure'&&!$this->v($row,['CLASS','STANDARD','CLASS NAME','STD']))return'Class/standard is missing.';if($type==='transport_route'&&!$this->v($row,['ROUTE','ROUTE NAME','BUS ROUTE','STOP','STOP NAME','NAME']))return'Route/stop name is missing.';return null;}
-    private function meaningful(string $type,array $row):bool{if($type==='ledger_reference')return$this->money($this->v($row,['BALANCE','DUE','OUTSTANDING','AMOUNT']))>0;if($type==='opening_balance')return$this->opening($row)>0;if($type==='fee_structure')return(bool)$this->v($row,['CLASS','STANDARD','CLASS NAME','STD']);if($type==='transport_route')return(bool)$this->v($row,['ROUTE','ROUTE NAME','BUS ROUTE','STOP','STOP NAME','NAME']);if($type==='concession')return$this->money($this->v($row,['CONCESSION','CONCESSION AMOUNT','DISCOUNT','DISCOUNT AMOUNT']))>0;return$this->money($this->v($row,['TOTAL','TOTAL FEE','GROSS','FEE AMOUNT','AMOUNT','PAYABLE','RECEIVED','RECEIVED AMOUNT','PAID']))>0;}
+    private function meaningful(string $type,array $row):bool{if($type==='student_master')return true;if($type==='ledger_reference')return$this->money($this->v($row,['BALANCE','DUE','OUTSTANDING','AMOUNT']))>0;if($type==='opening_balance')return$this->opening($row)>0;if($type==='fee_structure')return(bool)$this->v($row,['CLASS','STANDARD','CLASS NAME','STD']);if($type==='transport_route')return(bool)$this->v($row,['ROUTE','ROUTE NAME','BUS ROUTE','STOP','STOP NAME','NAME']);if($type==='concession')return$this->money($this->v($row,['CONCESSION','CONCESSION AMOUNT','DISCOUNT','DISCOUNT AMOUNT']))>0;return$this->money($this->v($row,['TOTAL','TOTAL FEE','GROSS','FEE AMOUNT','AMOUNT','PAYABLE','RECEIVED','RECEIVED AMOUNT','PAID']))>0;}
     private function opening(array $row):float{$b=$this->v($row,['BALANCE','FEE BALANCE','OPENING BALANCE']);if($b!==null)return$this->money($b);return max(0,$this->money($this->v($row,['FEE AMOUNT']))-$this->money($this->v($row,['AMOUNT RECEIVED','RECEIVED','PAID'])));}
     private function v(array $row,array $keys){foreach($keys as $k)if(array_key_exists($k,$row)&&trim((string)$row[$k])!=='')return$row[$k];return null;}
     private function money($v):float{return$v===null||$v===''?0:round((float)preg_replace('/[^0-9.\-]/','',(string)$v),2);}
