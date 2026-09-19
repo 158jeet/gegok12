@@ -151,7 +151,11 @@ class LegacyStudentMatcher
             ['institution_id' => $batch->institution_id, 'source_system' => 'legacy_erp', 'source_key' => $sourceKey],
             ['student_id' => $studentId, 'created_by' => $actorId, 'updated_at' => now(), 'created_at' => now()]
         );
-        DB::table('tagore_fee_import_rows')->where('id', $rowId)->update(['student_id' => $studentId, 'status' => 'ready', 'error_message' => null, 'updated_at' => now()]);
+        DB::table('tagore_fee_import_rows')
+            ->where('batch_id', $batch->id)
+            ->where('external_student_key', $sourceKey)
+            ->whereIn('status', ['error', 'reference'])
+            ->update(['student_id' => $studentId, 'status' => 'ready', 'error_message' => null, 'updated_at' => now()]);
     }
 
     private function data(object $row): array
