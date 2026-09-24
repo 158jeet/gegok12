@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->unique(['institution_id', 'source_system', 'source_key'], 'tagore_legacy_map_source_unique');
-            $table->unique(['institution_id', 'source_system', 'student_id']);
+            $table->unique(['institution_id', 'source_system', 'student_id'], 'tagore_legacy_map_student_unique');
             $table->index(['source_system', 'source_key']);
         });
     }
