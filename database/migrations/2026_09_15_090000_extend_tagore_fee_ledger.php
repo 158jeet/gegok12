@@ -46,7 +46,9 @@ return new class extends Migration {
         Schema::create('tagore_transport_routes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->string('route_code', 80);
             $table->string('route_name');
             $table->decimal('annual_amount', 12, 2)->default(0);
@@ -74,7 +76,9 @@ return new class extends Migration {
             $table->unsignedInteger('student_id');
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->decimal('amount', 12, 2)->default(0);
             $table->decimal('received_amount', 12, 2)->default(0);
             $table->decimal('balance_amount', 12, 2)->default(0);
