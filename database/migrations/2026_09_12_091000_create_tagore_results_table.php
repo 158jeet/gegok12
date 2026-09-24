@@ -12,7 +12,9 @@ return new class extends Migration {
             $table->unsignedInteger('student_id');
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->string('exam_name', 120);
             $table->string('subject', 120);
             $table->decimal('marks', 8, 2)->default(0);
