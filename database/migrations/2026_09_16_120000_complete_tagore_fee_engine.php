@@ -29,14 +29,16 @@ return new class extends Migration {
         if (!Schema::hasTable('tagore_fee_concessions')) {
             Schema::create('tagore_fee_concessions', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+                $table->unsignedInteger('student_id');
+                $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
                 $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
                 $table->foreignId('fee_obligation_id')->nullable()->constrained('tagore_fee_obligations')->nullOnDelete();
                 $table->string('type', 30)->default('fixed');
                 $table->decimal('value', 12, 2)->default(0);
                 $table->decimal('amount', 12, 2)->default(0);
                 $table->string('reason', 255)->nullable();
-                $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedInteger('approved_by')->nullable();
+                $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
                 $table->timestamp('approved_at')->nullable();
                 $table->string('status', 30)->default('pending');
                 $table->timestamps();
