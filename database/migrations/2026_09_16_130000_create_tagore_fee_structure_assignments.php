@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('status', 20)->default('active');
             $table->timestamps();
             $table->unique(['fee_structure_id', 'standard_link_id'], 'tagore_fee_assignment_unique');
-            $table->index(['institution_id', 'academic_year_id', 'standard_link_id']);
+            $table->index(['institution_id', 'academic_year_id', 'standard_link_id'], 'tagore_fee_assignment_scope_idx');
         });
     }
 
