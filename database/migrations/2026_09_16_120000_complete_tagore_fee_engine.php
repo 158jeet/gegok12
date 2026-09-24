@@ -22,7 +22,7 @@ return new class extends Migration {
                 $table->decimal('outstanding_amount', 12, 2)->default(0);
                 $table->json('metadata_json')->nullable();
                 $table->timestamps();
-                $table->index(['fee_obligation_id', 'fee_component_id']);
+                $table->index(['fee_obligation_id', 'fee_component_id'], 'tagore_fee_item_component_idx');
             });
         }
 
