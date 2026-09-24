@@ -12,7 +12,7 @@ return new class extends Migration {
                 $table->id();
                 $table->foreignId('fee_obligation_id')->constrained('tagore_fee_obligations')->cascadeOnDelete();
                 $table->foreignId('fee_component_id')->nullable()->constrained('tagore_fee_components')->nullOnDelete();
-                $table->string('fee_head');
+                $table->string('fee_head', 100);
                 $table->string('code', 60)->nullable();
                 $table->decimal('gross_amount', 12, 2)->default(0);
                 $table->decimal('discount_amount', 12, 2)->default(0);
@@ -33,16 +33,18 @@ return new class extends Migration {
                 $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
                 $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
                 $table->foreignId('fee_obligation_id')->nullable()->constrained('tagore_fee_obligations')->nullOnDelete();
-                $table->string('type', 30)->default('fixed');
-                $table->decimal('value', 12, 2)->default(0);
+                $table->foreignId('fee_component_id')->nullable()->constrained('tagore_fee_components')->nullOnDelete();
+                $table->string('concession_type', 40)->default('fixed');
+                $table->string('name', 120);
+                $table->decimal('percentage', 7, 3)->nullable();
                 $table->decimal('amount', 12, 2)->default(0);
-                $table->string('reason', 255)->nullable();
+                $table->text('reason')->nullable();
                 $table->unsignedInteger('approved_by')->nullable();
                 $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
                 $table->timestamp('approved_at')->nullable();
-                $table->string('status', 30)->default('pending');
+                $table->string('status', 30)->default('approved');
                 $table->timestamps();
-                $table->index(['student_id', 'institution_id', 'status']);
+                $table->index(['student_id', 'status']);
             });
         }
 
@@ -55,22 +57,22 @@ return new class extends Migration {
                 $table->foreignId('fee_obligation_item_id')->nullable()->constrained('tagore_fee_obligation_items')->nullOnDelete();
                 $table->decimal('amount', 12, 2);
                 $table->timestamps();
-                $table->index(['payment_id', 'fee_obligation_id']);
+                $table->index(['fee_obligation_id', 'payment_id'], 'tagore_payment_allocation_obligation_idx');
             });
         }
 
         Schema::table('tagore_payments', function (Blueprint $table) {
             if (!Schema::hasColumn('tagore_payments', 'receipt_no')) {
-                $table->string('receipt_no', 80)->nullable()->index();
+                $table->string('receipt_no', 80)->nullable()->unique()->after('id');
             }
             if (!Schema::hasColumn('tagore_payments', 'payment_mode')) {
-                $table->string('payment_mode', 30)->nullable();
+                $table->string('payment_mode', 40)->nullable()->after('currency');
             }
             if (!Schema::hasColumn('tagore_payments', 'reference_number')) {
-                $table->string('reference_number', 160)->nullable();
+                $table->string('reference_number', 160)->nullable()->after('gateway_payment_id');
             }
             if (!Schema::hasColumn('tagore_payments', 'notes')) {
-                $table->text('notes')->nullable();
+                $table->text('notes')->nullable()->after('paid_at');
             }
         });
     }
