@@ -20,7 +20,9 @@ return new class extends Migration {
         Schema::create('tagore_academic_sections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->constrained('academic_years')->cascadeOnDelete();
+            $table->unsignedInteger('academic_year_id');
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->cascadeOnDelete();
             $table->unsignedInteger('standard_link_id');
             $table->foreign('standard_link_id')->references('id')->on('standards_link')->cascadeOnDelete();
             $table->foreignId('stream_id')->nullable()->constrained('tagore_academic_streams')->nullOnDelete();
