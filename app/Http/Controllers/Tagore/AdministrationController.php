@@ -16,6 +16,16 @@ class AdministrationController extends Controller
         abort_unless($roles->contains('OWNER'), 403);
 
         $group = DB::table('tagore_groups')->where('code', 'TAGORE')->first();
+        $availableSchools = DB::table('schools as s')
+            ->whereNull('s.deleted_at')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('tagore_institutions as ti')
+                    ->whereColumn('ti.school_id', 's.id');
+            })
+            ->orderBy('s.name')
+            ->get(['s.id', 's.name']);
+
         $institutions = DB::table('tagore_institutions as i')
             ->join('schools as s', 's.id', '=', 'i.school_id')
             ->where('i.status', 'active')
@@ -38,7 +48,7 @@ class AdministrationController extends Controller
             ->limit(250)
             ->get(['ur.id', 'u.id as user_id', 'u.name', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
-        return view('tagore.administration', compact('group', 'institutions', 'years', 'rolesList', 'assignments'));
+        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments'));
     }
 
     public function storeInstitution(Request $request)
