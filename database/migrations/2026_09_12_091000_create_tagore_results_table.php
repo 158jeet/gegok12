@@ -9,7 +9,8 @@ return new class extends Migration {
     {
         Schema::create('tagore_results', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
             $table->string('exam_name', 120);
