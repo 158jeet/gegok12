@@ -31,7 +31,7 @@ return new class extends Migration {
             $table->string('status', 20)->default('active');
             $table->timestamps();
             $table->unique(['academic_year_id', 'standard_link_id', 'code'], 'tagore_academic_section_unique');
-            $table->index(['institution_id', 'academic_year_id', 'standard_link_id']);
+            $table->index(['institution_id', 'academic_year_id', 'standard_link_id'], 'tagore_academic_section_scope_idx');
         });
     }
 
