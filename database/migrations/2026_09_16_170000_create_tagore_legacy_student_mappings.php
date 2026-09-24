@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->string('source_system', 50)->default('legacy_erp');
             $table->string('source_key', 150);
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->unique(['institution_id', 'source_system', 'source_key']);
