@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
-            $table->unique(['institution_id', 'source_system', 'source_key']);
+            $table->unique(['institution_id', 'source_system', 'source_key'], 'tagore_legacy_map_source_unique');
             $table->unique(['institution_id', 'source_system', 'student_id']);
             $table->index(['source_system', 'source_key']);
         });
