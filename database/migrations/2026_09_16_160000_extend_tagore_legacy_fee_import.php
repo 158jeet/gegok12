@@ -19,7 +19,9 @@ return new class extends Migration {
         Schema::create('tagore_transport_routes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->string('name');
             $table->string('code', 100);
             $table->decimal('annual_fee', 12, 2)->default(0);
@@ -36,7 +38,9 @@ return new class extends Migration {
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('route_id')->constrained('tagore_transport_routes')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->decimal('annual_fee', 12, 2)->default(0);
             $table->string('status', 20)->default('active');
             $table->string('source_hash', 64)->nullable();
