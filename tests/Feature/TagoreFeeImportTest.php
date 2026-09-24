@@ -78,7 +78,7 @@ class TagoreFeeImportTest extends TestCase
         $service=file_get_contents(base_path('app/Services/Tagore/LegacyFeeMigrationService.php'));
         $safety=file_get_contents(base_path('app/Services/Tagore/LegacyFeeImportSafetyService.php'));
         $recon=file_get_contents(base_path('app/Services/Tagore/LegacyFeeReconciliationService.php'));
-        foreach(['ALL LEDGER','ledger_reference','explicit legacy-student mapping','ONE_TIME_TOTAL'] as $needle) $this->assertStringContainsString($needle,$service);
+        foreach(['ALL LEDGER','ledger_reference','explicit legacy-student mapping','one_time_amount','tagore_fee_concessions'] as $needle) $this->assertStringContainsString($needle,$service);
         foreach(['requires an explicit legacy-student mapping','Import batch contains skipped source rows','where(\'status\',\'error\')'] as $needle) $this->assertStringContainsString($needle,$safety);
         foreach(['report(','tagore_fee_obligations','outstanding_amount','legacy_balance','mismatch'] as $needle) $this->assertStringContainsString($needle,$recon);
     }
