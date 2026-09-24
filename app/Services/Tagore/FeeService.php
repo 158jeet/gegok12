@@ -15,6 +15,14 @@ class FeeService
         ?int $createdBy = null,
     ): int {
         return DB::transaction(function () use ($studentId, $institutionId, $data, $createdBy) {
+            $student = DB::table('users')->where('id', $studentId)->first(['id','school_id','usergroup_id']);
+            if (!$student || (int)$student->usergroup_id !== 6) {
+                throw ValidationException::withMessages(['student' => 'A fee obligation can only be created for a valid student.']);
+            }
+            $institutionSchool = DB::table('tagore_institutions')->where('id', $institutionId)->where('status','active')->value('school_id');
+            if (!$institutionSchool || (int)$institutionSchool !== (int)$student->school_id) {
+                throw ValidationException::withMessages(['student' => 'Student does not belong to the selected institution.']);
+            }
             $items = $data['items'] ?? [];
             $gross = round((float) ($data['gross_amount'] ?? collect($items)->sum('gross_amount')), 2);
             $discount = round((float) ($data['discount_amount'] ?? collect($items)->sum('discount_amount')), 2);
