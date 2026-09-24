@@ -84,7 +84,7 @@ class LegacyFeeReconciliationService
             $row = $this->mapRow($headers['map'], $values);
             $name = trim((string)$this->value($row, ['STUDENT', 'STUDENT NAME', 'NAME']));
             if ($name === '') continue;
-            $key = trim((string)$this->value($row, ['REG NO', 'REGISTRATION NO', 'ADM NO', 'ADMISSION NO', 'STUDENT ID']));
+            $key = trim((string)$this->value($row, ['SR NO', 'SRNO', 'REG NO', 'REGISTRATION NO', 'ADM NO', 'ADMISSION NO', 'STUDENT ID']));
             $expected = $this->money($this->value($row, ['BALANCE', 'BALANCE DUE', 'FEE BALANCE', 'DUE', 'OUTSTANDING', 'TOTAL DUE']));
             $student = $this->resolve($institutionId, $key, $name);
             $actual = null;
