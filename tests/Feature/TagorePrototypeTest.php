@@ -16,22 +16,32 @@ class TagorePrototypeTest extends TestCase
 
     public function test_fee_ledger_contains_the_required_real_world_layers(): void
     {
-        $migration = base_path('database/migrations/2026_09_15_090000_extend_tagore_fee_ledger.php');
-        $this->assertFileExists($migration);
+        $ledgerMigration = base_path('database/migrations/2026_09_15_090000_extend_tagore_fee_ledger.php');
+        $feeEngineMigration = base_path('database/migrations/2026_09_16_120000_complete_tagore_fee_engine.php');
 
-        $source = file_get_contents($migration);
+        $this->assertFileExists($ledgerMigration);
+        $this->assertFileExists($feeEngineMigration);
+
+        $ledgerSource = file_get_contents($ledgerMigration);
+        $feeEngineSource = file_get_contents($feeEngineMigration);
+
+        foreach ([
+            'tagore_fee_opening_balances',
+            'tagore_transport_routes',
+            'tagore_student_transport',
+        ] as $required) {
+            $this->assertStringContainsString($required, $ledgerSource);
+        }
+
         foreach ([
             'tagore_fee_obligation_items',
             'tagore_fee_concessions',
-            'tagore_transport_routes',
-            'tagore_student_transport',
-            'tagore_fee_opening_balances',
             'tagore_payment_allocations',
             'receipt_no',
             'payment_mode',
             'reference_number',
         ] as $required) {
-            $this->assertStringContainsString($required, $source);
+            $this->assertStringContainsString($required, $feeEngineSource);
         }
     }
 
