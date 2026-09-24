@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
@@ -26,23 +26,8 @@ return new class extends Migration {
             }
         });
 
-        if (!Schema::hasTable('tagore_transport_routes')) {
-            Schema::create('tagore_transport_routes', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-                $table->unsignedInteger('academic_year_id')->nullable();
-                $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
-                $table->string('name');
-                $table->string('code', 100);
-                $table->decimal('annual_fee', 12, 2)->default(0);
-                $table->string('status', 20)->default('active');
-                $table->string('source_hash', 64)->nullable();
-                $table->timestamps();
-                $table->unique(['institution_id', 'academic_year_id', 'code'], 'tagore_transport_route_unique');
-                $table->index(['institution_id', 'academic_year_id'], 'tagore_transport_route_scope_idx');
-            });
-        }
-
+        // tagore_transport_routes is owned by the fee-ledger migration (2026_09_15).
+        // This migration only adds the legacy-import assignment projection.
         if (!Schema::hasTable('tagore_transport_assignments')) {
             Schema::create('tagore_transport_assignments', function (Blueprint $table) {
                 $table->id();
@@ -65,21 +50,13 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::dropIfExists('tagore_transport_assignments');
-        Schema::dropIfExists('tagore_transport_routes');
 
         if (Schema::hasTable('tagore_fee_import_rows')) {
             Schema::table('tagore_fee_import_rows', function (Blueprint $table) {
-                if (Schema::hasColumn('tagore_fee_import_rows', 'row_type')) {
-                    $table->dropColumn('row_type');
-                }
-                if (Schema::hasColumn('tagore_fee_import_rows', 'source_hash')) {
-                    $table->dropColumn('source_hash');
-                }
-                if (Schema::hasColumn('tagore_fee_import_rows', 'target_type')) {
-                    $table->dropColumn('target_type');
-                }
-                if (Schema::hasColumn('tagore_fee_import_rows', 'target_id')) {
-                    $table->dropColumn('target_id');
+                foreach (['row_type', 'source_hash', 'target_type', 'target_id'] as $column) {
+                    if (Schema::hasColumn('tagore_fee_import_rows', $column)) {
+                        $table->dropColumn($column);
+                    }
                 }
             });
         }
