@@ -11,7 +11,8 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('created_by')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->string('source_name', 255);
             $table->string('source_type', 30)->default('xlsx');
             $table->string('import_type', 40)->default('opening_balance');
@@ -29,7 +30,8 @@ return new class extends Migration {
             $table->foreignId('batch_id')->constrained('tagore_fee_import_batches')->cascadeOnDelete();
             $table->unsignedInteger('row_number');
             $table->string('external_student_key', 160)->nullable();
-            $table->foreignId('student_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('student_id')->nullable();
+            $table->foreign('student_id')->references('id')->on('users')->nullOnDelete();
             $table->decimal('gross_amount', 12, 2)->nullable();
             $table->decimal('discount_amount', 12, 2)->nullable();
             $table->decimal('concession_amount', 12, 2)->nullable();
