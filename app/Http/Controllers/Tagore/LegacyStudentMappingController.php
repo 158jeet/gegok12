@@ -64,7 +64,7 @@ class LegacyStudentMappingController extends Controller
                 ['institution_id'=>$batch->institution_id,'source_system'=>'legacy_erp','source_key'=>$key],
                 ['student_id'=>$data['student_id'],'created_by'=>$userId,'updated_at'=>now(),'created_at'=>now()]
             );
-            DB::table('tagore_fee_import_rows')->where('id',$row->id)->update(['student_id'=>$data['student_id'],'status'=>'ready','error_message'=>null,'updated_at'=>now()]);
+            DB::table('tagore_fee_import_rows')->where('batch_id',$batchId)->where('external_student_key',$key)->update(['student_id'=>$data['student_id'],'status'=>'ready','error_message'=>null,'updated_at'=>now()]);
         });
         $errors = DB::table('tagore_fee_import_rows')->where('batch_id',$batchId)->where('status','error')->count();
         DB::table('tagore_fee_import_batches')->where('id',$batchId)->update(['error_count'=>$errors,'success_count'=>DB::table('tagore_fee_import_rows')->where('batch_id',$batchId)->where('status','ready')->count(),'status'=>$errors?'needs_review':'ready','updated_at'=>now()]);
