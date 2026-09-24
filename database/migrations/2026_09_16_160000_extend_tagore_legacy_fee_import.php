@@ -29,7 +29,7 @@ return new class extends Migration {
             $table->string('source_hash', 64)->nullable();
             $table->timestamps();
             $table->unique(['institution_id', 'academic_year_id', 'code'], 'tagore_transport_route_unique');
-            $table->index(['institution_id', 'academic_year_id'], 'tagore_transport_assignment_scope_idx');
+            $table->index(['institution_id', 'academic_year_id'], 'tagore_transport_route_scope_idx');
         });
 
         Schema::create('tagore_transport_assignments', function (Blueprint $table) {
@@ -46,7 +46,7 @@ return new class extends Migration {
             $table->string('source_hash', 64)->nullable();
             $table->timestamps();
             $table->unique(['student_id', 'academic_year_id'], 'tagore_transport_assignment_unique');
-            $table->index(['institution_id', 'academic_year_id']);
+            $table->index(['institution_id', 'academic_year_id'], 'tagore_transport_assignment_scope_idx');
         });
     }
 
