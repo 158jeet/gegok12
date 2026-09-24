@@ -231,7 +231,7 @@ return new class extends Migration {
             $table->unsignedInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
-            $table->index(['institution_id', 'student_id', 'transaction_date']);
+            $table->index(['institution_id', 'student_id', 'transaction_date'], 'tagore_fin_txn_scope_date_idx');
         });
 
         Schema::create('tagore_payment_reconciliations', function (Blueprint $table) {
