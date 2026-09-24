@@ -26,7 +26,8 @@ return new class extends Migration {
 
         Schema::create('tagore_fee_concessions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('fee_obligation_id')->nullable()->constrained('tagore_fee_obligations')->nullOnDelete();
             $table->foreignId('fee_component_id')->nullable()->constrained('tagore_fee_components')->nullOnDelete();
             $table->string('concession_type', 40)->default('fixed');
@@ -35,7 +36,8 @@ return new class extends Migration {
             $table->decimal('amount', 12, 2)->default(0);
             $table->text('reason')->nullable();
             $table->string('status', 30)->default('approved');
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('approved_by')->nullable();
+            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
             $table->index(['student_id', 'status']);
@@ -55,7 +57,8 @@ return new class extends Migration {
 
         Schema::create('tagore_student_transport', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('route_id')->constrained('tagore_transport_routes')->cascadeOnDelete();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
@@ -68,7 +71,8 @@ return new class extends Migration {
 
         Schema::create('tagore_fee_opening_balances', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
             $table->decimal('amount', 12, 2)->default(0);
@@ -77,7 +81,8 @@ return new class extends Migration {
             $table->string('source', 80)->default('legacy_erp');
             $table->string('source_reference')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('imported_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('imported_by')->nullable();
+            $table->foreign('imported_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
             $table->unique(['student_id', 'institution_id', 'academic_year_id'], 'tagore_opening_balance_unique');
         });
