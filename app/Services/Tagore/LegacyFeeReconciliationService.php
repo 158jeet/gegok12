@@ -25,11 +25,17 @@ class LegacyFeeReconciliationService
             $legacy = $this->money($this->value($source, ['BALANCE', 'BALANCE DUE', 'FEE BALANCE', 'DUE', 'OUTSTANDING', 'TOTAL DUE', 'AMOUNT']));
             $actual = null;
             if ($row->student_id) {
-                $actualQuery = DB::table('tagore_fee_obligations')
-                    ->where('institution_id', $batch->institution_id)
-                    ->where('student_id', $row->student_id);
-                if ($batch->academic_year_id) $actualQuery->where('academic_year_id', $batch->academic_year_id);
-                $actual = round((float) $actualQuery->sum('outstanding_amount'), 2);
+                $actualQuery = DB::table('tagore_fee_obligations as o')
+                    ->where('o.institution_id', $batch->institution_id)
+                    ->where('o.student_id', $row->student_id)
+                    ->whereExists(function ($query) use ($batch) {
+                        $query->select(DB::raw(1))
+                            ->from('tagore_fee_obligation_items as oi')
+                            ->whereColumn('oi.fee_obligation_id', 'o.id')
+                            ->where('oi.metadata_json', 'like', '%"import_batch_id":'.$batch->id.'%');
+                    });
+                if ($batch->academic_year_id) $actualQuery->where('o.academic_year_id', $batch->academic_year_id);
+                $actual = round((float) $actualQuery->sum('o.outstanding_amount'), 2);
             }
             $difference = $actual === null ? null : round($actual - $legacy, 2);
             $items[] = [
