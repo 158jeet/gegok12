@@ -29,13 +29,15 @@
                 @csrf
                 <label>GegoK12 school</label>
                 <select name="school_id" required>
-                    @foreach(DB::table('schools')->whereNull('deleted_at')->orderBy('name')->get(['id','name']) as $school)
+                    @forelse($availableSchools as $school)
                         <option value="{{ $school->id }}">{{ $school->name }}</option>
-                    @endforeach
+                    @empty
+                        <option value="" disabled>No unlinked GegoK12 schools available</option>
+                    @endforelse
                 </select>
-                <label>Institution code</label><input name="code" placeholder="TPS" required>
-                <label>Display name</label><input name="display_name" placeholder="Tagore Public School" required>
-                <label>Type</label><input name="type" value="school">
+                <label>Institution code</label><input name="code" placeholder="e.g. TPS" required>
+                <label>Display name</label><input name="display_name" placeholder="e.g. Tagore Public School" required>
+                <label>Type</label><input name="type" placeholder="e.g. school" value="">
                 <button>Add institution</button>
             </form>
         </section>
@@ -52,7 +54,7 @@
             <form method="post" action="{{ url('/tagore/admin/academic-year') }}">
                 @csrf
                 <label>Institution</label><select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select>
-                <label>Name</label><input name="name" value="2026-27" required>
+                <label>Name</label><input name="name" placeholder="e.g. 2026-27" required>
                 <label>Start date</label><input type="date" name="start_date" required>
                 <label>End date</label><input type="date" name="end_date" required>
                 <label>Status</label><select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select>
