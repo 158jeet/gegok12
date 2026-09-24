@@ -34,6 +34,19 @@ class TagorePrototypeSeeder extends Seeder
         }
         if(Schema::hasTable('student_parent_links')) foreach(DB::table('student_parent_links')->where('status','active')->get(['parent_id','student_id']) as $link) DB::table('tagore_parent_students')->updateOrInsert(['parent_user_id'=>$link->parent_id,'student_id'=>$link->student_id],['relationship'=>'Guardian','is_primary'=>true,'is_guardian'=>true,'status'=>'active','updated_at'=>$now,'created_at'=>$now]);
 
+        // Ensure the local/CI prototype always has one usable parent-child journey
+        // even when the upstream demo seed contains no active student-parent links.
+        if (!DB::table('tagore_parent_students')->where('status', 'active')->exists()) {
+            $parent = DB::table('users')->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->first(['id', 'school_id']);
+            $student = DB::table('users')->where('usergroup_id', 6)->where('school_id', $parent?->school_id)->whereNull('deleted_at')->orderBy('id')->first(['id']);
+            if ($parent && $student) {
+                DB::table('tagore_parent_students')->updateOrInsert(
+                    ['parent_user_id' => $parent->id, 'student_id' => $student->id],
+                    ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+                );
+            }
+        }
+
         foreach(DB::table('users')->where('usergroup_id',6)->whereNull('deleted_at')->orderBy('id')->limit(12)->get(['id','school_id']) as $student){
             $institutionId=DB::table('tagore_institutions')->where('school_id',$student->school_id)->value('id');if(!$institutionId)continue;
             if(!DB::table('tagore_fee_obligations')->where('student_id',$student->id)->exists())DB::table('tagore_fee_obligations')->insert(['student_id'=>$student->id,'institution_id'=>$institutionId,'due_date'=>$now->copy()->addDays(20)->toDateString(),'gross_amount'=>45000,'discount_amount'=>5000,'concession_amount'=>0,'net_amount'=>40000,'paid_amount'=>20000,'outstanding_amount'=>20000,'status'=>'partial','created_at'=>$now,'updated_at'=>$now]);
