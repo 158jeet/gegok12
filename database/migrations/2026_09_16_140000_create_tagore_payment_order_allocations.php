@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->foreignId('fee_installment_id')->nullable()->constrained('tagore_fee_installments')->nullOnDelete();
             $table->decimal('amount', 12, 2);
             $table->timestamps();
-            $table->index(['payment_order_id', 'fee_obligation_id']);
+            $table->index(['payment_order_id', 'fee_obligation_id'], 'tagore_payment_order_obligation_idx');
         });
     }
 
