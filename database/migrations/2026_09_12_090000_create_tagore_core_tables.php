@@ -63,7 +63,8 @@ return new class extends Migration {
 
         Schema::create('tagore_user_roles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('role_id')->constrained('tagore_roles')->cascadeOnDelete();
             $table->foreignId('institution_id')->nullable()->constrained('tagore_institutions')->nullOnDelete();
             $table->date('start_date')->nullable();
@@ -75,7 +76,8 @@ return new class extends Migration {
 
         Schema::create('tagore_user_scopes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('scope_type', 40);
             $table->unsignedBigInteger('scope_id');
             $table->foreignId('permission_id')->nullable()->constrained('tagore_permissions')->nullOnDelete();
@@ -86,8 +88,10 @@ return new class extends Migration {
 
         Schema::create('tagore_parent_students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('parent_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('parent_user_id');
+            $table->foreign('parent_user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('relationship', 40)->nullable();
             $table->boolean('is_primary')->default(false);
             $table->boolean('is_guardian')->default(true);
@@ -124,7 +128,8 @@ return new class extends Migration {
 
         Schema::create('tagore_fee_obligations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
             $table->foreignId('fee_structure_id')->nullable()->constrained('tagore_fee_structures')->nullOnDelete();
@@ -156,8 +161,10 @@ return new class extends Migration {
 
         Schema::create('tagore_payment_orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('parent_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->unsignedInteger('parent_user_id')->nullable();
+            $table->foreign('parent_user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('INR');
@@ -172,8 +179,10 @@ return new class extends Migration {
         Schema::create('tagore_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_order_id')->nullable()->constrained('tagore_payment_orders')->nullOnDelete();
-            $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('parent_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->unsignedInteger('parent_user_id')->nullable();
+            $table->foreign('parent_user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('INR');
@@ -203,8 +212,10 @@ return new class extends Migration {
         Schema::create('tagore_financial_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('student_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('parent_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('student_id')->nullable();
+            $table->foreign('student_id')->references('id')->on('users')->nullOnDelete();
+            $table->unsignedInteger('parent_user_id')->nullable();
+            $table->foreign('parent_user_id')->references('id')->on('users')->nullOnDelete();
             $table->string('transaction_type', 40);
             $table->string('reference_type', 80)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
@@ -213,7 +224,8 @@ return new class extends Migration {
             $table->decimal('balance_after', 12, 2)->nullable();
             $table->string('description')->nullable();
             $table->dateTime('transaction_date');
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('created_by')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
             $table->index(['institution_id', 'student_id', 'transaction_date']);
         });
@@ -226,7 +238,8 @@ return new class extends Migration {
             $table->decimal('settlement_amount', 12, 2)->nullable();
             $table->date('settlement_date')->nullable();
             $table->string('status', 30)->default('pending');
-            $table->foreignId('reconciled_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('reconciled_by')->nullable();
+            $table->foreign('reconciled_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamp('reconciled_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
@@ -244,8 +257,10 @@ return new class extends Migration {
         Schema::create('tagore_feedback', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('submitted_by')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('student_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('submitted_by');
+            $table->foreign('submitted_by')->references('id')->on('users')->cascadeOnDelete();
+            $table->unsignedInteger('student_id')->nullable();
+            $table->foreign('student_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('category_id')->nullable()->constrained('tagore_feedback_categories')->nullOnDelete();
             $table->string('subject');
             $table->text('message');
@@ -258,14 +273,16 @@ return new class extends Migration {
         Schema::create('tagore_feedback_responses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('feedback_id')->constrained('tagore_feedback')->cascadeOnDelete();
-            $table->foreignId('responded_by')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('responded_by');
+            $table->foreign('responded_by')->references('id')->on('users')->cascadeOnDelete();
             $table->text('message');
             $table->timestamps();
         });
 
         Schema::create('tagore_audit_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('institution_id')->nullable()->constrained('tagore_institutions')->nullOnDelete();
             $table->string('action', 100);
             $table->string('entity_type', 120)->nullable();
