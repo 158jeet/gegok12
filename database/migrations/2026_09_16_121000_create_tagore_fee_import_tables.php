@@ -10,7 +10,9 @@ return new class extends Migration {
         Schema::create('tagore_fee_import_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->unsignedInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->string('source_name', 255);
