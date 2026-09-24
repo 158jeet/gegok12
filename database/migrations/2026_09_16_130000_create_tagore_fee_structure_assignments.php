@@ -11,7 +11,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('fee_structure_id')->constrained('tagore_fee_structures')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
+            $table->unsignedInteger('academic_year_id')->nullable();
+
+            $table->foreign('academic_year_id')->references('id')->on('academic_years')->nullOnDelete();
             $table->unsignedInteger('standard_link_id');
             $table->foreign('standard_link_id')->references('id')->on('standards_link')->cascadeOnDelete();
             $table->string('status', 20)->default('active');
