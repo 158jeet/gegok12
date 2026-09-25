@@ -149,7 +149,9 @@ class TaskController extends Controller
             ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
             ->first();
 
-        $managerReviews = $this->managerReviews($visibleInstitutionIds);
+        $managerReviews = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
+            ? $this->managerReviews($visibleInstitutionIds)
+            : collect();
 
         $recentActivity = DB::table('tagore_task_events as e')
             ->join('tagore_tasks as t', 't.id', '=', 'e.task_id')
