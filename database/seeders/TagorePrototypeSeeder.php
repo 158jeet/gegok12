@@ -42,6 +42,52 @@ class TagorePrototypeSeeder extends Seeder
         }
         if(Schema::hasTable('student_parent_links')) foreach(DB::table('student_parent_links')->where('status','active')->get(['parent_id','student_id']) as $link) DB::table('tagore_parent_students')->updateOrInsert(['parent_user_id'=>$link->parent_id,'student_id'=>$link->student_id],['relationship'=>'Guardian','is_primary'=>true,'is_guardian'=>true,'status'=>'active','updated_at'=>$now,'created_at'=>$now]);
 
+        // Prototype organization structure: departments are institution-scoped.
+        $departmentMap = [];
+        $departmentDefinitions = [
+            ['Academic', 'ACADEMIC'],
+            ['Administration', 'ADMINISTRATION'],
+            ['Accounts', 'ACCOUNTS'],
+            ['Admissions & Marketing', 'ADMISSIONS'],
+            ['Transport', 'TRANSPORT'],
+            ['Hostel', 'HOSTEL'],
+            ['IT & Operations', 'IT_OPERATIONS'],
+            ['Human Resources', 'HR'],
+        ];
+        foreach (DB::table('tagore_institutions')->where('status', 'active')->get(['id']) as $institution) {
+            foreach ($departmentDefinitions as [$name, $code]) {
+                $departmentId = DB::table('tagore_departments')->where('institution_id', $institution->id)->where('code', $code)->value('id');
+                if (!$departmentId) {
+                    $departmentId = DB::table('tagore_departments')->insertGetId([
+                        'institution_id' => $institution->id, 'name' => $name, 'code' => $code,
+                        'status' => 'active', 'created_at' => $now, 'updated_at' => $now,
+                    ]);
+                }
+                $departmentMap[$institution->id][$code] = $departmentId;
+            }
+        }
+
+        foreach (DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.status', 'active')
+            ->get(['ur.user_id', 'ur.institution_id', 'r.code as role_code']) as $membership) {
+            if (!$membership->institution_id || !isset($departmentMap[$membership->institution_id])) continue;
+            $departmentCode = match ($membership->role_code) {
+                'TEACHER' => 'ACADEMIC',
+                'ACCOUNTS' => 'ACCOUNTS',
+                'OWNER', 'PRINCIPAL', 'COORDINATOR' => 'ADMINISTRATION',
+                default => null,
+            };
+            if (!$departmentCode) continue;
+            $departmentId = $departmentMap[$membership->institution_id][$departmentCode] ?? null;
+            if ($departmentId) {
+                DB::table('tagore_user_departments')->updateOrInsert(
+                    ['department_id' => $departmentId, 'user_id' => $membership->user_id],
+                    ['designation' => ucfirst(strtolower($membership->role_code)), 'is_primary' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+                );
+            }
+        }
+
         if (!DB::table('tagore_parent_students')->where('status', 'active')->exists()) {
             $parent = DB::table('users')->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->first(['id', 'school_id']);
             $student = DB::table('users')->where('usergroup_id', 6)->where('school_id', $parent?->school_id)->whereNull('deleted_at')->orderBy('id')->first(['id']);
