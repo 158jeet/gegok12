@@ -212,6 +212,23 @@ class TaskController extends Controller
             ? DB::table('tagore_task_templates as tt')->leftJoin('users as u','u.id','=','tt.assigned_to')->leftJoin('tagore_departments as d','d.id','=','tt.department_id')->whereIn('tt.institution_id',$visibleInstitutionIds)->orderBy('tt.active','desc')->orderBy('tt.next_run_at')->limit(100)->get(['tt.*','u.name as assignee_name','d.name as department_name'])
             : collect();
 
+        $templateRuns = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
+            ? DB::table('tagore_task_template_runs as r')
+                ->join('tagore_task_templates as tt', 'tt.id', '=', 'r.template_id')
+                ->leftJoin('tagore_tasks as t', 't.id', '=', 'r.task_id')
+                ->whereIn('r.institution_id', $visibleInstitutionIds)
+                ->orderByDesc('r.created_at')->limit(50)
+                ->get(['r.id','r.template_id','r.scheduled_for','r.started_at','r.completed_at','r.status','r.error_message','t.id as task_id','t.title as task_title','tt.title as template_title'])
+            : collect();
+
+        $templateHealth = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
+            ? [
+                'active' => (clone DB::table('tagore_task_templates')->whereIn('institution_id', $visibleInstitutionIds)->where('active', true))->count(),
+                'failed' => (clone DB::table('tagore_task_template_runs')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'failed')->where('created_at', '>=', now()->subDays(7)))->count(),
+                'last_success' => DB::table('tagore_task_template_runs')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'success')->max('completed_at'),
+            ]
+            : ['active' => 0, 'failed' => 0, 'last_success' => null];
+
         $managerReviews = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
             ? $this->managerReviews($visibleInstitutionIds)
             : collect();
@@ -235,7 +252,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity', 'managerReviews', 'roles', 'templates'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity', 'managerReviews', 'roles', 'templates', 'templateRuns', 'templateHealth'));
     }
 
 
