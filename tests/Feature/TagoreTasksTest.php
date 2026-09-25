@@ -81,6 +81,31 @@ class TagoreTasksTest extends TestCase
         $response->assertSee('Manager workload QA');
     }
 
+
+    public function test_manager_can_reassign_task_and_filter_by_employee(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->where('id', '!=', $owner->id)->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+        DB::table('tagore_tasks')->insert([
+            'institution_id'=>$institutionId,'created_by'=>$owner->id,'assigned_to'=>null,
+            'title'=>'Reassignment QA','status'=>'open','priority'=>'normal','progress'=>0,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $taskId = (int) DB::table('tagore_tasks')->where('title','Reassignment QA')->max('id');
+
+        $this->actingAs($owner)->patch(route('tagore.tasks.update', $taskId), [
+            'status'=>'in_progress','progress'=>25,'assigned_to'=>$teacher->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_tasks', ['id'=>$taskId,'assigned_to'=>$teacher->id,'progress'=>25]);
+
+        $this->actingAs($owner)
+            ->get(route('tagore.tasks.index', ['institution_id'=>$institutionId,'assigned_to'=>$teacher->id]))
+            ->assertOk()
+            ->assertSee('Reassignment QA');
+    }
+
     public function test_parent_cannot_access_tasks(): void
     {
         $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
