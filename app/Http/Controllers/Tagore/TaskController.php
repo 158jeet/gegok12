@@ -79,9 +79,17 @@ class TaskController extends Controller
                     $join->on('tw.assigned_to', '=', 'u.id');
                 }
             )
-            ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
-            ->whereIn('ur.institution_id', $visibleInstitutionIds)
-            ->where('ur.status', 'active')
+            ->joinSub(
+                DB::table('tagore_user_roles')
+                    ->select('user_id')
+                    ->whereIn('institution_id', $visibleInstitutionIds)
+                    ->where('status', 'active')
+                    ->groupBy('user_id'),
+                'visible_staff',
+                'visible_staff.user_id',
+                '=',
+                'u.id'
+            )
             ->whereNotIn('u.usergroup_id', [6, 7])
             ->whereNull('u.deleted_at')
             ->select('u.id', 'u.name')
