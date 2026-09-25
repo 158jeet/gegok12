@@ -135,6 +135,12 @@ class AppServiceProvider extends ServiceProvider {
     * @return void
     */
     public function register() {
-
+        $this->app->singleton(\App\Services\Kobo\KoboClient::class, function () {
+            return new \App\Services\Kobo\KoboClient(
+                config('kobo.base_url'),
+                config('kobo.api_token'),
+                config('kobo.timeout', 30),
+            );
+        });
     }
 }
