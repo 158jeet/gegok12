@@ -207,6 +207,10 @@ class TaskController extends Controller
             ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
             ->first();
 
+        $templates = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
+            ? DB::table('tagore_task_templates as tt')->leftJoin('users as u','u.id','=','tt.assigned_to')->leftJoin('tagore_departments as d','d.id','=','tt.department_id')->whereIn('tt.institution_id',$visibleInstitutionIds)->orderBy('tt.active','desc')->orderBy('tt.next_run_at')->limit(100)->get(['tt.*','u.name as assignee_name','d.name as department_name'])
+            : collect();
+
         $managerReviews = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
             ? $this->managerReviews($visibleInstitutionIds)
             : collect();
@@ -230,7 +234,81 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity', 'managerReviews', 'roles'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity', 'managerReviews', 'roles', 'templates'));
+    }
+
+
+    public function storeTemplate(Request $request)
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+
+        $data = $request->validate([
+            'institution_id' => ['required','integer'],
+            'assigned_to' => ['nullable','integer'],
+            'department_id' => ['nullable','integer'],
+            'title' => ['required','string','max:180'],
+            'description' => ['nullable','string','max:5000'],
+            'priority' => ['required','in:low,normal,high,urgent'],
+            'frequency' => ['required','in:daily,weekly,monthly'],
+            'day_of_week' => ['nullable','integer','between:0,6'],
+            'day_of_month' => ['nullable','integer','between:1,28'],
+            'run_at' => ['required','date_format:H:i'],
+            'due_after_minutes' => ['nullable','integer','min:1','max:10080'],
+        ]);
+        $institutionId = (int) $data['institution_id'];
+        abort_unless(in_array($institutionId, $institutionIds, true), 403);
+        if ($data['frequency'] === 'weekly') abort_unless($request->filled('day_of_week'), 422, 'Weekly templates require a day of week.');
+        if ($data['frequency'] === 'monthly') abort_unless($request->filled('day_of_month'), 422, 'Monthly templates require a day of month.');
+
+        if (!empty($data['department_id'])) {
+            abort_unless(DB::table('tagore_departments')->where('id',$data['department_id'])->where('institution_id',$institutionId)->where('status','active')->exists(),422);
+        }
+        if (!empty($data['assigned_to'])) {
+            abort_unless(DB::table('tagore_user_roles')->where('user_id',$data['assigned_to'])->where('institution_id',$institutionId)->where('status','active')->exists(),422);
+            if (empty($data['department_id'])) {
+                $data['department_id'] = DB::table('tagore_user_departments as ud')->join('tagore_departments as d','d.id','=','ud.department_id')
+                    ->where('ud.user_id',$data['assigned_to'])->where('ud.status','active')->where('ud.is_primary',true)
+                    ->where('d.institution_id',$institutionId)->where('d.status','active')->value('d.id');
+            }
+        }
+
+        $runAt = CarbonCarbon::createFromFormat('H:i', $data['run_at']);
+        $next = now()->setTime($runAt->hour, $runAt->minute, 0);
+        $frequency = $data['frequency'];
+        if ($frequency === 'weekly') {
+            $next->next($this->weekdayName((int)$data['day_of_week']));
+        } elseif ($frequency === 'monthly') {
+            $next->day((int)$data['day_of_month']);
+            if ($next->lte(now())) $next->addMonthNoOverflow();
+        } elseif ($next->lte(now())) {
+            $next->addDay();
+        }
+
+        DB::table('tagore_task_templates')->insert([
+            'institution_id'=>$institutionId,'created_by'=>$userId,'assigned_to'=>$data['assigned_to'] ?? null,
+            'department_id'=>$data['department_id'] ?? null,'title'=>$data['title'],'description'=>$data['description'] ?? null,
+            'priority'=>$data['priority'],'frequency'=>$frequency,'day_of_week'=>$data['day_of_week'] ?? null,
+            'day_of_month'=>$data['day_of_month'] ?? null,'run_at'=>$data['run_at'].':00','due_after_minutes'=>$data['due_after_minutes'] ?? null,
+            'next_run_at'=>$next,'active'=>true,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
+        return back()->with('success','Recurring task template created.');
+    }
+
+    public function toggleTemplate(Request $request, int $templateId)
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+        $template = DB::table('tagore_task_templates')->where('id',$templateId)->first();
+        abort_unless($template && in_array((int)$template->institution_id,$institutionIds,true),404);
+        DB::table('tagore_task_templates')->where('id',$templateId)->update(['active'=>!$template->active,'updated_at'=>now()]);
+        return back()->with('success', $template->active ? 'Template paused.' : 'Template activated.');
+    }
+
+    private function weekdayName(int $day): string
+    {
+        return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][$day];
     }
 
     public function store(Request $request)
