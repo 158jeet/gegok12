@@ -40,4 +40,31 @@ class TagoreManagerDashboardTest extends TestCase
             ->assertSee('Workload balance')
             ->assertSee('Academic');
     }
+
+    public function test_manager_can_open_department_performance_profile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+        $departmentId = (int) DB::table('tagore_departments')->where('institution_id', $institutionId)->where('code', 'ACADEMIC')->value('id');
+
+        $this->actingAs($owner)
+            ->get(route('tagore.department.profile', $departmentId))
+            ->assertOk()
+            ->assertSee('Academic')
+            ->assertSee('Employee workload')
+            ->assertSee('Pending follow-ups')
+            ->assertSee('7-day workload trend');
+    }
+
+    public function test_non_manager_cannot_open_department_performance_profile(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+        $departmentId = (int) DB::table('tagore_departments')->where('institution_id', $institutionId)->where('code', 'ACADEMIC')->value('id');
+
+        $this->actingAs($teacher)
+            ->get(route('tagore.department.profile', $departmentId))
+            ->assertForbidden();
+    }
+
 }
