@@ -40,6 +40,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/tasks', [TaskController::class, 'store'])->name('tagore.tasks.store');
     Route::patch('/tasks/{taskId}', [TaskController::class, 'update'])->whereNumber('taskId')->name('tagore.tasks.update');
     Route::post('/tasks/{taskId}/review', [TaskController::class, 'review'])->whereNumber('taskId')->name('tagore.tasks.review');
+    Route::patch('/reviews/{reviewId}/complete', [TaskController::class, 'completeReview'])->whereNumber('reviewId')->name('tagore.reviews.complete');
 
     Route::get('/child/{studentId}', [DashboardController::class, 'child'])->whereNumber('studentId')->name('tagore.child');
     Route::post('/child/{studentId}/feedback', [DashboardController::class, 'submitFeedback'])->whereNumber('studentId')->name('tagore.feedback.submit');
