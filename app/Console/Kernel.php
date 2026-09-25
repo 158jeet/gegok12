@@ -32,6 +32,7 @@ class Kernel extends ConsoleKernel
             \App\Console\Commands\CheckWebNotification::class,
             \App\Console\Commands\CheckSendMail::class,
             \App\Console\Commands\CheckTask::class,
+            \App\Console\Commands\GenerateTagoreRecurringTasks::class,
 
             \App\Console\Commands\DataSeeder\SeedAttendance::class,
 
@@ -78,6 +79,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('gego:checkanniversary')
                  ->daily()
                  ->withoutOverlapping(); 
+
+        $schedule->command('tagore:generate-recurring-tasks')
+                 ->everyMinute()
+                 ->withoutOverlapping();
 
         $schedule->command('gego:checktask')
                  ->everyMinute()
