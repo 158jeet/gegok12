@@ -22,9 +22,9 @@ return new class extends Migration {
             $table->dateTime('follow_up_at')->nullable();
             $table->timestamps();
 
-            $table->index(['institution_id', 'employee_id', 'created_at']);
-            $table->index(['manager_id', 'created_at']);
-            $table->index(['task_id', 'created_at']);
+            $table->index(['institution_id', 'employee_id', 'created_at'], 'tagore_reviews_inst_emp_created_idx');
+            $table->index(['manager_id', 'created_at'], 'tagore_reviews_manager_created_idx');
+            $table->index(['task_id', 'created_at'], 'tagore_reviews_task_created_idx');
         });
     }
 
