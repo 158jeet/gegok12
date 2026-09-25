@@ -15,7 +15,7 @@ class TaskController extends Controller
     public function index(Request $request): View
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
-        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+        abort_unless(app(\App\Services\Tagore\ScopeService::class)->can($userId, 'task.view'), 403);
 
         $query = TagoreTask::query()
             ->whereIn('institution_id', $institutionIds)
