@@ -12,6 +12,58 @@ class TaskController extends Controller
 {
     private const MANAGER_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR'];
 
+
+    public function employeeProfile(Request $request, int $employeeId): View
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+
+        $employee = DB::table('users as u')
+            ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
+            ->leftJoin('tagore_user_departments as ud', function ($join) {
+                $join->on('ud.user_id', '=', 'u.id')
+                    ->where('ud.status', 'active')
+                    ->where('ud.is_primary', true);
+            })
+            ->leftJoin('tagore_departments as d', 'd.id', '=', 'ud.department_id')
+            ->leftJoin('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('u.id', $employeeId)
+            ->whereIn('ur.institution_id', $institutionIds)
+            ->where('ur.status', 'active')
+            ->whereNull('u.deleted_at')
+            ->select('u.id','u.name','u.email','ud.designation','d.name as department','r.code as role')
+            ->first();
+        abort_unless($employee, 404);
+
+        $tasks = TagoreTask::query()->whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->orderByRaw("case when status='open' then 0 when status='in_progress' then 1 when status='blocked' then 2 else 3 end")->orderByDesc('id')->limit(100)->get();
+        $taskStats = [
+            'assigned' => TagoreTask::whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->count(),
+            'active' => TagoreTask::whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->whereIn('status',['open','in_progress','blocked'])->count(),
+            'completed' => TagoreTask::whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->where('status','completed')->count(),
+            'overdue' => TagoreTask::whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->whereNotIn('status',['completed','cancelled'])->whereNotNull('due_at')->where('due_at','<',now())->count(),
+            'blocked' => TagoreTask::whereIn('institution_id', $institutionIds)->where('assigned_to', $employeeId)->where('status','blocked')->count(),
+        ];
+        $taskStats['completion_rate'] = $taskStats['assigned'] > 0 ? round(($taskStats['completed'] / $taskStats['assigned']) * 100, 1) : 0;
+
+        $reviews = DB::table('tagore_employee_reviews as r')->join('users as m','m.id','=','r.manager_id')->leftJoin('tagore_tasks as t','t.id','=','r.task_id')->whereIn('r.institution_id',$institutionIds)->where('r.employee_id',$employeeId)->orderByDesc('r.created_at')->limit(50)->get(['r.id','r.review_type','r.outcome','r.notes','r.action_required','r.follow_up_at','r.completed_at','r.created_at','m.name as manager_name','t.title as task_title']);
+
+        $activity = DB::table('tagore_task_events as e')->leftJoin('users as a','a.id','=','e.actor_id')->leftJoin('tagore_tasks as t','t.id','=','e.task_id')->whereIn('e.institution_id',$institutionIds)->whereIn('e.task_id', $tasks->pluck('id')->all() ?: [0])->orderByDesc('e.created_at')->limit(100)->get(['e.id','e.event_type','e.metadata','e.created_at','a.name as actor_name','t.title as task_title']);
+
+        $trend = collect([7,30,90])->mapWithKeys(function ($days) use ($employeeId, $institutionIds) {
+            $from = now()->subDays($days)->startOfDay();
+            return [$days => [
+                'created' => TagoreTask::whereIn('institution_id',$institutionIds)->where('assigned_to',$employeeId)->where('created_at','>=',$from)->count(),
+                'completed' => TagoreTask::whereIn('institution_id',$institutionIds)->where('assigned_to',$employeeId)->where('status','completed')->whereNotNull('completed_at')->where('completed_at','>=',$from)->count(),
+            ]];
+        });
+
+        $team = DB::table('tagore_tasks as t')->whereIn('t.institution_id',$institutionIds)->whereNotNull('t.assigned_to')->selectRaw('COUNT(*) as assigned')->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active')->selectRaw("SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END) as completed")->first();
+        $teamMembers = DB::table('tagore_user_roles as ur')->whereIn('ur.institution_id',$institutionIds)->where('ur.status','active')->distinct('ur.user_id')->count('ur.user_id');
+        $teamAverageActive = $teamMembers > 0 ? round(((int) $team->active / $teamMembers), 1) : 0;
+
+        return view('tagore.tasks.employee', compact('employee','taskStats','tasks','reviews','activity','trend','teamAverageActive'));
+    }
+
     public function index(Request $request): View
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
