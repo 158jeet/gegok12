@@ -1,4 +1,5 @@
-<!doctype html>
+@php use Illuminate\Support\Str; @endphp
+<!doctype html
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tasks | TagoreK12</title>
 <style>
 body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f4f7fb;color:#172033}.shell{max-width:1200px;margin:auto;padding:24px 16px 60px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px}.v{font-size:28px;font-weight:800}form{display:flex;gap:8px;flex-wrap:wrap}input,select,textarea,button{padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit}textarea{min-height:80px;width:100%}.new{margin-top:16px}.new .row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}.new .wide{grid-column:1/-1}table{width:100%;background:#fff;border-collapse:collapse;margin-top:16px}th,td{padding:10px;border-bottom:1px solid #edf2f7;text-align:left;font-size:14px}a{text-decoration:none;color:#2563eb}.muted{color:#64748b}@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.new .row{grid-template-columns:1fr 1fr}}@media(max-width:500px){.cards{grid-template-columns:1fr}.new .row{grid-template-columns:1fr}}
