@@ -47,6 +47,40 @@ class TagoreTasksTest extends TestCase
         $this->assertLessThan(35, $queries, "Task index executed {$queries} SQL queries.");
     }
 
+
+    public function test_manager_can_see_employee_workload_and_filter_institution(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->value('id');
+        $employee = User::query()
+            ->where('school_id', $owner->school_id)
+            ->whereNotIn('usergroup_id', [6, 7])
+            ->where('id', '!=', $owner->id)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
+        DB::table('tagore_tasks')->insert([
+            'institution_id' => $institutionId,
+            'created_by' => $owner->id,
+            'assigned_to' => $employee->id,
+            'title' => 'Manager workload QA',
+            'status' => 'in_progress',
+            'priority' => 'high',
+            'progress' => 50,
+            'due_at' => now()->addHours(2),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->get(route('tagore.tasks.index', ['institution_id' => $institutionId]))
+            ->assertOk();
+
+        $response->assertSee('Institution workload');
+        $response->assertSee($employee->name);
+        $response->assertSee('Manager workload QA');
+    }
+
     public function test_parent_cannot_access_tasks(): void
     {
         $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
