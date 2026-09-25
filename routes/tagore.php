@@ -37,6 +37,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
 
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
+    Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tagore.tasks.store');
     Route::patch('/tasks/{taskId}', [TaskController::class, 'update'])->whereNumber('taskId')->name('tagore.tasks.update');
     Route::post('/tasks/{taskId}/review', [TaskController::class, 'review'])->whereNumber('taskId')->name('tagore.tasks.review');
