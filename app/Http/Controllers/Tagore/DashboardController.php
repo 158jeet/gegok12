@@ -33,16 +33,75 @@ class DashboardController extends Controller
             'pending_fees' => $isParent ? DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count() : DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count(),
             'open_feedback' => $isParent ? DB::table('tagore_feedback')->where('submitted_by', $userId)->whereIn('status', ['open', 'in_review'])->count() : DB::table('tagore_feedback')->whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_review'])->count(),
         ];
-        if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty() && !empty($institutionIds)) {
+        $managerCommand = [
+            'is_manager' => false,
+            'action_items' => collect(),
+            'departments' => collect(),
+            'completion_rate' => 0,
+            'active_staff' => 0,
+        ];
+        if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty() && !empty($institutionIds)) {
+            $managerCommand['is_manager'] = true;
             $taskBase = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->whereNotIn('status', ['completed','cancelled']);
-            if (!$roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty()) $taskBase->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId));
+            $stats['open_tasks'] = (clone $taskBase)->count();
+            $stats['overdue_tasks'] = (clone $taskBase)->whereNotNull('due_at')->where('due_at','<',now())->count();
+
+            $totalTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->count();
+            $completedTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->where('status', 'completed')->count();
+            $managerCommand['completion_rate'] = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
+
+            $managerCommand['active_staff'] = DB::table('tagore_user_roles as ur')
+                ->join('users as u', 'u.id', '=', 'ur.user_id')
+                ->whereIn('ur.institution_id', $institutionIds)
+                ->where('ur.status', 'active')
+                ->whereNotIn('u.usergroup_id', [6, 7])
+                ->whereNull('u.deleted_at')
+                ->distinct('u.id')->count('u.id');
+
+            $managerCommand['departments'] = DB::table('tagore_departments as d')
+                ->leftJoin('tagore_tasks as t', function ($join) {
+                    $join->on('t.department_id', '=', 'd.id')->whereNotIn('t.status', ['completed', 'cancelled']);
+                })
+                ->whereIn('d.institution_id', $institutionIds)
+                ->where('d.status', 'active')
+                ->groupBy('d.id', 'd.name')
+                ->select('d.id', 'd.name')
+                ->selectRaw('COUNT(t.id) as active')
+                ->selectRaw("SUM(CASE WHEN t.due_at IS NOT NULL AND t.due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+                ->selectRaw("SUM(CASE WHEN t.status = 'blocked' THEN 1 ELSE 0 END) as blocked")
+                ->orderByDesc('active')
+                ->limit(12)->get();
+
+            $managerCommand['action_items'] = DB::table('tagore_tasks as t')
+                ->leftJoin('users as u', 'u.id', '=', 't.assigned_to')
+                ->leftJoin('tagore_departments as d', 'd.id', '=', 't.department_id')
+                ->whereIn('t.institution_id', $institutionIds)
+                ->whereNotIn('t.status', ['completed', 'cancelled'])
+                ->where(function ($q) {
+                    $q->where('t.status', 'blocked')
+                      ->orWhere(function ($q) {
+                          $q->whereNotNull('t.due_at')->where('t.due_at', '<', now());
+                      })
+                      ->orWhere(function ($q) {
+                          $q->whereNotNull('t.due_at')->whereBetween('t.due_at', [now(), now()->addDay()]);
+                      })
+                      ->orWhere('t.assigned_to', null);
+                })
+                ->select('t.id', 't.title', 't.status', 't.priority', 't.progress', 't.due_at',
+                    'u.name as assignee', 'd.name as department')
+                ->orderByRaw("case when t.status='blocked' then 0 when t.due_at < ? then 1 when t.assigned_to is null then 2 else 3 end", [now()])
+                ->orderBy('t.due_at')
+                ->limit(15)->get();
+        } elseif (!$isParent && $roles->intersect(['TEACHER','ACCOUNTS'])->isNotEmpty() && !empty($institutionIds)) {
+            $taskBase = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->whereNotIn('status', ['completed','cancelled'])
+                ->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId));
             $stats['open_tasks'] = (clone $taskBase)->count();
             $stats['overdue_tasks'] = (clone $taskBase)->whereNotNull('due_at')->where('due_at','<',now())->count();
         } else {
             $stats['open_tasks'] = 0;
             $stats['overdue_tasks'] = 0;
         }
-        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions'));
+        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions', 'managerCommand'));
     }
 
     public function child(Request $request, int $studentId): View
