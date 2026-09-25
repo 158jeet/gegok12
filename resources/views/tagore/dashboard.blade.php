@@ -13,7 +13,7 @@
 @else
 <table class="table"><tr><th>Employee</th><th>Active</th><th>Completed</th><th>Overdue</th><th>Blocked</th><th>Completion</th></tr>
 @foreach($managerCommand['employee_performance'] as $employee)<tr>
-<td><a href="{{ route('tagore.tasks.index', ['assigned_to' => $employee->id]) }}">{{ $employee->name }}</a></td>
+<td><a href="{{ route('tagore.tasks.employee', $employee->id) }}">{{ $employee->name }}</a></td>
 <td>{{ $employee->active }}</td><td>{{ $employee->completed }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->completion_rate }}%</td>
 </tr>@endforeach</table>
 @endif
