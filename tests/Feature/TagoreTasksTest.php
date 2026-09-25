@@ -351,8 +351,10 @@ class TagoreTasksTest extends TestCase
         $task = DB::table('tagore_tasks')->where('title','Generate routine QA')->latest('id')->first();
         $this->assertNotNull($task);
         $this->assertDatabaseHas('tagore_task_events',['task_id'=>$task->id,'event_type'=>'created_from_template']);
-        $this->assertDatabaseMissing('tagore_task_templates',['id'=>$templateId,'next_run_at'=>now()->subMinute()]);
-        $this->assertTrue(DB::table('tagore_task_templates')->where('id',$templateId)->whereNotNull('last_generated_at')->exists());
+        $advanced = DB::table('tagore_task_templates')->where('id',$templateId)->first();
+        $this->assertNotNull($advanced->last_generated_at);
+        $this->assertNotNull($advanced->next_run_at);
+        $this->assertGreaterThan(now()->subSecond()->timestamp, strtotime($advanced->next_run_at));
     }
 
 }
