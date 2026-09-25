@@ -9,21 +9,57 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: school
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo_sqlite
+          extensions: mbstring, pdo_mysql
           coverage: none
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Validate Composer
         run: composer validate --no-check-publish
+      - name: Prepare seeded Tagore test database
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: school
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          php artisan migrate:fresh --force
+          php artisan db:seed --force
+          php artisan db:seed --class=TagorePrototypeSeeder --force
       - name: PHP syntax check (Tagore layer)
         run: |
           find app/Http/Controllers/Tagore app/Models/Tagore app/Services/Tagore database/seeders -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run Tagore tests
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: school
+          DB_USERNAME: root
+          DB_PASSWORD: root
         run: php artisan test --filter=Tagore --exclude-group=e2e
 
   mysql-migration-smoke:
