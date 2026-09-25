@@ -17,6 +17,16 @@
 <td>{{ $employee->active }}</td><td>{{ $employee->completed }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->completion_rate }}%</td>
 </tr>@endforeach</table>
 @endif
+<h3 style="margin-top:18px">Pending manager follow-ups</h3>
+@if($managerCommand['followups']->isEmpty())<div class="muted">No pending action-required follow-ups.</div>
+@else
+<table class="table"><tr><th>Employee</th><th>Task</th><th>Outcome</th><th>Follow-up</th><th>Action</th></tr>
+@foreach($managerCommand['followups'] as $followup)<tr>
+<td>{{ $followup->employee_name }}</td><td>{{ $followup->task_title ?: '—' }}</td><td>{{ ucfirst(str_replace('_',' ',$followup->outcome)) }}</td>
+<td>{{ $followup->follow_up_at ? date('d M Y H:i', strtotime($followup->follow_up_at)) : 'Not scheduled' }}<br><span class="muted">{{ ucfirst($followup->state) }}</span></td>
+<td><form method="post" action="{{ route('tagore.reviews.complete',$followup->id) }}">@csrf @method('PATCH')<button type="submit">Close follow-up</button></form></td>
+</tr>@endforeach</table>
+@endif
 <h3 style="margin-top:18px">Manager follow-up</h3>
 @if($managerCommand['manager_followups']->isEmpty())<div class="muted">No follow-up signals based on current workload data.</div>
 @else<table class="table"><tr><th>Employee</th><th>Active</th><th>Overdue</th><th>Blocked</th><th>Signal</th></tr>
