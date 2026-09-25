@@ -41,6 +41,8 @@ class DashboardController extends Controller
             'active_staff' => 0,
             'employee_performance' => collect(),
             'workload_trend' => collect(),
+            'manager_followups' => collect(),
+            'workload_summary' => ['staff_with_active_work' => 0, 'average_active' => 0, 'max_active' => 0],
         ];
         if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty() && !empty($institutionIds)) {
             $managerCommand['is_manager'] = true;
@@ -110,6 +112,23 @@ class DashboardController extends Controller
                     'completed' => (int) ($completedTrend[$day] ?? 0),
                 ];
             });
+            $managerCommand['manager_followups'] = $managerCommand['employee_performance']
+                ->filter(fn ($employee) => (int) $employee->blocked > 0 || (int) $employee->overdue > 0 || (int) $employee->active >= 8)
+                ->map(function ($employee) {
+                    $signals = [];
+                    if ((int) $employee->blocked > 0) $signals[] = 'Blocked work';
+                    if ((int) $employee->overdue > 0) $signals[] = 'Overdue work';
+                    if ((int) $employee->active >= 8) $signals[] = '8+ active tasks';
+                    $employee->follow_up = implode(' • ', $signals);
+                    return $employee;
+                })->values();
+
+            $activeWorkloads = $managerCommand['employee_performance']->pluck('active')->map(fn ($value) => (int) $value);
+            $managerCommand['workload_summary'] = [
+                'staff_with_active_work' => $activeWorkloads->filter(fn ($value) => $value > 0)->count(),
+                'average_active' => $activeWorkloads->isNotEmpty() ? round($activeWorkloads->avg(), 1) : 0,
+                'max_active' => $activeWorkloads->max() ?? 0,
+            ];
 
             $managerCommand['active_staff'] = DB::table('tagore_user_roles as ur')
                 ->join('users as u', 'u.id', '=', 'ur.user_id')
