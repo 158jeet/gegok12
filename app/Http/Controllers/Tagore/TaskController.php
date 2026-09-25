@@ -149,6 +149,13 @@ class TaskController extends Controller
             ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
             ->first();
 
+        $recentActivity = DB::table('tagore_task_events as e')
+            ->join('tagore_tasks as t', 't.id', '=', 'e.task_id')
+            ->leftJoin('users as actor', 'actor.id', '=', 'e.actor_id')
+            ->whereIn('e.institution_id', $visibleInstitutionIds)
+            ->orderByDesc('e.created_at')->orderByDesc('e.id')->limit(20)
+            ->get(['e.id','e.task_id','e.event_type','e.metadata','e.created_at','t.title as task_title','actor.name as actor_name']);
+
         $assignees = DB::table('users as u')
             ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
             ->whereIn('ur.institution_id', $institutionIds)
@@ -161,7 +168,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity'));
     }
 
     public function store(Request $request)
@@ -213,6 +220,14 @@ class TaskController extends Controller
             'progress' => 0,
         ]);
 
+        $this->recordEvent($task, $userId, 'created', [
+            'title' => $task->title,
+            'assigned_to' => $task->assigned_to,
+            'department_id' => $task->department_id,
+            'priority' => $task->priority,
+            'due_at' => $task->due_at?->toISOString(),
+        ]);
+
         return back()->with('success', "Task #{$task->id} created.");
     }
 
@@ -251,12 +266,63 @@ class TaskController extends Controller
             );
         }
 
-        $completedAt = $data['status'] === 'completed' ? now() : null;
+        $before = [
+            'status' => $task->status,
+            'progress' => (int) $task->progress,
+            'assigned_to' => $task->assigned_to,
+            'department_id' => $task->department_id,
+        ];
+
+        $completedAt = $data['status'] === 'completed' ? ($task->completed_at ?: now()) : null;
         if ($data['status'] === 'completed') $data['progress'] = 100;
 
         $task->update($data + ['completed_at' => $completedAt]);
 
+        $changes = [];
+        foreach (['status', 'progress', 'assigned_to', 'department_id'] as $field) {
+            $old = $before[$field];
+            $new = $task->{$field};
+            if ((string) $old !== (string) $new) {
+                $changes[$field] = ['from' => $old, 'to' => $new];
+            }
+        }
+        if ($changes) {
+            $this->recordEvent($task, $userId, 'updated', ['changes' => $changes]);
+        }
+        if (($before['assigned_to'] ?? null) != $task->assigned_to) {
+            $this->recordEvent($task, $userId, 'reassigned', [
+                'from' => $before['assigned_to'],
+                'to' => $task->assigned_to,
+            ]);
+        }
+        if ($before['status'] !== $task->status) {
+            $this->recordEvent($task, $userId, 'status_changed', [
+                'from' => $before['status'],
+                'to' => $task->status,
+            ]);
+        }
+        if ($before['progress'] !== (int) $task->progress) {
+            $this->recordEvent($task, $userId, 'progress_changed', [
+                'from' => $before['progress'],
+                'to' => (int) $task->progress,
+            ]);
+        }
+
         return back()->with('success', 'Task updated.');
+    }
+
+
+    private function recordEvent(TagoreTask $task, int $actorId, string $eventType, array $metadata = []): void
+    {
+        DB::table('tagore_task_events')->insert([
+            'task_id' => $task->id,
+            'institution_id' => $task->institution_id,
+            'actor_id' => $actorId,
+            'event_type' => $eventType,
+            'metadata' => $metadata ? json_encode($metadata) : null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function context(Request $request): array
