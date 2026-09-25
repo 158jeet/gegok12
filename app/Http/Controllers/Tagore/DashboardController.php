@@ -35,7 +35,7 @@ class DashboardController extends Controller
         ];
         if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty() && !empty($institutionIds)) {
             $taskBase = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->whereNotIn('status', ['completed','cancelled']);
-            if (!$roles->contains('OWNER')) $taskBase->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId));
+            if (!$roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty()) $taskBase->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId));
             $stats['open_tasks'] = (clone $taskBase)->count();
             $stats['overdue_tasks'] = (clone $taskBase)->whereNotNull('due_at')->where('due_at','<',now())->count();
         } else {
