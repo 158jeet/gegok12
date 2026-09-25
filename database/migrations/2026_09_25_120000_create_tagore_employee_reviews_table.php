@@ -20,6 +20,8 @@ return new class extends Migration {
             $table->text('notes');
             $table->boolean('action_required')->default(false);
             $table->dateTime('follow_up_at')->nullable();
+            $table->dateTime('completed_at')->nullable();
+            $table->index(['institution_id', 'completed_at'], 'tagore_reviews_followup_status_idx');
             $table->timestamps();
 
             $table->index(['institution_id', 'employee_id', 'created_at'], 'tagore_reviews_inst_emp_created_idx');
