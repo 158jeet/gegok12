@@ -55,6 +55,8 @@ class TaskController extends Controller
             'completed' => (clone $base)->where('status', 'completed')->count(),
         ];
 
+        $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'display_name']);
+
         $assignees = DB::table('users as u')
             ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
             ->whereIn('ur.institution_id', $institutionIds)
@@ -67,7 +69,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutionIds'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds'));
     }
 
     public function store(Request $request)
