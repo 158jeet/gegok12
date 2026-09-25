@@ -34,6 +34,10 @@ class TagoreTasksTest extends TestCase
             'status' => 'completed',
             'progress' => 100,
         ]);
+
+        $this->assertDatabaseHas('tagore_task_events', ['task_id' => $taskId, 'event_type' => 'created']);
+        $this->assertDatabaseHas('tagore_task_events', ['task_id' => $taskId, 'event_type' => 'status_changed']);
+        $this->assertDatabaseHas('tagore_task_events', ['task_id' => $taskId, 'event_type' => 'progress_changed']);
     }
 
     public function test_task_index_stays_within_a_small_query_budget(): void
@@ -99,6 +103,7 @@ class TagoreTasksTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseHas('tagore_tasks', ['id'=>$taskId,'assigned_to'=>$teacher->id,'progress'=>25]);
+        $this->assertDatabaseHas('tagore_task_events', ['task_id' => $taskId, 'event_type' => 'reassigned']);
 
         $this->actingAs($owner)
             ->get(route('tagore.tasks.index', ['institution_id'=>$institutionId,'assigned_to'=>$teacher->id]))
