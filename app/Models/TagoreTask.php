@@ -9,7 +9,7 @@ class TagoreTask extends Model
     protected $table = 'tagore_tasks';
 
     protected $fillable = [
-        'institution_id','created_by','assigned_to','title','description',
+        'institution_id','department_id','created_by','assigned_to','title','description',
         'priority','status','progress','due_at','completed_at',
     ];
 
