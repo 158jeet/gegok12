@@ -17,6 +17,18 @@
 <td>{{ $employee->active }}</td><td>{{ $employee->completed }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->completion_rate }}%</td>
 </tr>@endforeach</table>
 @endif
+<h3 style="margin-top:18px">Manager follow-up</h3>
+@if($managerCommand['manager_followups']->isEmpty())<div class="muted">No follow-up signals based on current workload data.</div>
+@else<table class="table"><tr><th>Employee</th><th>Active</th><th>Overdue</th><th>Blocked</th><th>Signal</th></tr>
+@foreach($managerCommand['manager_followups'] as $employee)<tr>
+<td><a href="{{ route('tagore.tasks.index', ['assigned_to' => $employee->id]) }}">{{ $employee->name }}</a></td><td>{{ $employee->active }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->follow_up }}</td>
+</tr>@endforeach</table>@endif
+<h3 style="margin-top:18px">Workload balance</h3>
+<div class="feature" style="grid-template-columns:repeat(3,1fr)">
+<div><b>{{ $managerCommand['workload_summary']['staff_with_active_work'] }}</b><span class="muted">Staff with active work</span></div>
+<div><b>{{ $managerCommand['workload_summary']['average_active'] }}</b><span class="muted">Average active tasks / staff</span></div>
+<div><b>{{ $managerCommand['workload_summary']['max_active'] }}</b><span class="muted">Highest active workload</span></div>
+</div>
 <h3 style="margin-top:18px">7-day workload trend</h3>
 <table class="table"><tr><th>Date</th><th>Created</th><th>Completed</th><th>Net</th></tr>
 @foreach($managerCommand['workload_trend'] as $day)<tr>
