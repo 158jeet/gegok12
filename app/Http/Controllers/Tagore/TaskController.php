@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    private const STAFF_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'];
+    private const MANAGER_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR'];
 
     public function index(Request $request): View
     {
@@ -24,7 +24,7 @@ class TaskController extends Controller
             ->orderBy('due_at')
             ->orderByDesc('id');
 
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(self::MANAGER_ROLES)->isNotEmpty()) {
             $query->where(function ($q) use ($userId) {
                 $q->where('assigned_to', $userId)->orWhere('created_by', $userId);
             });
@@ -40,7 +40,7 @@ class TaskController extends Controller
         $tasks = $query->paginate(30)->withQueryString();
 
         $base = TagoreTask::whereIn('institution_id', $institutionIds);
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(self::MANAGER_ROLES)->isNotEmpty()) {
             $base->where(function ($q) use ($userId) {
                 $q->where('assigned_to', $userId)->orWhere('created_by', $userId);
             });
@@ -114,7 +114,7 @@ class TaskController extends Controller
 
         $task = TagoreTask::findOrFail($taskId);
         abort_unless(in_array((int) $task->institution_id, $institutionIds, true), 403);
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(self::MANAGER_ROLES)->isNotEmpty()) {
             abort_unless((int) $task->assigned_to === $userId || (int) $task->created_by === $userId, 403);
         }
 
