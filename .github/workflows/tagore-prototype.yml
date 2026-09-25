@@ -47,9 +47,15 @@ jobs:
           php artisan migrate:fresh --force
           php artisan db:seed --force
           php artisan db:seed --class=TagorePrototypeSeeder --force
-      - name: PHP syntax check (Tagore layer)
+      - name: Tagore structural preflight
         run: |
-          find app/Http/Controllers/Tagore app/Models/Tagore app/Services/Tagore database/seeders -name '*.php' -print0 | xargs -0 -n1 php -l
+          composer dump-autoload --optimize --strict-ambiguous
+          php artisan route:list --path=tagore --json > /tmp/tagore-routes.json
+          php artisan view:cache
+          php artisan config:cache
+      - name: PHP syntax check (all Tagore PHP)
+        run: |
+          find app/Http/Controllers/Tagore app/Models/Tagore app/Services/Tagore app/Console/Commands database/migrations database/seeders routes tests/Feature -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run Tagore tests
         env:
           APP_ENV: testing
