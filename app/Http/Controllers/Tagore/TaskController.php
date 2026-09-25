@@ -120,7 +120,7 @@ class TaskController extends Controller
             ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
             ->whereIn('ur.institution_id', $institutionIds)
             ->where('ur.status', 'active')
-            ->whereIn('u.usergroup_id', [4, 5, 11])
+            ->whereNotIn('u.usergroup_id', [6, 7])
             ->whereNull('u.deleted_at')
             ->select('u.id', 'u.name')
             ->distinct()
