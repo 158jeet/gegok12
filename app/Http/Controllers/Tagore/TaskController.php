@@ -149,6 +149,8 @@ class TaskController extends Controller
             ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
             ->first();
 
+        $managerReviews = $this->managerReviews($visibleInstitutionIds);
+
         $recentActivity = DB::table('tagore_task_events as e')
             ->join('tagore_tasks as t', 't.id', '=', 'e.task_id')
             ->leftJoin('users as actor', 'actor.id', '=', 'e.actor_id')
@@ -168,7 +170,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload', 'recentActivity', 'managerReviews'));
     }
 
     public function store(Request $request)
@@ -309,6 +311,56 @@ class TaskController extends Controller
         }
 
         return back()->with('success', 'Task updated.');
+    }
+
+
+
+    public function review(Request $request, int $taskId)
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+
+        $task = TagoreTask::findOrFail($taskId);
+        abort_unless(in_array((int) $task->institution_id, $institutionIds, true), 403);
+        abort_unless($task->assigned_to, 422, 'A review requires an assigned employee.');
+
+        $data = $request->validate([
+            'review_type' => ['required', 'in:follow_up,performance,recognition,corrective'],
+            'outcome' => ['required', 'in:note,positive,needs_attention,action_required'],
+            'notes' => ['required', 'string', 'max:5000'],
+            'action_required' => ['nullable', 'boolean'],
+            'follow_up_at' => ['nullable', 'date'],
+        ]);
+
+        $reviewId = DB::table('tagore_employee_reviews')->insertGetId([
+            'institution_id' => $task->institution_id,
+            'employee_id' => $task->assigned_to,
+            'manager_id' => $userId,
+            'task_id' => $task->id,
+            'review_type' => $data['review_type'],
+            'outcome' => $data['outcome'],
+            'notes' => $data['notes'],
+            'action_required' => !empty($data['action_required']),
+            'follow_up_at' => $data['follow_up_at'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->recordEvent($task, $userId, 'manager_reviewed', ['review_id' => $reviewId, 'outcome' => $data['outcome']]);
+
+        return back()->with('success', 'Manager review recorded.');
+    }
+
+    private function managerReviews(array $institutionIds)
+    {
+        return DB::table('tagore_employee_reviews as r')
+            ->join('users as e', 'e.id', '=', 'r.employee_id')
+            ->join('users as m', 'm.id', '=', 'r.manager_id')
+            ->leftJoin('tagore_tasks as t', 't.id', '=', 'r.task_id')
+            ->whereIn('r.institution_id', $institutionIds)
+            ->orderByDesc('r.created_at')->orderByDesc('r.id')->limit(20)
+            ->get(['r.id','r.review_type','r.outcome','r.notes','r.action_required','r.follow_up_at','r.created_at',
+                'e.name as employee_name','m.name as manager_name','t.title as task_title']);
     }
 
 
