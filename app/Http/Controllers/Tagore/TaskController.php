@@ -317,6 +317,34 @@ class TaskController extends Controller
 
 
 
+    public function completeReview(Request $request, int $reviewId)
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+
+        $review = DB::table('tagore_employee_reviews')->where('id', $reviewId)->first();
+        abort_unless($review && in_array((int) $review->institution_id, $institutionIds, true), 404);
+
+        if ($review->completed_at !== null) {
+            return back()->with('success', 'Follow-up was already closed.');
+        }
+
+        DB::table('tagore_employee_reviews')->where('id', $reviewId)->update([
+            'completed_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($review->task_id) {
+            $task = TagoreTask::find($review->task_id);
+            if ($task) {
+                $this->recordEvent($task, $userId, 'follow_up_completed', ['review_id' => $reviewId]);
+            }
+        }
+
+        return back()->with('success', 'Manager follow-up closed.');
+    }
+
+
     public function review(Request $request, int $taskId)
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
