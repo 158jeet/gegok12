@@ -43,6 +43,7 @@ class DashboardController extends Controller
             'workload_trend' => collect(),
             'manager_followups' => collect(),
             'workload_summary' => ['staff_with_active_work' => 0, 'average_active' => 0, 'max_active' => 0],
+            'followups' => collect(),
         ];
         if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty() && !empty($institutionIds)) {
             $managerCommand['is_manager'] = true;
@@ -129,6 +130,22 @@ class DashboardController extends Controller
                 'average_active' => $activeWorkloads->isNotEmpty() ? round($activeWorkloads->avg(), 1) : 0,
                 'max_active' => $activeWorkloads->max() ?? 0,
             ];
+
+            $managerCommand['followups'] = DB::table('tagore_employee_reviews as r')
+                ->join('users as e', 'e.id', '=', 'r.employee_id')
+                ->join('users as m', 'm.id', '=', 'r.manager_id')
+                ->leftJoin('tagore_tasks as t', 't.id', '=', 'r.task_id')
+                ->whereIn('r.institution_id', $institutionIds)
+                ->where('r.action_required', true)
+                ->whereNull('r.completed_at')
+                ->orderByRaw("CASE WHEN r.follow_up_at IS NULL THEN 2 WHEN r.follow_up_at < ? THEN 0 ELSE 1 END", [now()])
+                ->orderBy('r.follow_up_at')
+                ->limit(30)
+                ->get(['r.id','r.employee_id','r.outcome','r.notes','r.follow_up_at','r.created_at','e.name as employee_name','m.name as manager_name','t.title as task_title'])
+                ->map(function ($followup) {
+                    $followup->state = $followup->follow_up_at && $followup->follow_up_at < now() ? 'overdue' : ($followup->follow_up_at ? 'due' : 'unscheduled');
+                    return $followup;
+                });
 
             $managerCommand['active_staff'] = DB::table('tagore_user_roles as ur')
                 ->join('users as u', 'u.id', '=', 'ur.user_id')
