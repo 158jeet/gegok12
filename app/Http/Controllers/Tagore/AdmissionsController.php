@@ -66,8 +66,10 @@ class AdmissionsController extends Controller
 
         $lead=DB::transaction(function() use($data,$userId){
             $institutionId=(int)$data['institution_id'];
-            $next=(int)TagoreAdmissionLead::where('institution_id',$institutionId)->max('id')+1;
-            $lead=TagoreAdmissionLead::create($data+['lead_no'=>sprintf('ADM-%s-%06d',$institutionId,$next),'status'=>'new']);
+            // Use the database-generated ID for the human-readable lead number.
+            // This avoids max(id)+1 races when two admission staff create leads together.
+            $lead=TagoreAdmissionLead::create($data+['lead_no'=>'PENDING-'.bin2hex(random_bytes(8)),'status'=>'new']);
+            $lead->update(['lead_no'=>sprintf('ADM-%s-%06d',$institutionId,$lead->id)]);
             TagoreAdmissionActivity::create(['lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'created','notes'=>'Lead created','completed_at'=>now()]);
             return $lead;
         });
