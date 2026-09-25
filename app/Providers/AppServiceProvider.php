@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 use App\Observers\TeacherProfileObserver;
 use App\Observers\AcademicYearObserver;
 use App\Observers\StandardLinkObserver;
@@ -119,10 +120,15 @@ class AppServiceProvider extends ServiceProvider {
 
         if ( !\App::runningInConsole() && count( Schema::getColumnListing( 'settings' ) ) ) {
 
-            $settings = Setting::all();
+            // Settings are read once per cache window instead of hitting the database
+            // on every web request. This keeps the legacy GegoK12 settings system
+            // from becoming a permanent query on the Tagore request path.
+            $settings = Cache::remember('gegok12.settings.map', now()->addMinutes(5), function () {
+                return Setting::query()->pluck('value', 'key')->all();
+            });
 
-            foreach ( $settings as $key => $setting ) {
-                Config::set( 'settings.'.$setting->key, $setting->value );
+            foreach ( $settings as $key => $value ) {
+                Config::set( 'settings.'.$key, $value );
             }
         }
 
