@@ -54,7 +54,7 @@ class TagoreTasksTest extends TestCase
         $institutionId = (int) DB::table('tagore_institutions')->value('id');
         $employee = User::query()
             ->where('school_id', $owner->school_id)
-            ->whereNotIn('usergroup_id', [6, 7])
+            ->where('usergroup_id', 5)
             ->where('id', '!=', $owner->id)
             ->whereNull('deleted_at')
             ->firstOrFail();
