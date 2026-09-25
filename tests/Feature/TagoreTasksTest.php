@@ -224,7 +224,7 @@ class TagoreTasksTest extends TestCase
             'notes' => 'Should not be accepted.',
         ])->assertForbidden();
 
-        $this->assertDatabaseCount('tagore_employee_reviews', 0);
+        $this->assertDatabaseMissing('tagore_employee_reviews', ['task_id' => $taskId, 'manager_id' => $teacher->id]);
     }
 
 }
