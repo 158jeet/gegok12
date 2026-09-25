@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tagore;
 
 use App\Http\Controllers\Controller;
 use App\Models\TagoreTask;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -273,7 +274,7 @@ class TaskController extends Controller
             }
         }
 
-        $runAt = CarbonCarbon::createFromFormat('H:i', $data['run_at']);
+        $runAt = Carbon::createFromFormat('H:i', $data['run_at']);
         $next = now()->setTime($runAt->hour, $runAt->minute, 0);
         $frequency = $data['frequency'];
         if ($frequency === 'weekly') {
