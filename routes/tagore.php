@@ -40,6 +40,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
     Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tagore.tasks.store');
+    Route::post('/task-templates', [TaskController::class, 'storeTemplate'])->name('tagore.task-templates.store');
+    Route::patch('/task-templates/{templateId}/toggle', [TaskController::class, 'toggleTemplate'])->whereNumber('templateId')->name('tagore.task-templates.toggle');
     Route::patch('/tasks/{taskId}', [TaskController::class, 'update'])->whereNumber('taskId')->name('tagore.tasks.update');
     Route::post('/tasks/{taskId}/review', [TaskController::class, 'review'])->whereNumber('taskId')->name('tagore.tasks.review');
     Route::patch('/reviews/{reviewId}/complete', [TaskController::class, 'completeReview'])->whereNumber('reviewId')->name('tagore.reviews.complete');
