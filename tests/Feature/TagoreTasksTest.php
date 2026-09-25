@@ -36,6 +36,17 @@ class TagoreTasksTest extends TestCase
         ]);
     }
 
+    public function test_task_index_stays_within_a_small_query_budget(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $queries = 0;
+        DB::listen(static function () use (&$queries): void { $queries++; });
+
+        $this->actingAs($owner)->get(route('tagore.tasks.index'))->assertOk();
+
+        $this->assertLessThan(35, $queries, "Task index executed {$queries} SQL queries.");
+    }
+
     public function test_parent_cannot_access_tasks(): void
     {
         $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
