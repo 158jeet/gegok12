@@ -309,4 +309,50 @@ class TagoreTasksTest extends TestCase
         $this->actingAs($teacher)->get(route('tagore.tasks.employee', $teacher->id))->assertForbidden();
     }
 
+
+    public function test_manager_can_create_and_pause_recurring_task_template(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+
+        $this->actingAs($owner)->post(route('tagore.task-templates.store'), [
+            'institution_id' => $institutionId,
+            'title' => 'Daily attendance review',
+            'priority' => 'normal',
+            'frequency' => 'daily',
+            'run_at' => '23:59',
+            'due_after_minutes' => 120,
+        ])->assertRedirect();
+
+        $template = DB::table('tagore_task_templates')->where('title','Daily attendance review')->latest('id')->first();
+        $this->assertNotNull($template);
+        $this->assertTrue((bool)$template->active);
+        $this->assertNotNull($template->next_run_at);
+
+        $this->actingAs($owner)->patch(route('tagore.task-templates.toggle', $template->id))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_task_templates', ['id'=>$template->id,'active'=>0]);
+    }
+
+    public function test_recurring_task_command_generates_due_task_and_advances_template(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+
+        $templateId = DB::table('tagore_task_templates')->insertGetId([
+            'institution_id'=>$institutionId,'created_by'=>$owner->id,'title'=>'Generate routine QA',
+            'priority'=>'high','frequency'=>'daily','run_at'=>'09:00:00','next_run_at'=>now()->subMinute(),
+            'active'=>true,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
+        Artisan::call('tagore:generate-recurring-tasks');
+
+        $task = DB::table('tagore_tasks')->where('title','Generate routine QA')->latest('id')->first();
+        $this->assertNotNull($task);
+        $this->assertDatabaseHas('tagore_task_events',['task_id'=>$task->id,'event_type'=>'created_from_template']);
+        $this->assertDatabaseMissing('tagore_task_templates',['id'=>$templateId,'next_run_at'=>now()->subMinute()]);
+        $this->assertTrue(DB::table('tagore_task_templates')->where('id',$templateId)->whereNotNull('last_generated_at')->exists());
+    }
+
 }
