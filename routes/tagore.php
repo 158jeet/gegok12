@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Tagore\AcademicStructureController;
 use App\Http\Controllers\Tagore\AdministrationController;
+use App\Http\Controllers\Tagore\AdmissionsController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
-Route::middleware(['auth'])->prefix('tagore')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
@@ -27,6 +28,13 @@ Route::middleware(['auth'])->prefix('tagore')->group(function () {
     Route::post('/admin/academic-structure/section', [AcademicStructureController::class, 'storeSection'])->name('tagore.academic.section');
     Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
     Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
+
+    Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
+    Route::get('/admissions/create', [AdmissionsController::class, 'create'])->name('tagore.admissions.create');
+    Route::post('/admissions', [AdmissionsController::class, 'store'])->name('tagore.admissions.store');
+    Route::get('/admissions/{leadId}', [AdmissionsController::class, 'show'])->whereNumber('leadId')->name('tagore.admissions.show');
+    Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
+
     Route::get('/child/{studentId}', [DashboardController::class, 'child'])->whereNumber('studentId')->name('tagore.child');
     Route::post('/child/{studentId}/feedback', [DashboardController::class, 'submitFeedback'])->whereNumber('studentId')->name('tagore.feedback.submit');
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
