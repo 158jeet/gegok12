@@ -33,6 +33,15 @@ class DashboardController extends Controller
             'pending_fees' => $isParent ? DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count() : DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count(),
             'open_feedback' => $isParent ? DB::table('tagore_feedback')->where('submitted_by', $userId)->whereIn('status', ['open', 'in_review'])->count() : DB::table('tagore_feedback')->whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_review'])->count(),
         ];
+        if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty() && !empty($institutionIds)) {
+            $taskBase = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->whereNotIn('status', ['completed','cancelled']);
+            if (!$roles->contains('OWNER')) $taskBase->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId));
+            $stats['open_tasks'] = (clone $taskBase)->count();
+            $stats['overdue_tasks'] = (clone $taskBase)->whereNotNull('due_at')->where('due_at','<',now())->count();
+        } else {
+            $stats['open_tasks'] = 0;
+            $stats['overdue_tasks'] = 0;
+        }
         return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions'));
     }
 
