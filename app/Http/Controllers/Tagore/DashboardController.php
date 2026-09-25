@@ -39,6 +39,8 @@ class DashboardController extends Controller
             'departments' => collect(),
             'completion_rate' => 0,
             'active_staff' => 0,
+            'employee_performance' => collect(),
+            'workload_trend' => collect(),
         ];
         if (!$isParent && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty() && !empty($institutionIds)) {
             $managerCommand['is_manager'] = true;
@@ -49,6 +51,65 @@ class DashboardController extends Controller
             $totalTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->count();
             $completedTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->where('status', 'completed')->count();
             $managerCommand['completion_rate'] = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
+
+            $managerCommand['employee_performance'] = DB::table('users as u')
+                ->joinSub(
+                    DB::table('tagore_user_roles')
+                        ->select('user_id')
+                        ->whereIn('institution_id', $institutionIds)
+                        ->where('status', 'active')
+                        ->groupBy('user_id'),
+                    'visible_staff',
+                    'visible_staff.user_id',
+                    '=',
+                    'u.id'
+                )
+                ->leftJoin('tagore_tasks as t', function ($join) use ($institutionIds) {
+                    $join->on('t.assigned_to', '=', 'u.id')->whereIn('t.institution_id', $institutionIds);
+                })
+                ->whereNotIn('u.usergroup_id', [6, 7])
+                ->whereNull('u.deleted_at')
+                ->select('u.id', 'u.name')
+                ->selectRaw("COUNT(t.id) as assigned")
+                ->selectRaw("SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed")
+                ->selectRaw("SUM(CASE WHEN t.status NOT IN ('completed','cancelled') AND t.due_at IS NOT NULL AND t.due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+                ->selectRaw("SUM(CASE WHEN t.status = 'blocked' THEN 1 ELSE 0 END) as blocked")
+                ->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+                ->groupBy('u.id', 'u.name')
+                ->orderByDesc('active')
+                ->orderBy('u.name')
+                ->limit(50)->get()
+                ->map(function ($employee) {
+                    $employee->completion_rate = (int) $employee->assigned > 0
+                        ? round(((int) $employee->completed / (int) $employee->assigned) * 100, 1)
+                        : 0;
+                    return $employee;
+                });
+
+            $trendStart = now()->subDays(6)->startOfDay();
+            $trendEnd = now()->endOfDay();
+            $createdTrend = DB::table('tagore_tasks')
+                ->whereIn('institution_id', $institutionIds)
+                ->whereBetween('created_at', [$trendStart, $trendEnd])
+                ->selectRaw('DATE(created_at) as day')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day');
+            $completedTrend = DB::table('tagore_tasks')
+                ->whereIn('institution_id', $institutionIds)
+                ->whereBetween('completed_at', [$trendStart, $trendEnd])
+                ->selectRaw('DATE(completed_at) as day')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day');
+            $managerCommand['workload_trend'] = collect(range(0, 6))->map(function ($offset) use ($trendStart, $createdTrend, $completedTrend) {
+                $day = $trendStart->copy()->addDays($offset)->format('Y-m-d');
+                return (object) [
+                    'day' => $day,
+                    'created' => (int) ($createdTrend[$day] ?? 0),
+                    'completed' => (int) ($completedTrend[$day] ?? 0),
+                ];
+            });
 
             $managerCommand['active_staff'] = DB::table('tagore_user_roles as ur')
                 ->join('users as u', 'u.id', '=', 'ur.user_id')
