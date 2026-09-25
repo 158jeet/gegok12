@@ -106,6 +106,34 @@ class TagoreTasksTest extends TestCase
             ->assertSee('Reassignment QA');
     }
 
+
+    public function test_manager_can_view_department_workload_and_department_is_inferred_from_assignee(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->where('id', '!=', $owner->id)->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+        $departmentId = (int) DB::table('tagore_user_departments as ud')
+            ->join('tagore_departments as d', 'd.id', '=', 'ud.department_id')
+            ->where('ud.user_id', $teacher->id)->where('ud.status', 'active')->where('ud.is_primary', true)
+            ->where('d.institution_id', $institutionId)->value('d.id');
+
+        $this->actingAs($owner)->post(route('tagore.tasks.store'), [
+            'institution_id' => $institutionId,
+            'assigned_to' => $teacher->id,
+            'title' => 'Department inference QA',
+            'priority' => 'normal',
+        ])->assertRedirect();
+
+        $task = DB::table('tagore_tasks')->where('title', 'Department inference QA')->first();
+        $this->assertSame($departmentId, (int) $task->department_id);
+
+        $this->actingAs($owner)
+            ->get(route('tagore.tasks.index', ['institution_id' => $institutionId, 'department_id' => $departmentId]))
+            ->assertOk()
+            ->assertSee('Department workload')
+            ->assertSee('Department inference QA');
+    }
+
     public function test_parent_cannot_access_tasks(): void
     {
         $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
