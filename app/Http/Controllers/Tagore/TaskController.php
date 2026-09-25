@@ -223,8 +223,8 @@ class TaskController extends Controller
 
         $templateHealth = $roles->intersect(self::MANAGER_ROLES)->isNotEmpty()
             ? [
-                'active' => (clone DB::table('tagore_task_templates')->whereIn('institution_id', $visibleInstitutionIds)->where('active', true))->count(),
-                'failed' => (clone DB::table('tagore_task_template_runs')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'failed')->where('created_at', '>=', now()->subDays(7)))->count(),
+                'active' => DB::table('tagore_task_templates')->whereIn('institution_id', $visibleInstitutionIds)->where('active', true)->count(),
+                'failed' => DB::table('tagore_task_template_runs')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'failed')->where('created_at', '>=', now()->subDays(7))->count(),
                 'last_success' => DB::table('tagore_task_template_runs')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'success')->max('completed_at'),
             ]
             : ['active' => 0, 'failed' => 0, 'last_success' => null];
