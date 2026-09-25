@@ -36,6 +36,8 @@ class TagoreManagerDashboardTest extends TestCase
             ->assertSee('Department health')
             ->assertSee('Employee Performance')
             ->assertSee('7-day workload trend')
+            ->assertSee('Manager follow-up')
+            ->assertSee('Workload balance')
             ->assertSee('Academic');
     }
 }
