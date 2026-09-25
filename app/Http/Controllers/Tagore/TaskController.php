@@ -73,7 +73,7 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
-        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+        abort_unless(app(\App\Services\Tagore\ScopeService::class)->can($userId, 'task.manage'), 403);
 
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
