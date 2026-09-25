@@ -19,6 +19,7 @@ Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
+    Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
     Route::post('/admin/institution', [AdministrationController::class, 'storeInstitution'])->name('tagore.admin.institution');
