@@ -17,8 +17,14 @@ class TaskController extends Controller
         [$userId, $roles, $institutionIds] = $this->context($request);
         abort_unless(app(\App\Services\Tagore\ScopeService::class)->can($userId, 'task.view'), 403);
 
+        $selectedInstitutionId = $request->filled('institution_id') ? (int) $request->integer('institution_id') : null;
+        $visibleInstitutionIds = $selectedInstitutionId !== null
+            ? array_values(array_intersect($institutionIds, [$selectedInstitutionId]))
+            : $institutionIds;
+        abort_unless($visibleInstitutionIds !== [], 403);
+
         $query = TagoreTask::query()
-            ->whereIn('institution_id', $institutionIds)
+            ->whereIn('institution_id', $visibleInstitutionIds)
             ->orderByRaw("case when status='open' then 0 when status='in_progress' then 1 when status='blocked' then 2 else 3 end")
             ->orderByRaw('case when due_at is null then 1 else 0 end')
             ->orderBy('due_at')
@@ -39,7 +45,7 @@ class TaskController extends Controller
 
         $tasks = $query->paginate(30)->withQueryString();
 
-        $base = TagoreTask::whereIn('institution_id', $institutionIds);
+        $base = TagoreTask::whereIn('institution_id', $visibleInstitutionIds);
         if (!$roles->intersect(self::MANAGER_ROLES)->isNotEmpty()) {
             $base->where(function ($q) use ($userId) {
                 $q->where('assigned_to', $userId)->orWhere('created_by', $userId);
@@ -57,6 +63,47 @@ class TaskController extends Controller
 
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'display_name']);
 
+        $workload = DB::table('users as u')
+            ->leftJoinSub(
+                DB::table('tagore_tasks')
+                    ->select('institution_id', 'assigned_to')
+                    ->selectRaw("COUNT(*) as total")
+                    ->selectRaw("SUM(CASE WHEN status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+                    ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed")
+                    ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+                    ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as due_today", [now()->startOfDay(), now()->endOfDay()])
+                    ->whereIn('institution_id', $visibleInstitutionIds)
+                    ->groupBy('institution_id', 'assigned_to'),
+                'tw',
+                function ($join) {
+                    $join->on('tw.assigned_to', '=', 'u.id');
+                }
+            )
+            ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
+            ->whereIn('ur.institution_id', $visibleInstitutionIds)
+            ->where('ur.status', 'active')
+            ->whereNotIn('u.usergroup_id', [6, 7])
+            ->whereNull('u.deleted_at')
+            ->select('u.id', 'u.name')
+            ->selectRaw('COALESCE(SUM(tw.total), 0) as total')
+            ->selectRaw('COALESCE(SUM(tw.active), 0) as active')
+            ->selectRaw('COALESCE(SUM(tw.completed), 0) as completed')
+            ->selectRaw('COALESCE(SUM(tw.overdue), 0) as overdue')
+            ->selectRaw('COALESCE(SUM(tw.due_today), 0) as due_today')
+            ->groupBy('u.id', 'u.name')
+            ->orderByDesc('active')
+            ->orderBy('u.name')
+            ->limit(500)
+            ->get();
+
+        $unassignedWorkload = TagoreTask::whereIn('institution_id', $visibleInstitutionIds)
+            ->whereNull('assigned_to')
+            ->selectRaw("COUNT(*) as total")
+            ->selectRaw("SUM(CASE WHEN status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed")
+            ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+            ->first();
+
         $assignees = DB::table('users as u')
             ->join('tagore_user_roles as ur', 'ur.user_id', '=', 'u.id')
             ->whereIn('ur.institution_id', $institutionIds)
@@ -69,7 +116,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload'));
     }
 
     public function store(Request $request)
