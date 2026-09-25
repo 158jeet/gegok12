@@ -284,4 +284,29 @@ class TagoreTasksTest extends TestCase
     }
 
 
+
+    public function test_manager_can_open_employee_work_profile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->where('id', '!=', $owner->id)->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+
+        $this->actingAs($owner)->get(route('tagore.tasks.employee', $teacher->id))
+            ->assertOk()
+            ->assertSee($teacher->name)
+            ->assertSee('Assigned work')
+            ->assertSee('Manager review history')
+            ->assertSee('Activity timeline')
+            ->assertSee('7 / 30 / 90-day trend')
+            ->assertSee('Workload position');
+
+        $this->assertTrue(DB::table('tagore_user_roles')->where('user_id', $teacher->id)->where('institution_id', $institutionId)->where('status','active')->exists());
+    }
+
+    public function test_employee_work_profile_rejects_out_of_scope_user(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $this->actingAs($teacher)->get(route('tagore.tasks.employee', $teacher->id))->assertForbidden();
+    }
+
 }
