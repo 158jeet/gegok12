@@ -108,7 +108,7 @@ class TaskController extends Controller
     public function update(Request $request, int $taskId)
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
-        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+        abort_unless(app(\App\Services\Tagore\ScopeService::class)->can($userId, 'task.manage'), 403);
 
         $task = TagoreTask::findOrFail($taskId);
         abort_unless(in_array((int) $task->institution_id, $institutionIds, true), 403);
