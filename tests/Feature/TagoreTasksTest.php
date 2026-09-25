@@ -162,4 +162,69 @@ class TagoreTasksTest extends TestCase
             'status'=>'completed','progress'=>100,
         ])->assertForbidden();
     }
+
+    public function test_manager_can_record_employee_review_and_review_is_audited(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->where('id', '!=', $owner->id)->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+
+        $taskId = DB::table('tagore_tasks')->insertGetId([
+            'institution_id' => $institutionId,
+            'created_by' => $owner->id,
+            'assigned_to' => $teacher->id,
+            'title' => 'Review QA',
+            'status' => 'in_progress',
+            'priority' => 'high',
+            'progress' => 60,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.tasks.review', $taskId), [
+            'review_type' => 'performance',
+            'outcome' => 'needs_attention',
+            'notes' => 'Follow up on the pending deliverable.',
+            'action_required' => '1',
+            'follow_up_at' => now()->addDay()->toDateTimeString(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_employee_reviews', [
+            'task_id' => $taskId,
+            'employee_id' => $teacher->id,
+            'manager_id' => $owner->id,
+            'outcome' => 'needs_attention',
+            'action_required' => 1,
+        ]);
+        $this->assertDatabaseHas('tagore_task_events', [
+            'task_id' => $taskId,
+            'event_type' => 'manager_reviewed',
+        ]);
+    }
+
+    public function test_teacher_cannot_record_manager_review(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+        $taskId = DB::table('tagore_tasks')->insertGetId([
+            'institution_id' => $institutionId,
+            'created_by' => $teacher->id,
+            'assigned_to' => $teacher->id,
+            'title' => 'Review authorization QA',
+            'status' => 'open',
+            'priority' => 'normal',
+            'progress' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($teacher)->post(route('tagore.tasks.review', $taskId), [
+            'review_type' => 'follow_up',
+            'outcome' => 'note',
+            'notes' => 'Should not be accepted.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('tagore_employee_reviews', 0);
+    }
+
 }
