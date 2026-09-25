@@ -11,9 +11,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->unsignedInteger('created_by')->nullable();
-            $table->foreign('created_by')->references('id')->nullOnDelete();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->unsignedInteger('assigned_to')->nullable();
-            $table->foreign('assigned_to')->references('id')->nullOnDelete();
+            $table->foreign('assigned_to')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('department_id')->nullable()->constrained('tagore_departments')->nullOnDelete();
             $table->string('title', 180);
             $table->text('description')->nullable();
