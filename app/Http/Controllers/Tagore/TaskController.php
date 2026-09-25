@@ -57,7 +57,13 @@ class TaskController extends Controller
             ]];
         });
 
-        $team = DB::table('tagore_tasks as t')->whereIn('t.institution_id',$institutionIds)->whereNotNull('t.assigned_to')->selectRaw('COUNT(*) as assigned')->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active')->selectRaw("SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END) as completed")->first();
+        $team = DB::table('tagore_tasks as t')
+            ->whereIn('t.institution_id', $institutionIds)
+            ->whereNotNull('t.assigned_to')
+            ->selectRaw('COUNT(*) as assigned')
+            ->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed")
+            ->first();
         $teamMembers = DB::table('tagore_user_roles as ur')->whereIn('ur.institution_id',$institutionIds)->where('ur.status','active')->distinct('ur.user_id')->count('ur.user_id');
         $teamAverageActive = $teamMembers > 0 ? round(((int) $team->active / $teamMembers), 1) : 0;
 
