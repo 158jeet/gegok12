@@ -201,6 +201,75 @@ class DashboardController extends Controller
         return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions', 'managerCommand'));
     }
 
+
+    public function departmentProfile(Request $request, int $departmentId): View
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR'])->isNotEmpty(), 403);
+
+        $institutionIds = DB::table('tagore_user_roles')
+            ->where('user_id', $userId)->where('status', 'active')
+            ->whereNotNull('institution_id')->pluck('institution_id');
+
+        $department = DB::table('tagore_departments as d')
+            ->join('tagore_institutions as i', 'i.id', '=', 'd.institution_id')
+            ->where('d.id', $departmentId)->where('d.status', 'active')
+            ->whereIn('d.institution_id', $institutionIds)
+            ->first(['d.id','d.name','d.code','i.display_name as institution']);
+        abort_unless($department, 404);
+
+        $taskQuery = DB::table('tagore_tasks')->where('department_id', $departmentId)->whereIn('institution_id', $institutionIds);
+        $total = (clone $taskQuery)->count();
+        $completed = (clone $taskQuery)->where('status', 'completed')->count();
+        $stats = [
+            'assigned' => $total,
+            'active' => (clone $taskQuery)->whereIn('status', ['open','in_progress','blocked'])->count(),
+            'completed' => $completed,
+            'overdue' => (clone $taskQuery)->whereNotIn('status',['completed','cancelled'])->whereNotNull('due_at')->where('due_at','<',now())->count(),
+            'blocked' => (clone $taskQuery)->where('status','blocked')->count(),
+            'completion_rate' => $total > 0 ? round(($completed / $total) * 100, 1) : 0,
+        ];
+
+        $employees = DB::table('tagore_user_departments as ud')
+            ->join('users as u', 'u.id', '=', 'ud.user_id')
+            ->leftJoin('tagore_tasks as t', function ($join) use ($departmentId, $institutionIds) {
+                $join->on('t.assigned_to', '=', 'u.id')->where('t.department_id', '=', $departmentId)->whereIn('t.institution_id', $institutionIds);
+            })
+            ->where('ud.department_id', $departmentId)->where('ud.status','active')->whereNull('u.deleted_at')
+            ->groupBy('u.id','u.name','ud.designation')
+            ->select('u.id','u.name','ud.designation')
+            ->selectRaw('COUNT(t.id) as assigned')
+            ->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN t.status='completed' THEN 1 ELSE 0 END) as completed")
+            ->selectRaw("SUM(CASE WHEN t.status NOT IN ('completed','cancelled') AND t.due_at IS NOT NULL AND t.due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+            ->selectRaw("SUM(CASE WHEN t.status='blocked' THEN 1 ELSE 0 END) as blocked")
+            ->orderByDesc('active')->orderBy('u.name')->get()
+            ->map(function ($employee) {
+                $employee->completion_rate = (int)$employee->assigned > 0 ? round(((int)$employee->completed / (int)$employee->assigned)*100,1) : 0;
+                return $employee;
+            });
+
+        $followups = DB::table('tagore_employee_reviews as r')
+            ->join('users as e','e.id','=','r.employee_id')
+            ->leftJoin('tagore_tasks as t','t.id','=','r.task_id')
+            ->where('r.institution_id',$department->institution_id)
+            ->whereNull('r.completed_at')->where('r.action_required',true)
+            ->whereIn('r.employee_id', $employees->pluck('id')->all() ?: [0])
+            ->orderBy('r.follow_up_at')->limit(30)
+            ->get(['r.id','r.outcome','r.notes','r.follow_up_at','e.name as employee_name','t.title as task_title']);
+
+        $trendStart = now()->subDays(6)->startOfDay();
+        $createdTrend = (clone $taskQuery)->whereBetween('created_at',[$trendStart,now()->endOfDay()])->selectRaw('DATE(created_at) day')->selectRaw('COUNT(*) total')->groupBy('day')->pluck('total','day');
+        $completedTrend = (clone $taskQuery)->whereBetween('completed_at',[$trendStart,now()->endOfDay()])->selectRaw('DATE(completed_at) day')->selectRaw('COUNT(*) total')->groupBy('day')->pluck('total','day');
+        $trend = collect(range(0,6))->map(function($offset) use ($trendStart,$createdTrend,$completedTrend) {
+            $day=$trendStart->copy()->addDays($offset)->format('Y-m-d');
+            return (object)['day'=>$day,'created'=>(int)($createdTrend[$day]??0),'completed'=>(int)($completedTrend[$day]??0)];
+        });
+
+        return view('tagore.departments.profile', compact('department','stats','employees','followups','trend'));
+    }
+
     public function child(Request $request, int $studentId): View
     {
         $userId = (int) $request->user()->id;
