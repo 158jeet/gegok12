@@ -227,4 +227,61 @@ class TagoreTasksTest extends TestCase
         $this->assertDatabaseMissing('tagore_employee_reviews', ['task_id' => $taskId, 'manager_id' => $teacher->id]);
     }
 
+
+    public function test_manager_follow_up_appears_on_dashboard_and_can_be_closed(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->where('id', '!=', $owner->id)->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $teacher->school_id)->value('id');
+
+        $taskId = DB::table('tagore_tasks')->insertGetId([
+            'institution_id' => $institutionId,
+            'created_by' => $owner->id,
+            'assigned_to' => $teacher->id,
+            'title' => 'Follow-up dashboard QA',
+            'status' => 'in_progress',
+            'priority' => 'high',
+            'progress' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $reviewId = DB::table('tagore_employee_reviews')->insertGetId([
+            'institution_id' => $institutionId,
+            'employee_id' => $teacher->id,
+            'manager_id' => $owner->id,
+            'task_id' => $taskId,
+            'review_type' => 'follow_up',
+            'outcome' => 'action_required',
+            'notes' => 'Complete pending deliverable.',
+            'action_required' => true,
+            'follow_up_at' => now()->subHour(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->get(route('tagore.dashboard'))
+            ->assertOk()
+            ->assertSee('Pending manager follow-ups')
+            ->assertSee('Follow-up dashboard QA')
+            ->assertSee('Overdue');
+
+        $this->actingAs($owner)->patch(route('tagore.reviews.complete', $reviewId))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_employee_reviews', [
+            'id' => $reviewId,
+            'action_required' => 1,
+        ]);
+        $this->assertDatabaseHas('tagore_task_events', [
+            'task_id' => $taskId,
+            'event_type' => 'follow_up_completed',
+        ]);
+        $this->assertDatabaseMissing('tagore_employee_reviews', [
+            'id' => $reviewId,
+            'completed_at' => null,
+        ]);
+    }
+
+
 }
