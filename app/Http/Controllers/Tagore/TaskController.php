@@ -42,6 +42,10 @@ class TaskController extends Controller
             $needle = trim($request->string('q')->toString());
             $query->where('title', 'like', "%{$needle}%");
         }
+        if ($request->filled('assigned_to')) {
+            $assignedTo = $request->string('assigned_to')->toString();
+            $query->where('assigned_to', $assignedTo === 'unassigned' ? null : (int) $assignedTo);
+        }
 
         $tasks = $query->paginate(30)->withQueryString();
 
@@ -176,7 +180,20 @@ class TaskController extends Controller
         $data = $request->validate([
             'status' => ['required', 'in:open,in_progress,blocked,completed,cancelled'],
             'progress' => ['required', 'integer', 'min:0', 'max:100'],
+            'assigned_to' => ['nullable', 'integer'],
         ]);
+
+        if (!empty($data['assigned_to'])) {
+            abort_unless(
+                DB::table('tagore_user_roles')
+                    ->where('user_id', (int) $data['assigned_to'])
+                    ->where('institution_id', (int) $task->institution_id)
+                    ->where('status', 'active')
+                    ->exists(),
+                422,
+                'The assignee must belong to the task institution.'
+            );
+        }
 
         $completedAt = $data['status'] === 'completed' ? now() : null;
         if ($data['status'] === 'completed') $data['progress'] = 100;
