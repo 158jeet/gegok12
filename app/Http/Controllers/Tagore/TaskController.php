@@ -46,6 +46,9 @@ class TaskController extends Controller
             $assignedTo = $request->string('assigned_to')->toString();
             $query->where('assigned_to', $assignedTo === 'unassigned' ? null : (int) $assignedTo);
         }
+        if ($request->filled('department_id')) {
+            $query->where('department_id', (int) $request->integer('department_id'));
+        }
 
         $tasks = $query->paginate(30)->withQueryString();
 
@@ -66,6 +69,36 @@ class TaskController extends Controller
         ];
 
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'display_name']);
+        $departments = DB::table('tagore_departments')->whereIn('institution_id', $visibleInstitutionIds)->where('status', 'active')->orderBy('name')->get(['id', 'institution_id', 'name']);
+
+        $departmentWorkload = DB::table('tagore_departments as d')
+            ->leftJoinSub(
+                DB::table('tagore_tasks')
+                    ->select('department_id')
+                    ->selectRaw('COUNT(*) as total')
+                    ->selectRaw("SUM(CASE WHEN status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+                    ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed")
+                    ->selectRaw("SUM(CASE WHEN status NOT IN ('completed','cancelled') AND due_at IS NOT NULL AND due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+                    ->selectRaw("SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked")
+                    ->whereIn('institution_id', $visibleInstitutionIds)
+                    ->whereNotNull('department_id')
+                    ->groupBy('department_id'),
+                'dw',
+                'dw.department_id',
+                '=',
+                'd.id'
+            )
+            ->whereIn('d.institution_id', $visibleInstitutionIds)
+            ->where('d.status', 'active')
+            ->select('d.id', 'd.name', 'd.institution_id')
+            ->selectRaw('COALESCE(dw.total, 0) as total')
+            ->selectRaw('COALESCE(dw.active, 0) as active')
+            ->selectRaw('COALESCE(dw.completed, 0) as completed')
+            ->selectRaw('COALESCE(dw.overdue, 0) as overdue')
+            ->selectRaw('COALESCE(dw.blocked, 0) as blocked')
+            ->orderByDesc('active')
+            ->orderBy('d.name')
+            ->get();
 
         $workload = DB::table('users as u')
             ->leftJoinSub(
@@ -128,7 +161,7 @@ class TaskController extends Controller
             ->limit(250)
             ->get();
 
-        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload'));
+        return view('tagore.tasks.index', compact('tasks', 'stats', 'assignees', 'institutions', 'institutionIds', 'selectedInstitutionId', 'workload', 'unassignedWorkload', 'departments', 'departmentWorkload'));
     }
 
     public function store(Request $request)
@@ -139,6 +172,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'assigned_to' => ['nullable', 'integer'],
+            'department_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:5000'],
             'priority' => ['required', 'in:low,normal,high,urgent'],
@@ -147,6 +181,22 @@ class TaskController extends Controller
 
         $institutionId = (int) $data['institution_id'];
         abort_unless(in_array($institutionId, $institutionIds, true), 403);
+
+        if (!empty($data['department_id'])) {
+            abort_unless(
+                DB::table('tagore_departments')->where('id', (int) $data['department_id'])
+                    ->where('institution_id', $institutionId)->where('status', 'active')->exists(),
+                422,
+                'The department must belong to the selected institution.'
+            );
+        } elseif (!empty($data['assigned_to'])) {
+            $data['department_id'] = DB::table('tagore_user_departments as ud')
+                ->join('tagore_departments as d', 'd.id', '=', 'ud.department_id')
+                ->where('ud.user_id', (int) $data['assigned_to'])
+                ->where('ud.status', 'active')->where('ud.is_primary', true)
+                ->where('d.institution_id', $institutionId)->where('d.status', 'active')
+                ->value('d.id');
+        }
 
         if (!empty($data['assigned_to'])) {
             abort_unless(
@@ -181,7 +231,13 @@ class TaskController extends Controller
             'status' => ['required', 'in:open,in_progress,blocked,completed,cancelled'],
             'progress' => ['required', 'integer', 'min:0', 'max:100'],
             'assigned_to' => ['nullable', 'integer'],
+            'department_id' => ['nullable', 'integer'],
         ]);
+
+        if (!empty($data['department_id'])) {
+            abort_unless(DB::table('tagore_departments')->where('id', (int) $data['department_id'])
+                ->where('institution_id', (int) $task->institution_id)->where('status', 'active')->exists(), 422);
+        }
 
         if (!empty($data['assigned_to'])) {
             abort_unless(
