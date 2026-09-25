@@ -1,10 +1,11 @@
 <?php
 
-namespace AppConsoleCommands;
+namespace App\Console\Commands;
 
-use AppModelsTagoreTask;
-use IlluminateConsoleCommand;
-use IlluminateSupportFacadesDB;
+use App\Models\TagoreTask;
+use Carbon\Carbon;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class GenerateTagoreRecurringTasks extends Command
 {
@@ -44,7 +45,10 @@ class GenerateTagoreRecurringTasks extends Command
                 'institution_id' => $task->institution_id,
                 'actor_id' => $template->created_by,
                 'event_type' => 'created_from_template',
-                'metadata' => json_encode(['template_id' => $template->id, 'scheduled_for' => $template->next_run_at]),
+                'metadata' => json_encode([
+                    'template_id' => $template->id,
+                    'scheduled_for' => $template->next_run_at,
+                ]),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -61,9 +65,9 @@ class GenerateTagoreRecurringTasks extends Command
         return self::SUCCESS;
     }
 
-    private function nextRun(object $template)
+    private function nextRun(object $template): ?Carbon
     {
-        $base = CarbonCarbon::parse($template->next_run_at);
+        $base = Carbon::parse($template->next_run_at);
 
         return match ($template->frequency) {
             'daily' => $base->addDay(),
