@@ -69,4 +69,25 @@ class TagoreManagerDashboardTest extends TestCase
             ->assertForbidden();
     }
 
+
+    public function test_manager_can_view_department_analytics_for_multiple_periods(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $departmentId = DB::table('tagore_departments')->where('code', 'ACADEMIC')->value('id');
+        $this->assertNotNull($departmentId);
+
+        $this->actingAs($owner)->get(route('tagore.department.profile', ['departmentId' => $departmentId, 'period' => 30]))
+            ->assertOk()->assertSee('30-day workload trend')->assertSee('Created in period')->assertSee('Employee performance');
+
+        $this->actingAs($owner)->get(route('tagore.department.profile', ['departmentId' => $departmentId, 'period' => 90]))
+            ->assertOk()->assertSee('90-day workload trend');
+    }
+
+    public function test_non_manager_cannot_view_department_analytics(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->firstOrFail();
+        $departmentId = DB::table('tagore_departments')->where('code', 'ACADEMIC')->value('id');
+        $this->actingAs($teacher)->get(route('tagore.department.profile', ['departmentId' => $departmentId]))->assertForbidden();
+    }
+
 }
