@@ -33,6 +33,7 @@ class Kernel extends ConsoleKernel
             \App\Console\Commands\CheckSendMail::class,
             \App\Console\Commands\CheckTask::class,
             \App\Console\Commands\GenerateTagoreRecurringTasks::class,
+            \App\Console\Commands\KoboSyncCommand::class,
 
             \App\Console\Commands\DataSeeder\SeedAttendance::class,
 
@@ -83,6 +84,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('tagore:generate-recurring-tasks')
                  ->everyMinute()
                  ->withoutOverlapping();
+
+        if (config('kobo.api_token') && config('kobo.asset_uid')) {
+            $schedule->command('kobo:sync')
+                     ->everyFiveMinutes()
+                     ->withoutOverlapping();
+        }
 
         $schedule->command('gego:checktask')
                  ->everyMinute()
