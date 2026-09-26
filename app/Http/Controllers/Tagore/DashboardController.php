@@ -13,6 +13,11 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         $userId = (int) $request->user()->id;
+        $analyticsDays = (int) $request->input('period', 7);
+        if (!in_array($analyticsDays, [7, 30, 90], true)) {
+            $analyticsDays = 7;
+        }
+        $analyticsStart = now()->subDays($analyticsDays - 1)->startOfDay();
         $roles = $this->roles($userId);
         $isParent = $roles->contains('PARENT');
         $children = $this->childrenForUser($userId, $isParent);
@@ -53,6 +58,17 @@ class DashboardController extends Controller
 
             $totalTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->count();
             $completedTasks = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->where('status', 'completed')->count();
+            $periodCreated = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->where('created_at', '>=', $analyticsStart)->count();
+            $periodCompleted = DB::table('tagore_tasks')->whereIn('institution_id', $institutionIds)->where('status', 'completed')->whereNotNull('completed_at')->where('completed_at', '>=', $analyticsStart)->count();
+            $managerCommand['analytics'] = [
+                'days' => $analyticsDays,
+                'start' => $analyticsStart,
+                'created' => $periodCreated,
+                'completed' => $periodCompleted,
+                'net' => $periodCreated - $periodCompleted,
+                'completion_rate' => $periodCreated > 0 ? round(($periodCompleted / $periodCreated) * 100, 1) : 0,
+            ];
+
             $managerCommand['completion_rate'] = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0;
 
             $managerCommand['employee_performance'] = DB::table('users as u')
@@ -73,8 +89,8 @@ class DashboardController extends Controller
                 ->whereNotIn('u.usergroup_id', [6, 7])
                 ->whereNull('u.deleted_at')
                 ->select('u.id', 'u.name')
-                ->selectRaw("COUNT(t.id) as assigned")
-                ->selectRaw("SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed")
+                ->selectRaw("SUM(CASE WHEN t.created_at >= ? THEN 1 ELSE 0 END) as assigned", [$analyticsStart])
+                ->selectRaw("SUM(CASE WHEN t.status = 'completed' AND t.completed_at IS NOT NULL AND t.completed_at >= ? THEN 1 ELSE 0 END) as completed", [$analyticsStart])
                 ->selectRaw("SUM(CASE WHEN t.status NOT IN ('completed','cancelled') AND t.due_at IS NOT NULL AND t.due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
                 ->selectRaw("SUM(CASE WHEN t.status = 'blocked' THEN 1 ELSE 0 END) as blocked")
                 ->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
@@ -89,7 +105,7 @@ class DashboardController extends Controller
                     return $employee;
                 });
 
-            $trendStart = now()->subDays(6)->startOfDay();
+            $trendStart = $analyticsStart;
             $trendEnd = now()->endOfDay();
             $createdTrend = DB::table('tagore_tasks')
                 ->whereIn('institution_id', $institutionIds)
@@ -105,7 +121,7 @@ class DashboardController extends Controller
                 ->selectRaw('COUNT(*) as total')
                 ->groupBy('day')
                 ->pluck('total', 'day');
-            $managerCommand['workload_trend'] = collect(range(0, 6))->map(function ($offset) use ($trendStart, $createdTrend, $completedTrend) {
+            $managerCommand['workload_trend'] = collect(range(0, $analyticsDays - 1))->map(function ($offset) use ($trendStart, $createdTrend, $completedTrend) {
                 $day = $trendStart->copy()->addDays($offset)->format('Y-m-d');
                 return (object) [
                     'day' => $day,
@@ -198,7 +214,7 @@ class DashboardController extends Controller
             $stats['open_tasks'] = 0;
             $stats['overdue_tasks'] = 0;
         }
-        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions', 'managerCommand'));
+        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions', 'managerCommand', 'analyticsDays'));
     }
 
 
