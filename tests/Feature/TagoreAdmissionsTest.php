@@ -76,4 +76,38 @@ class TagoreAdmissionsTest extends TestCase
             ->assertOk()->assertSee('Funnel Student')->assertSee('JEE 2027');
     }
 
+    public function test_activity_records_contact_and_conversion_or_lost_reason(): void
+    {
+        $owner=User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $institutionId=(int)DB::table('tagore_institutions')->value('id');
+        $leadId=DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id'=>$institutionId,'lead_no'=>'QA-CONV-'.uniqid(),
+            'student_name'=>'Conversion Student','mobile'=>'9777777777','status'=>'new',
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
+            'type'=>'call','outcome'=>'Interested','notes'=>'Parent wants campus visit.',
+            'status'=>'follow_up','next_follow_up_at'=>now()->addDay(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_admission_leads',[
+            'id'=>$leadId,'status'=>'follow_up',
+        ]);
+        $lead=TagoreAdmissionLead::findOrFail($leadId);
+        $this->assertNotNull($lead->last_contacted_at);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
+            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
+        ])->assertRedirect();
+
+        $this->assertNotNull($lead->fresh()->converted_at);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
+            'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',
+        ])->assertRedirect();
+
+        $this->assertSame('Fee concern',$lead->fresh()->lost_reason);
+    }
+
 }
