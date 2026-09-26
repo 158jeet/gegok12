@@ -51,4 +51,29 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertDatabaseHas('tagore_admission_activities',['lead_id'=>$leadId,'type'=>'call','outcome'=>'connected']);
         $this->assertDatabaseHas('tagore_admission_leads',['id'=>$leadId,'status'=>'follow_up']);
     }
+    public function test_manager_can_assign_lead_and_filter_follow_up_queue(): void
+    {
+        $owner=User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $institutionId=(int)DB::table('tagore_institutions')->value('id');
+        $teacher=User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+
+        $leadId=DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id'=>$institutionId,'lead_no'=>'QA-FUNNEL-'.uniqid(),
+            'student_name'=>'Funnel Student','mobile'=>'9888888888','source'=>'Meta',
+            'campaign'=>'JEE 2027','status'=>'follow_up','next_follow_up_at'=>now()->subHour(),
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
+        $this->actingAs($owner)->patch(route('tagore.admissions.assign',$leadId),[
+            'assigned_to'=>$teacher->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_admission_leads',[
+            'id'=>$leadId,'assigned_to'=>$teacher->id,'campaign'=>'JEE 2027',
+        ]);
+
+        $this->actingAs($owner)->get(route('tagore.admissions.index',['follow_up'=>'overdue']))
+            ->assertOk()->assertSee('Funnel Student')->assertSee('JEE 2027');
+    }
+
 }
