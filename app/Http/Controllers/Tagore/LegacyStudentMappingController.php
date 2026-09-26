@@ -15,7 +15,7 @@ class LegacyStudentMappingController extends Controller
         $userId = (int)$request->user()->id;
         $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
         abort_unless($batch, 404);
-        $this->authorize($userId, (int)$batch->institution_id);
+        $this->authorizeInstitution($userId, (int)$batch->institution_id);
 
         $rows = DB::table('tagore_fee_import_rows as r')
             ->leftJoin('users as u', 'u.id', '=', 'r.student_id')
@@ -32,7 +32,7 @@ class LegacyStudentMappingController extends Controller
     {
         $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
         abort_unless($batch, 404);
-        $this->authorize((int) $request->user()->id, (int) $batch->institution_id);
+        $this->authorizeInstitution((int) $request->user()->id, (int) $batch->institution_id);
         $report = app(LegacyStudentMatcher::class)->preview($batchId);
         return view('tagore.fees.mapping-suggestions', compact('batch', 'report'));
     }
@@ -41,7 +41,7 @@ class LegacyStudentMappingController extends Controller
     {
         $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
         abort_unless($batch, 404);
-        $this->authorize((int) $request->user()->id, (int) $batch->institution_id);
+        $this->authorizeInstitution((int) $request->user()->id, (int) $batch->institution_id);
         $result = app(LegacyStudentMatcher::class)->applyHighConfidence($batchId, (int) $request->user()->id);
         return back()->with('success', 'High-confidence legacy student matches applied: '.$result['mapped'].'.');
     }
@@ -51,7 +51,7 @@ class LegacyStudentMappingController extends Controller
         $userId = (int)$request->user()->id;
         $batch = DB::table('tagore_fee_import_batches')->where('id', $batchId)->first();
         abort_unless($batch, 404);
-        $this->authorize($userId, (int)$batch->institution_id);
+        $this->authorizeInstitution($userId, (int)$batch->institution_id);
         $data = $request->validate(['student_id'=>['required','integer','exists:users,id']]);
         $row = DB::table('tagore_fee_import_rows')->where('id',$rowId)->where('batch_id',$batchId)->first();
         abort_unless($row,404);
@@ -71,7 +71,7 @@ class LegacyStudentMappingController extends Controller
         return back()->with('success','Legacy student mapping saved.');
     }
 
-    private function authorize(int $userId, int $institutionId): void
+    private function authorizeInstitution(int $userId, int $institutionId): void
     {
         $roles = DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.status','active')->pluck('r.code');
         abort_unless($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);

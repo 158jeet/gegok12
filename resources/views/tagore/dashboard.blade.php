@@ -4,8 +4,49 @@
 <body><div class="shell">
 <div class="top"><div><div class="brand">TagoreK12</div><div class="sub">One unified application for the Tagore Group</div></div><div class="pill">{{ $roles->implode(', ') ?: 'GegoK12 user' }}</div></div>
 <div class="notice">Prototype mode — GegoK12 remains the underlying school-management foundation. This Tagore layer adds the Group experience without requiring Fee Pro or Exam Pro.</div>
-<div class="nav"><a href="{{ route('tagore.dashboard') }}">Home</a>@if($roles->contains('PARENT'))<a href="{{ route('tagore.parent.dashboard') }}">Parent Dashboard</a>@endif<a href="{{ url('/dashboard') }}">GegoK12</a><a href="{{ route('tagore.dashboard.api') }}">API</a></div>
+<div class="nav"><a href="{{ route('tagore.dashboard') }}">Home</a>@if($roles->contains('PARENT'))<a href="{{ route('tagore.parent.dashboard') }}">Parent Dashboard</a>@endif<a href="{{ url('/dashboard') }}">GegoK12</a>@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}">Admissions CRM</a>@endif @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}">Work Tasks</a>@endif<a href="{{ route('tagore.dashboard.api') }}">API</a></div>
 <div class="grid"><div class="card"><div class="label">Institutions</div><div class="value">{{ $stats['institutions'] }}</div></div><div class="card"><div class="label">My children</div><div class="value">{{ $stats['children'] }}</div></div><div class="card"><div class="label">Outstanding fee items</div><div class="value">{{ $stats['pending_fees'] }}</div></div><div class="card"><div class="label">Open feedback</div><div class="value">{{ $stats['open_feedback'] }}</div></div></div>
+@if($managerCommand['is_manager'])<div class="section card"><h2>Manager Command Center</h2><form method="get" style="margin-bottom:14px;display:flex;gap:8px;align-items:center"><label class="muted">Analytics period</label><select name="period" onchange="this.form.submit()"><option value="7" {{ $analyticsDays === 7 ? "selected" : "" }}>7 days</option><option value="30" {{ $analyticsDays === 30 ? "selected" : "" }}>30 days</option><option value="90" {{ $analyticsDays === 90 ? "selected" : "" }}>90 days</option></select></form><div class="grid" style="margin:0 0 14px"><div class="card"><div class="label">Active staff</div><div class="value">{{ $managerCommand['active_staff'] }}</div></div><div class="card"><div class="label">Open work</div><div class="value">{{ $stats['open_tasks'] }}</div></div><div class="card"><div class="label">Overdue</div><div class="value">{{ $stats['overdue_tasks'] }}</div></div><div class="card"><div class="label">Completion rate</div><div class="value">{{ $managerCommand['completion_rate'] }}%</div></div></div><div class="feature" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px"><div><b>{{ $managerCommand["analytics"]["created"] }}</b><span class="muted">Created in period</span></div><div><b>{{ $managerCommand["analytics"]["completed"] }}</b><span class="muted">Completed in period</span></div><div><b>{{ $managerCommand["analytics"]["net"] }}</b><span class="muted">Net workload change</span></div><div><b>{{ $managerCommand["analytics"]["completion_rate"] }}%</b><span class="muted">Period completion</span></div></div><h3>Needs attention</h3>@if($managerCommand['action_items']->isEmpty())<div class="muted">No urgent work requires attention.</div>@else<table class="table"><tr><th>Task</th><th>Department</th><th>Owner</th><th>Status</th><th>Due</th></tr>@foreach($managerCommand['action_items'] as $item)<tr><td><a href="{{ route('tagore.tasks.index', ['assigned_to' => $item->assignee ? null : 'unassigned']) }}">{{ $item->title }}</a></td><td>{{ $item->department ?: '—' }}</td><td>{{ $item->assignee ?: 'Unassigned' }}</td><td>{{ ucfirst(str_replace('_',' ',$item->status)) }}</td><td>{{ $item->due_at ? date('d M H:i', strtotime($item->due_at)) : 'No due date' }}</td></tr>@endforeach</table>@endif<h3 style="margin-top:18px">Department health</h3><table class="table"><tr><th>Department</th><th>Active</th><th>Overdue</th><th>Blocked</th></tr>@foreach($managerCommand['departments'] as $department)<tr><td><a href="{{ route('tagore.department.profile', ['departmentId' => $department->id]) }}">{{ $department->name }}</a></td><td>{{ $department->active }}</td><td>{{ $department->overdue }}</td><td>{{ $department->blocked }}</td></tr>@endforeach</table></div>@endif
+@if($managerCommand['is_manager'])
+<div class="section card"><h2>Employee Performance</h2>
+@if($managerCommand['employee_performance']->isEmpty())<div class="muted">No staff workload data yet.</div>
+@else
+<table class="table"><tr><th>Employee</th><th>Active</th><th>Completed</th><th>Overdue</th><th>Blocked</th><th>Completion</th></tr>
+@foreach($managerCommand['employee_performance'] as $employee)<tr>
+<td><a href="{{ route('tagore.tasks.employee', $employee->id) }}">{{ $employee->name }}</a></td>
+<td>{{ $employee->active }}</td><td>{{ $employee->completed }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->completion_rate }}%</td>
+</tr>@endforeach</table>
+@endif
+<h3 style="margin-top:18px">Pending manager follow-ups</h3>
+@if($managerCommand['followups']->isEmpty())<div class="muted">No pending action-required follow-ups.</div>
+@else
+<table class="table"><tr><th>Employee</th><th>Task</th><th>Outcome</th><th>Follow-up</th><th>Action</th></tr>
+@foreach($managerCommand['followups'] as $followup)<tr>
+<td>{{ $followup->employee_name }}</td><td>{{ $followup->task_title ?: '—' }}</td><td>{{ ucfirst(str_replace('_',' ',$followup->outcome)) }}</td>
+<td>{{ $followup->follow_up_at ? date('d M Y H:i', strtotime($followup->follow_up_at)) : 'Not scheduled' }}<br><span class="muted">{{ ucfirst($followup->state) }}</span></td>
+<td><form method="post" action="{{ route('tagore.reviews.complete',$followup->id) }}">@csrf @method('PATCH')<button type="submit">Close follow-up</button></form></td>
+</tr>@endforeach</table>
+@endif
+<h3 style="margin-top:18px">Manager follow-up</h3>
+@if($managerCommand['manager_followups']->isEmpty())<div class="muted">No follow-up signals based on current workload data.</div>
+@else<table class="table"><tr><th>Employee</th><th>Active</th><th>Overdue</th><th>Blocked</th><th>Signal</th></tr>
+@foreach($managerCommand['manager_followups'] as $employee)<tr>
+<td><a href="{{ route('tagore.tasks.index', ['assigned_to' => $employee->id]) }}">{{ $employee->name }}</a></td><td>{{ $employee->active }}</td><td>{{ $employee->overdue }}</td><td>{{ $employee->blocked }}</td><td>{{ $employee->follow_up }}</td>
+</tr>@endforeach</table>@endif
+<h3 style="margin-top:18px">Workload balance</h3>
+<div class="feature" style="grid-template-columns:repeat(3,1fr)">
+<div><b>{{ $managerCommand['workload_summary']['staff_with_active_work'] }}</b><span class="muted">Staff with active work</span></div>
+<div><b>{{ $managerCommand['workload_summary']['average_active'] }}</b><span class="muted">Average active tasks / staff</span></div>
+<div><b>{{ $managerCommand['workload_summary']['max_active'] }}</b><span class="muted">Highest active workload</span></div>
+</div>
+<h3 style="margin-top:18px">{{ $analyticsDays }}-day workload trend</h3>
+<table class="table"><tr><th>Date</th><th>Created</th><th>Completed</th><th>Net</th></tr>
+@foreach($managerCommand['workload_trend'] as $day)<tr>
+<td>{{ date('d M', strtotime($day->day)) }}</td><td>{{ $day->created }}</td><td>{{ $day->completed }}</td><td>{{ $day->created - $day->completed }}</td>
+</tr>@endforeach</table>
+</div>
+@endif
+@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<div class="section card"><h2>Work Management</h2><div class="feature"><div><b>{{ $stats['open_tasks'] ?? 0 }}</b><span class="muted">Open tasks</span></div><div><b>{{ $stats['overdue_tasks'] ?? 0 }}</b><span class="muted">Overdue tasks</span></div><div><b>Assignments</b><span class="muted">Create & track employee work</span></div><div><b>Progress</b><span class="muted">0–100% completion</span></div><div><a href="{{ route('tagore.tasks.index') }}">Open task board →</a></div></div></div>@endif
 <div class="section card"><h2>Institutions</h2>@if($institutions->isEmpty())<div class="muted">No Tagore institutions linked yet. Run the prototype seeder after GegoK12 has at least one school.</div>@else<table class="table"><tr><th>Code</th><th>Institution</th><th>GegoK12 school</th></tr>@foreach($institutions as $institution)<tr><td>{{ $institution->code }}</td><td>{{ $institution->display_name }}</td><td>{{ $institution->school_name }}</td></tr>@endforeach</table>@endif</div>
 <div class="section card"><h2>My children</h2>@if($children->isEmpty())<div class="muted">No parent-child relationship is linked to this account yet.</div>@else<table class="table"><tr><th>Student</th><th>Relationship</th><th></th></tr>@foreach($children as $child)<tr><td><a href="{{ route('tagore.child', $child->student_id) }}">{{ $child->name }}</a></td><td>{{ $child->relationship ?: 'Guardian' }}</td><td><a href="{{ route('tagore.child', $child->student_id) }}">Open →</a></td></tr>@endforeach</table>@endif</div>
 <div class="section card"><h2>Phase 1 in one application</h2><div class="feature"><div><b>Fees</b><span class="muted">Ledger & outstanding</span></div><div><b>Attendance</b><span class="muted">Live GegoK12 data</span></div><div><b>Results</b><span class="muted">Published results</span></div><div><b>Feedback</b><span class="muted">Submit & track</span></div><div><b>Notices</b><span class="muted">Existing communication</span></div></div></div>
