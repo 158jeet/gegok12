@@ -34,7 +34,6 @@ class Kernel extends ConsoleKernel
             \App\Console\Commands\CheckTask::class,
             \App\Console\Commands\GenerateTagoreRecurringTasks::class,
             \App\Console\Commands\KoboSyncCommand::class,
-            \App\Console\Commands\KoboImportAdmissionsCommand::class,
 
             \App\Console\Commands\DataSeeder\SeedAttendance::class,
 
@@ -92,14 +91,6 @@ class Kernel extends ConsoleKernel
                      ->withoutOverlapping();
         }
 
-        if (config('kobo.api_token') && config('kobo.asset_uid') && config('kobo.institution_id')) {
-            $schedule->command('kobo:import-admissions')
-                     ->everyFiveMinutes()
-                     ->withoutOverlapping()
-                     ->after(function () {
-                         // Import runs against the synchronized local submissions table.
-                     });
-        }
 
         $schedule->command('gego:checktask')
                  ->everyMinute()
