@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\TagoreAdmissionLead;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
