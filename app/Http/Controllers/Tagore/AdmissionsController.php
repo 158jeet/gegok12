@@ -37,10 +37,10 @@ class AdmissionsController extends Controller
         }
 
         $leads=$query->paginate(25)->withQueryString();
+        $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
         $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
-        $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
         $stats=[
             'total'=>(clone $base)->count(),
             'new'=>(clone $base)->where('status','new')->count(),
