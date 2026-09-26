@@ -24,6 +24,12 @@ class AdmissionsController extends Controller
             ->orderBy('next_follow_up_at')->orderByDesc('id');
 
         if($request->filled('status')) $query->where('status',$request->string('status')->toString());
+        if($request->filled('assigned_to')) $query->where('assigned_to',(int)$request->input('assigned_to'));
+        if($request->input('follow_up')==='due') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<=',now());
+        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now());
+        if($request->input('source')) $query->where('source',$request->string('source')->toString());
+        if($request->input('campaign')) $query->where('campaign',$request->string('campaign')->toString());
+
         if($request->filled('q')){
             $needle=trim($request->string('q')->toString());
             $query->where(fn($q)=>$q->where('student_name','like',"%{$needle}%")
@@ -31,14 +37,20 @@ class AdmissionsController extends Controller
         }
 
         $leads=$query->paginate(25)->withQueryString();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
+        $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
         $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
         $stats=[
             'total'=>(clone $base)->count(),
             'new'=>(clone $base)->where('status','new')->count(),
             'follow_up'=>(clone $base)->where('status','follow_up')->count(),
             'due_today'=>(clone $base)->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->count(),
+            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost'])->count(),
+            'qualified'=>(clone $base)->where('status','qualified')->count(),
+            'admitted'=>(clone $base)->where('status','admitted')->count(),
         ];
-        return view('tagore.admissions.index',compact('leads','stats'));
+        return view('tagore.admissions.index',compact('leads','stats','staff','sources','campaigns'));
     }
 
     public function create(Request $request): View
@@ -59,10 +71,11 @@ class AdmissionsController extends Controller
             'student_name'=>['required','string','max:150'],'parent_name'=>['nullable','string','max:150'],
             'mobile'=>['nullable','string','max:30'],'alternate_mobile'=>['nullable','string','max:30'],
             'email'=>['nullable','email','max:190'],'class_name'=>['nullable','string','max:80'],
-            'source'=>['nullable','string','max:60'],'assigned_to'=>['nullable','integer'],
+            'source'=>['nullable','string','max:60'],'campaign'=>['nullable','string','max:100'],'assigned_to'=>['nullable','integer'],
             'next_follow_up_at'=>['nullable','date'],'notes'=>['nullable','string','max:5000'],
         ]);
         abort_unless(in_array((int)$data['institution_id'],$this->institutionIds($userId,$roles),true),403);
+        if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$data['institution_id']),422);
 
         $lead=DB::transaction(function() use($data,$userId){
             $institutionId=(int)$data['institution_id'];
@@ -74,6 +87,19 @@ class AdmissionsController extends Controller
             return $lead;
         });
         return redirect()->route('tagore.admissions.show',$lead)->with('success','Admission lead created.');
+    }
+
+    public function assign(Request $request,int $leadId)
+    {
+        $userId=(int)$request->user()->id; $roles=$this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
+        $lead=TagoreAdmissionLead::findOrFail($leadId);
+        abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
+        $data=$request->validate(['assigned_to'=>['nullable','integer']]);
+        if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$lead->institution_id),422);
+        $lead->update(['assigned_to'=>$data['assigned_to'] ?? null]);
+        TagoreAdmissionActivity::create(['lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'note','outcome'=>'assignment','notes'=>$lead->assigned_to ? 'Lead assigned to user #'.$lead->assigned_to : 'Lead unassigned','completed_at'=>now()]);
+        return back()->with('success','Lead assignment updated.');
     }
 
     public function show(Request $request,int $leadId): View
@@ -106,6 +132,11 @@ class AdmissionsController extends Controller
             if($updates) $lead->update($updates);
         });
         return back()->with('success','Activity saved.');
+    }
+
+    private function staffBelongsToInstitution(int $userId,int $institutionId): bool
+    {
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.institution_id',$institutionId)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->exists();
     }
 
     private function roles(int $userId)
