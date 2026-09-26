@@ -51,7 +51,7 @@ jobs:
         run: |
           composer dump-autoload --optimize --strict-ambiguous --no-scripts
           composer dump-autoload --optimize
-          php artisan route:list --path=tagore --json > /tmp/tagore-routes.json 2> /tmp/tagore-routes.err || { cat /tmp/tagore-routes.err; cat /tmp/tagore-routes.json; exit 1; }
+          php scripts/check-tagore-routes.php
           php artisan view:cache
           php artisan config:cache
       - name: PHP syntax check (all Tagore PHP)
