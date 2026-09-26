@@ -41,6 +41,9 @@ class AdmissionsController extends Controller
         $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
+        $ownerPerformance=(clone $base)->whereNotNull('assigned_to')->select('assigned_to',DB::raw('count(*) as total'),DB::raw("sum(case when status='admitted' then 1 else 0 end) as admitted"),DB::raw("sum(case when status='lost' then 1 else 0 end) as lost"))->groupBy('assigned_to')->orderByDesc('admitted')->limit(10)->get();
+        $ownerIds=$ownerPerformance->pluck('assigned_to')->map(fn($id)=>(int)$id)->all();
+        $ownerNames=DB::table('users')->whereIn('id',$ownerIds)->pluck('name','id');
         $stats=[
             'total'=>(clone $base)->count(),
             'new'=>(clone $base)->where('status','new')->count(),
@@ -49,8 +52,10 @@ class AdmissionsController extends Controller
             'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost'])->count(),
             'qualified'=>(clone $base)->where('status','qualified')->count(),
             'admitted'=>(clone $base)->where('status','admitted')->count(),
+            'lost'=>(clone $base)->where('status','lost')->count(),
+            'conversion_rate'=>(($total=(clone $base)->count()) > 0 ? round(((clone $base)->where('status','admitted')->count() / $total) * 100,1) : 0),
         ];
-        return view('tagore.admissions.index',compact('leads','stats','staff','sources','campaigns'));
+        return view('tagore.admissions.index',compact('leads','stats','staff','sources','campaigns','ownerPerformance','ownerNames'));
     }
 
     public function create(Request $request): View
@@ -122,14 +127,22 @@ class AdmissionsController extends Controller
             'type'=>['required','in:call,whatsapp,meeting,note,visit'],'outcome'=>['nullable','string','max:80'],
             'notes'=>['nullable','string','max:5000'],'scheduled_at'=>['nullable','date'],'completed_at'=>['nullable','date'],
             'status'=>['nullable','in:new,contacted,follow_up,qualified,admitted,lost'],'next_follow_up_at'=>['nullable','date'],
+            'lost_reason'=>['nullable','string','max:120'],
         ]);
         DB::transaction(function() use($lead,$data,$userId){
             TagoreAdmissionActivity::create([
                 'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>$data['type'],'outcome'=>$data['outcome']??null,
                 'notes'=>$data['notes']??null,'scheduled_at'=>$data['scheduled_at']??null,'completed_at'=>$data['completed_at']??null,
             ]);
-            $updates=[]; if(!empty($data['status'])) $updates['status']=$data['status'];
+            $updates=[];
+            if(!empty($data['status'])) {
+                $updates['status']=$data['status'];
+                if($data['status']==='admitted') $updates['converted_at']=now();
+                if($data['status']==='lost') $updates['lost_reason']=$data['lost_reason']??null;
+                if($data['status']!=='lost') $updates['lost_reason']=null;
+            }
             if(array_key_exists('next_follow_up_at',$data)) $updates['next_follow_up_at']=$data['next_follow_up_at'];
+            if(in_array($data['type'],['call','whatsapp','meeting','visit'],true)) $updates['last_contacted_at']=now();
             if($updates) $lead->update($updates);
         });
         return back()->with('success','Activity saved.');
