@@ -52,7 +52,7 @@ jobs:
           composer dump-autoload --optimize --strict-ambiguous --no-scripts
           composer dump-autoload --optimize
           php scripts/check-tagore-routes.php
-          php artisan view:cache
+          php scripts/check-tagore-views.php
           php artisan config:cache
       - name: PHP syntax check (all Tagore PHP)
         run: |
