@@ -67,7 +67,9 @@ jobs:
           DB_DATABASE: school
           DB_USERNAME: root
           DB_PASSWORD: root
-        run: php artisan test --filter=Tagore --exclude-group=e2e
+        run: |
+          php artisan config:clear
+          php artisan test --filter=Tagore --exclude-group=e2e
 
   mysql-migration-smoke:
     runs-on: ubuntu-latest
