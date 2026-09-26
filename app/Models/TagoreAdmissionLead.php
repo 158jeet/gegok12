@@ -13,7 +13,7 @@ class TagoreAdmissionLead extends Model
 
     protected $fillable = [
         'institution_id','academic_year_id','lead_no','student_name','parent_name',
-        'mobile','alternate_mobile','email','class_name','source','status',
+        'mobile','alternate_mobile','email','class_name','source','campaign','status',
         'assigned_to','next_follow_up_at','notes',
     ];
 
