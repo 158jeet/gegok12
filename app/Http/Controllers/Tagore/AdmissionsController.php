@@ -108,7 +108,8 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $lead=TagoreAdmissionLead::with('activities')->findOrFail($leadId);
         abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
-        return view('tagore.admissions.show',compact('lead'));
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        return view('tagore.admissions.show',compact('lead','staff'));
     }
 
     public function activity(Request $request,int $leadId)
