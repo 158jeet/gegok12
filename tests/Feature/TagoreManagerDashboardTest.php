@@ -29,15 +29,17 @@ class TagoreManagerDashboardTest extends TestCase
         ]);
 
         $this->actingAs($owner)
-            ->get(route('tagore.dashboard'))
+            ->get(route('tagore.dashboard', ['period' => 30]))
             ->assertOk()
             ->assertSee('Manager Command Center')
             ->assertSee('Command center QA')
             ->assertSee('Department health')
             ->assertSee('Employee Performance')
-            ->assertSee('7-day workload trend')
+            ->assertSee('30-day workload trend')
             ->assertSee('Manager follow-up')
             ->assertSee('Workload balance')
+            ->assertSee('Created in period')
+            ->assertSee('Period completion')
             ->assertSee('Academic');
     }
 
