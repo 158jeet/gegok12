@@ -49,7 +49,8 @@ jobs:
           php artisan db:seed --class=TagorePrototypeSeeder --force
       - name: Tagore structural preflight
         run: |
-          composer dump-autoload --optimize --strict-ambiguous
+          composer dump-autoload --optimize --strict-ambiguous --no-scripts
+          composer dump-autoload --optimize
           php artisan route:list --path=tagore --json > /tmp/tagore-routes.json
           php artisan view:cache
           php artisan config:cache
