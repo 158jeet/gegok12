@@ -40,7 +40,7 @@ class FeeEditorController extends Controller
             'max_percent'=>['required','numeric','between:-100,100'],
         ]);
         $count=$service->bulkAdjust($data,$data['min_percent'],$data['max_percent'],(int)$request->user()->id);
-        return back()->with('success',\"{$count} fee records adjusted. Opening balances were excluded. Each applied percentage is stored in the audit trail.\");
+        return back()->with('success', "{$count} fee records adjusted. Opening balances were excluded. Each applied percentage is stored in the audit trail.");
     }
 
     public function closeYear(Request $request, FeeVaultService $vault)
