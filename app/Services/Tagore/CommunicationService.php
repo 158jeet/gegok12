@@ -16,7 +16,8 @@ class CommunicationService
         if(in_array($campaign->status,['sent','sending'],true)) return ['sent'=>(int)$campaign->sent_count,'failed'=>(int)$campaign->failed_count];
 
         $audience=json_decode((string)$campaign->audience_json,true) ?: [];
-        $query=DB::table('users')->whereNull('deleted_at');
+        $schoolId=DB::table('tagore_institutions')->where('id',$campaign->institution_id)->value('school_id');
+        $query=DB::table('users')->whereNull('deleted_at')->where('school_id',$schoolId);
         if(!empty($audience['user_ids'])) $query->whereIn('id',array_map('intval',(array)$audience['user_ids']));
         if(!empty($audience['school_ids'])) $query->whereIn('school_id',array_map('intval',(array)$audience['school_ids']));
         if(!empty($audience['usergroup_ids'])) $query->whereIn('usergroup_id',array_map('intval',(array)$audience['usergroup_ids']));
