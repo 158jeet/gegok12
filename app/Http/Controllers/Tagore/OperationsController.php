@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Http\\Controllers\\Tagore;
+namespace App\Http\Controllers\Tagore;
 
-use App\\Http\\Controllers\\Controller;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\View\\View;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class OperationsController extends Controller
 {
