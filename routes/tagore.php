@@ -18,6 +18,7 @@ use App\Http\Controllers\Tagore\PayrollController;
 use App\Http\Controllers\Tagore\InventoryController;
 use App\Http\Controllers\Tagore\TransportController;
 use App\Http\Controllers\Tagore\CommunicationController;
+use App\Http\Controllers\Tagore\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -91,6 +92,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/inventory', [InventoryController::class, 'index'])->name('tagore.inventory.index');
     Route::get('/transport', [TransportController::class, 'index'])->name('tagore.transport.index');
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
+    Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
+    Route::post('/reports', [ReportController::class, 'save'])->name('tagore.reports.save');
+    Route::get('/reports/{id}/export', [ReportController::class, 'export'])->whereNumber('id')->name('tagore.reports.export');
     Route::post('/communication/campaign', [CommunicationController::class, 'create'])->name('tagore.communication.create');
     Route::patch('/communication/campaign/{id}/send', [CommunicationController::class, 'send'])->whereNumber('id')->name('tagore.communication.send');
     Route::post('/communication/device', [CommunicationController::class, 'device'])->name('tagore.communication.device');
