@@ -57,6 +57,14 @@ class PlatformController extends Controller
         $d=$request->validate(['plan_id'=>'required|integer','student_id'=>'required|integer']);
         $plan=DB::table('tagore_fee_finance_plans')->where('id',$d['plan_id'])->where('status','active')->first(); abort_unless($plan,404);
         $student=DB::table('users')->where('id',$d['student_id'])->where('usergroup_id',6)->whereNull('deleted_at')->first(); abort_unless($student,422,'Student not found.');
+        $roles=$this->roles($request);
+        if (!$roles->contains('OWNER') && !$roles->intersect(['PRINCIPAL','ACCOUNTS','COORDINATOR'])->isNotEmpty()) {
+            if ($roles->contains('STUDENT')) abort_unless((int)$request->user()->id===(int)$student->id,403);
+            elseif ($roles->contains('PARENT')) abort_unless(DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('student_id',$student->id)->where('status','active')->exists(),403);
+            else abort(403);
+        }
+        $institutionSchool=DB::table('tagore_institutions')->where('id',$plan->institution_id)->value('school_id');
+        abort_unless((int)$institutionSchool===(int)$student->school_id,403);
         $r=$plan->interest_rate/100/12; $n=(int)$plan->tenure_months; $p=(float)$plan->amount;
         $emi=$r>0 ? $p*$r*pow(1+$r,$n)/(pow(1+$r,$n)-1) : $p/$n;
         $id=DB::table('tagore_fee_finance_applications')->insertGetId(['plan_id'=>$plan->id,'student_id'=>$student->id,'principal'=>$p,'emi'=>round($emi,2),'status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
@@ -115,6 +123,11 @@ class PlatformController extends Controller
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         DB::table('tagore_creative_templates')->insert($d+['status'=>'active','created_at'=>now(),'updated_at'=>now()]);
         return back()->with('success','Creative template saved.');
+    }
+
+    private function roles(Request $request)
+    {
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$request->user()->id)->where('ur.status','active')->pluck('r.code')->unique()->values();
     }
 
     private function guard($roles,array $allowed): void { abort_unless($roles->contains('OWNER') || $roles->intersect($allowed)->isNotEmpty(),403); }
