@@ -25,7 +25,7 @@ class FeeController extends Controller
 
         $fees = DB::table('tagore_fee_obligations')->where('student_id', $studentId)->orderByDesc('due_date')->orderByDesc('id')->get();
         $items = DB::table('tagore_fee_obligation_items as oi')->join('tagore_fee_obligations as o', 'o.id', '=', 'oi.fee_obligation_id')->where('o.student_id', $studentId)->orderBy('o.id')->orderBy('oi.id')->get(['oi.*', 'o.due_date']);
-        $payments = DB::table('tagore_payments')->where('student_id', $studentId)->where('status', 'success')->orderByDesc('paid_at')->get();
+        $payments = $roles->contains('PARENT') || $roles->contains('STUDENT') ? collect() : DB::table('tagore_payments')->where('student_id', $studentId)->where('status', 'success')->orderByDesc('paid_at')->get();
         $concessions = DB::table('tagore_fee_concessions')->where('student_id', $studentId)->where('status', 'approved')->orderByDesc('id')->get();
         $summary = [
             'gross' => round((float) $fees->sum('gross_amount'), 2),
@@ -83,7 +83,8 @@ class FeeController extends Controller
             'payment_mode' => ['required', 'in:cash,cheque,bank_transfer,other'],
             'reference_number' => ['nullable', 'string', 'max:160'],
         ]);
-        $feeService->recordOfflinePayment($studentId, $student->institution_id, (float) $data['amount'], null, $userId, $data['reference_number'] ?? null, [], $data['payment_mode']);
+        $paymentId = $feeService->recordOfflinePayment($studentId, $student->institution_id, (float) $data['amount'], null, $userId, $data['reference_number'] ?? null, [], $data['payment_mode']);
+        app(FeeReceiptMailer::class)->send($paymentId);
         return back()->with('success', 'Payment recorded successfully.');
     }
 
