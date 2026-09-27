@@ -87,6 +87,14 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/accounts/fees/import/{batchId}/mapping/{rowId}', [LegacyStudentMappingController::class, 'store'])->whereNumber('batchId')->whereNumber('rowId')->name('tagore.fees.import.mapping.store');
     Route::get('/payroll', [PayrollController::class, 'index'])->name('tagore.payroll.index');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('tagore.inventory.index');
+    Route::get('/transport', [TransportController::class, 'index'])->name('tagore.transport.index');
+    Route::post('/transport/route', [TransportController::class, 'route'])->name('tagore.transport.route');
+    Route::post('/transport/vehicle', [TransportController::class, 'vehicle'])->name('tagore.transport.vehicle');
+    Route::post('/transport/driver', [TransportController::class, 'driver'])->name('tagore.transport.driver');
+    Route::post('/transport/trip', [TransportController::class, 'startTrip'])->name('tagore.transport.trip');
+    Route::post('/transport/trip/{tripId}/gps', [TransportController::class, 'gpsPing'])->whereNumber('tripId')->name('tagore.transport.gps');
+    Route::get('/transport/trip/{tripId}/live', [TransportController::class, 'live'])->whereNumber('tripId')->name('tagore.transport.live');
+    Route::post('/transport/trip/{tripId}/boarding', [TransportController::class, 'boarding'])->whereNumber('tripId')->name('tagore.transport.boarding');
     Route::post('/inventory/vendor', [InventoryController::class, 'vendor'])->name('tagore.inventory.vendor');
     Route::post('/inventory/item', [InventoryController::class, 'item'])->name('tagore.inventory.item');
     Route::post('/inventory/movement', [InventoryController::class, 'movement'])->name('tagore.inventory.movement');
