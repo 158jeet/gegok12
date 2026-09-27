@@ -22,6 +22,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
+    Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
+    Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
+    Route::patch('/staff/me/leave/{leaveId}/cancel', [\App\Http\Controllers\Tagore\StaffController::class, 'cancelOwnLeave'])->whereNumber('leaveId')->name('tagore.staff.self.leave.cancel');
     Route::get('/staff/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'leave'])->name('tagore.staff.leave');
     Route::post('/staff/leave/{leaveId}/decide', [\App\Http\Controllers\Tagore\StaffController::class, 'decideLeave'])->whereNumber('leaveId')->name('tagore.staff.leave.decide');
     Route::post('/admin/institution', [AdministrationController::class, 'storeInstitution'])->name('tagore.admin.institution');
