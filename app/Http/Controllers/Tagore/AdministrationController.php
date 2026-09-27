@@ -39,6 +39,8 @@ class AdministrationController extends Controller
             ->get(['ay.id', 'ay.school_id', 'ay.name', 'ay.start_date', 'ay.end_date', 'ay.status', 'i.id as institution_id', 'i.display_name as institution']);
 
         $rolesList = DB::table('tagore_roles')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'code', 'description']);
+        $departments = DB::table('tagore_departments as d')->join('tagore_institutions as i','i.id','=','d.institution_id')->where('d.status','active')->where('i.status','active')->orderBy('i.display_name')->orderBy('d.name')->get(['d.id','d.name','d.code','d.institution_id','i.display_name as institution']);
+        $staff = DB::table('users as u')->join('schools as s','s.id','=','u.school_id')->whereNull('u.deleted_at')->whereIn('u.school_id',$institutions->pluck('school_id')->all())->orderBy('u.name')->limit(500)->get(['u.id','u.name','u.email','u.school_id','s.name as school_name']);
         $assignments = DB::table('tagore_user_roles as ur')
             ->join('users as u', 'u.id', '=', 'ur.user_id')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
@@ -48,7 +50,7 @@ class AdministrationController extends Controller
             ->limit(250)
             ->get(['ur.id', 'u.id as user_id', 'u.name', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
-        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments'));
+        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
     }
 
     public function storeInstitution(Request $request)
@@ -99,6 +101,48 @@ class AdministrationController extends Controller
             'updated_at' => now(),
         ]);
         return back()->with('success', 'Academic year added.');
+    }
+
+    public function storeDepartment(Request $request)
+    {
+        $this->owner($request);
+        $data = $request->validate([
+            'institution_id' => ['required', 'integer', 'exists:tagore_institutions,id'],
+            'name' => ['required', 'string', 'max:100'],
+            'code' => ['required', 'string', 'max:50'],
+        ]);
+        abort_unless(DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->exists(), 422);
+        $code = strtoupper(trim($data['code']));
+        abort_if(DB::table('tagore_departments')->where('institution_id', $data['institution_id'])->where('code', $code)->exists(), 422, 'Department code already exists in this institution.');
+        DB::table('tagore_departments')->insert([
+            'institution_id' => $data['institution_id'], 'name' => trim($data['name']), 'code' => $code,
+            'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        return back()->with('success', 'Department added.');
+    }
+
+    public function assignDepartment(Request $request)
+    {
+        $this->owner($request);
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'department_id' => ['required', 'integer', 'exists:tagore_departments,id'],
+            'designation' => ['nullable', 'string', 'max:120'],
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+        $department = DB::table('tagore_departments as d')->join('tagore_institutions as i','i.id','=','d.institution_id')
+            ->where('d.id',$data['department_id'])->where('d.status','active')->where('i.status','active')
+            ->first(['d.id','d.institution_id','i.school_id']);
+        abort_unless($department, 422);
+        abort_unless(DB::table('users')->where('id',$data['user_id'])->where('school_id',$department->school_id)->exists(), 422, 'User must belong to the selected institution school.');
+        if (!empty($data['is_primary'])) {
+            DB::table('tagore_user_departments')->where('user_id',$data['user_id'])->where('status','active')->update(['is_primary'=>false,'updated_at'=>now()]);
+        }
+        DB::table('tagore_user_departments')->updateOrInsert(
+            ['user_id'=>$data['user_id'],'department_id'=>$data['department_id']],
+            ['designation'=>$data['designation'] ?? null,'is_primary'=>!empty($data['is_primary']),'status'=>'active','created_at'=>now(),'updated_at'=>now()]
+        );
+        return back()->with('success', 'Department assignment saved.');
     }
 
     public function assignRole(Request $request)
