@@ -57,12 +57,13 @@ class OperationsController extends Controller
     public function index(Request $request): View
     {
         $roles=$this->roles((int)$request->user()->id);
-        $module=$request->query('module','payroll');
-        abort_unless(isset(self::MODULES[$module]),404);
+        $allowed=array_filter(self::MODULES, fn($label,$key) => $roles->contains('OWNER') || $roles->intersect(self::ACCESS[$key] ?? [])->isNotEmpty(), ARRAY_FILTER_USE_BOTH);
+        $module=$request->query('module',array_key_first($allowed));
+        abort_unless(isset($allowed[$module]),403);
         $table=$this->table($module);
         $rows=DB::table($table)->orderByDesc('id')->limit(200)->get();
         return view('tagore.operations.index',[
-            'modules'=>self::MODULES,'columns'=>self::COLUMNS[$module],'module'=>$module,'moduleTitle'=>self::MODULES[$module],
+            'modules'=>$allowed,'columns'=>self::COLUMNS[$module],'module'=>$module,'moduleTitle'=>self::MODULES[$module],
             'rows'=>$rows,'roles'=>$roles,
         ]);
     }
