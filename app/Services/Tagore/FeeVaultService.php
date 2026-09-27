@@ -55,7 +55,9 @@ class FeeVaultService
         $out=[];
         foreach($rows as $row){
             if(!Storage::disk('local')->exists($row->archive_path)) continue;
-            $data=json_decode(Crypt::decryptString(Storage::disk('local')->get($row->archive_path)),true);
+            $ciphertext=Storage::disk('local')->get($row->archive_path);
+            if(!hash_equals((string)$row->archive_sha256,hash('sha256',$ciphertext))) continue;
+            $data=json_decode(Crypt::decryptString($ciphertext),true);
             $out[]=['closure'=>(array)$row,'records'=>array_values(array_filter($data['students']??[],fn($x)=>(int)($x['student_id']??0)===$studentId)),'payments'=>array_values(array_filter($data['payments']??[],fn($x)=>(int)($x['student_id']??0)===$studentId)),'transactions'=>array_values(array_filter($data['transactions']??[],fn($x)=>(int)($x['student_id']??0)===$studentId))];
         }
         return $out;
