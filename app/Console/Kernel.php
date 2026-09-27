@@ -36,6 +36,7 @@ class Kernel extends ConsoleKernel
             \App\Console\Commands\KoboSyncCommand::class,
             \App\Console\Commands\ArchiveClosedTagoreFeeYears::class,
             \App\Console\Commands\SendTagoreCampaigns::class,
+            \App\Console\Commands\RunTagoreAutomations::class,
 
             \App\Console\Commands\DataSeeder\SeedAttendance::class,
 
@@ -89,6 +90,7 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('tagore:archive-closed-fees')->dailyAt('02:15')->withoutOverlapping();
         $schedule->command('tagore:send-campaigns')->everyMinute()->withoutOverlapping();
+        $schedule->command('tagore:run-automations')->everyMinute()->withoutOverlapping();
 
         if (config('kobo.api_token') && config('kobo.asset_uid')) {
             $schedule->command('kobo:sync')
