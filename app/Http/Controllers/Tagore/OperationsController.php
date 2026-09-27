@@ -54,92 +54,197 @@ class OperationsController extends Controller
         'creative'=>['name','template_type','template_json','brand_json','status'],
     ];
 
+    private const TABLES = [
+        'payroll'=>'payroll','inventory'=>'inventory','expense'=>'expense','transport'=>'transport','hostel'=>'hostel',
+        'alumni'=>'alumni','visitor'=>'visitor','gatepass'=>'gatepass','survey'=>'survey','notification'=>'notification',
+        'document'=>'document','course'=>'course','content'=>'content','report'=>'report','social'=>'social',
+        'website'=>'website','store'=>'store','fee-plan'=>'fee_plan','integration'=>'integration',
+        'automation'=>'automation','creative'=>'creative',
+    ];
+
     public function index(Request $request): View
     {
-        $roles=$this->roles((int)$request->user()->id);
-        $allowed=array_filter(self::MODULES, fn($label,$key) => $roles->contains('OWNER') || $roles->intersect(self::ACCESS[$key] ?? [])->isNotEmpty(), ARRAY_FILTER_USE_BOTH);
-        $module=$request->query('module',array_key_first($allowed));
-        abort_unless(isset($allowed[$module]),403);
-        $table=$this->table($module);
-        $rows=DB::table($table)->orderByDesc('id')->limit(200)->get();
-        return view('tagore.operations.index',[
-            'modules'=>$allowed,'columns'=>self::COLUMNS[$module],'module'=>$module,'moduleTitle'=>self::MODULES[$module],
-            'rows'=>$rows,'roles'=>$roles,
+        $roles = $this->roles((int) $request->user()->id);
+        $allowed = array_filter(
+            self::MODULES,
+            fn ($label, $key) => $roles->contains('OWNER') || $roles->intersect(self::ACCESS[$key] ?? [])->isNotEmpty(),
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        $module = (string) $request->query('module', array_key_first($allowed));
+        abort_unless(isset($allowed[$module]), 403);
+
+        $institutionIds = $this->institutionIds($request, $roles);
+        $institutionId = $this->selectedInstitutionId($request, $roles, $institutionIds);
+        $table = $this->table($module);
+
+        $rows = DB::table($table)
+            ->whereIn('institution_id', $institutionIds ?: [-1])
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
+        $institutions = DB::table('tagore_institutions')
+            ->whereIn('id', $institutionIds ?: [-1])
+            ->where('status', 'active')
+            ->orderBy('display_name')
+            ->get(['id','display_name']);
+
+        return view('tagore.operations.index', [
+            'modules'=>$allowed,
+            'columns'=>self::COLUMNS[$module],
+            'module'=>$module,
+            'moduleTitle'=>self::MODULES[$module],
+            'rows'=>$rows,
+            'roles'=>$roles,
+            'institutions'=>$institutions,
+            'institutionId'=>$institutionId,
         ]);
     }
 
-    public function store(Request $request,string $module)
+    public function store(Request $request, string $module)
     {
-        $this->authorizeModule($request,$module);
-        $data=$this->validated($request,$module);
-        $data['institution_id']=$this->institutionId($request);
-        $id=DB::table($this->table($module))->insertGetId($data+['created_at'=>now(),'updated_at'=>now()]);
-        return back()->with('success',self::MODULES[$module].' record created (#'.$id.').');
+        $this->authorizeModule($request, $module);
+        $roles = $this->roles((int) $request->user()->id);
+        $institutionIds = $this->institutionIds($request, $roles);
+        $institutionId = $this->selectedInstitutionId($request, $roles, $institutionIds);
+        $data = $this->validated($request, $module);
+        $data['institution_id'] = $institutionId;
+
+        $id = DB::table($this->table($module))->insertGetId($data + ['created_at'=>now(),'updated_at'=>now()]);
+        $this->audit($request, $module, $id, 'created', null, $data);
+
+        return back()->with('success', self::MODULES[$module].' record created (#'.$id.').');
     }
 
-    public function update(Request $request,string $module,int $id)
+    public function update(Request $request, string $module, int $id)
     {
-        $this->authorizeModule($request,$module);
-        $data=$this->validated($request,$module);
-        $row=DB::table($this->table($module))->where('id',$id)->first();
+        $this->authorizeModule($request, $module);
+        $roles = $this->roles((int) $request->user()->id);
+        $institutionIds = $this->institutionIds($request, $roles);
+        $row = DB::table($this->table($module))->where('id',$id)->first();
         abort_unless($row,404);
-        $this->scope($request,$row);
+        abort_unless(in_array((int) $row->institution_id, $institutionIds, true),403);
+
+        $data = $this->validated($request, $module);
         DB::table($this->table($module))->where('id',$id)->update($data+['updated_at'=>now()]);
+        $this->audit($request, $module, $id, 'updated', $row, $data);
+
         return back()->with('success','Record updated.');
     }
 
-    public function destroy(Request $request,string $module,int $id)
+    public function destroy(Request $request, string $module, int $id)
     {
-        $this->authorizeModule($request,$module);
-        $row=DB::table($this->table($module))->where('id',$id)->first();
+        $this->authorizeModule($request, $module);
+        $roles = $this->roles((int) $request->user()->id);
+        $institutionIds = $this->institutionIds($request, $roles);
+        $row = DB::table($this->table($module))->where('id',$id)->first();
         abort_unless($row,404);
-        $this->scope($request,$row);
+        abort_unless(in_array((int) $row->institution_id, $institutionIds, true),403);
+
         DB::table($this->table($module))->where('id',$id)->delete();
+        $this->audit($request, $module, $id, 'deleted', $row, null);
+
         return back()->with('success','Record deleted.');
     }
 
-    private function validated(Request $request,string $module): array
+    private function validated(Request $request, string $module): array
     {
         abort_unless(isset(self::COLUMNS[$module]),404);
-        $out=[];
-        foreach(self::COLUMNS[$module] as $column){
-            if($request->has($column)){
-                $value=$request->input($column);
-                if(str_ends_with($column,'_json')||in_array($column,['access_json','recipients_json','definition_json','config_json','template_json','brand_json','questions_json'])){
-                    $decoded=is_array($value)?$value:json_decode((string)$value,true);
-                    abort_unless(json_last_error()===JSON_ERROR_NONE || is_array($value),422,'Invalid JSON field: '.$column);
-                    $value=$decoded;
-                }
-                $out[$column]=$value;
+        $out = [];
+
+        foreach (self::COLUMNS[$module] as $column) {
+            if (!$request->has($column)) {
+                continue;
             }
+
+            $value = $request->input($column);
+            if (str_ends_with($column,'_json')) {
+                $decoded = is_array($value) ? $value : json_decode((string) $value, true);
+                abort_unless(is_array($decoded) && json_last_error() === JSON_ERROR_NONE || is_array($value), 422, 'Invalid JSON field: '.$column);
+                $value = $decoded;
+            }
+            $out[$column] = $value;
         }
+
         return $out;
     }
 
-    private function authorizeModule(Request $request,string $module): void
+    private function authorizeModule(Request $request, string $module): void
     {
         abort_unless(isset(self::MODULES[$module]),404);
-        $roles=$this->roles((int)$request->user()->id);
-        abort_unless($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','LIBRARY','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty(),403);
+        $roles = $this->roles((int) $request->user()->id);
+        abort_unless($roles->contains('OWNER') || $roles->intersect(self::ACCESS[$module] ?? [])->isNotEmpty(),403);
+    }
+
+    private function institutionIds(Request $request, $roles): array
+    {
+        if ($roles->contains('OWNER')) {
+            return DB::table('tagore_institutions')->where('status','active')->pluck('id')->map(fn($id)=>(int)$id)->all();
+        }
+
+        return DB::table('tagore_user_roles')
+            ->where('user_id',$request->user()->id)
+            ->where('status','active')
+            ->whereNotNull('institution_id')
+            ->pluck('institution_id')
+            ->map(fn($id)=>(int)$id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function selectedInstitutionId(Request $request, $roles, array $institutionIds): int
+    {
+        $requested = (int) $request->input('institution_id');
+        if ($roles->contains('OWNER')) {
+            abort_unless($requested > 0 && in_array($requested, $institutionIds, true), 403);
+            return $requested;
+        }
+
+        abort_unless(count($institutionIds) > 0, 403);
+        if ($requested > 0) {
+            abort_unless(in_array($requested, $institutionIds, true), 403);
+            return $requested;
+        }
+
+        return (int) $institutionIds[0];
+    }
+
+    private function table(string $module): string
+    {
+        return 'tagore_'.self::TABLES[$module].'_records';
     }
 
     private function roles(int $userId)
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.status','active')->pluck('r.code')->unique()->values();
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r','r.id','=','ur.role_id')
+            ->where('ur.user_id',$userId)
+            ->where('ur.status','active')
+            ->pluck('r.code')
+            ->unique()
+            ->values();
     }
 
-    private function institutionId(Request $request): ?int
+    private function audit(Request $request, string $module, int $id, string $action, $old, $new): void
     {
-        $roles=$this->roles((int)$request->user()->id);
-        if($roles->contains('OWNER')) return $request->integer('institution_id') ?: null;
-        return DB::table('tagore_user_roles')->where('user_id',$request->user()->id)->where('status','active')->whereNotNull('institution_id')->value('institution_id');
-    }
+        if (!DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+            return;
+        }
 
-    private function scope(Request $request,object $row): void
-    {
-        $roles=$this->roles((int)$request->user()->id);
-        if(!$roles->contains('OWNER') && (int)($row->institution_id??0)!==(int)$this->institutionId($request)) abort(403);
+        DB::table('tagore_audit_events')->insert([
+            'user_id'=>(int)$request->user()->id,
+            'institution_id'=>(int)$request->input('institution_id'),
+            'action'=>'OPERATIONS_'.strtoupper($action),
+            'entity_type'=>'tagore_'.$module.'_records',
+            'entity_id'=>$id,
+            'old_values_json'=>$old ? json_encode((array)$old) : null,
+            'new_values_json'=>$new ? json_encode($new) : null,
+            'ip_address'=>$request->ip(),
+            'user_agent'=>substr((string)$request->userAgent(),0,2000),
+            'created_at'=>now(),
+            'updated_at'=>now(),
+        ]);
     }
-
-    private function table(string $module): string { return 'tagore_'.$module.'_records'; }
 }
