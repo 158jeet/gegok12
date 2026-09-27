@@ -22,6 +22,7 @@ use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
 use App\Http\Controllers\Tagore\PlatformController;
+use App\Http\Controllers\Tagore\DocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -100,6 +101,10 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
+    Route::get('/documents', [DocumentController::class, 'index'])->name('tagore.documents.index');
+    Route::post('/documents', [DocumentController::class, 'upload'])->name('tagore.documents.upload');
+    Route::get('/documents/{id}/download', [DocumentController::class, 'download'])->whereNumber('id')->name('tagore.documents.download');
+    Route::get('/documents/{id}/versions', [DocumentController::class, 'versions'])->whereNumber('id')->name('tagore.documents.versions');
     Route::post('/platform/alumni', [PlatformController::class, 'alumni'])->name('tagore.platform.alumni');
     Route::post('/platform/event', [PlatformController::class, 'event'])->name('tagore.platform.event');
     Route::post('/platform/finance', [PlatformController::class, 'financePlan'])->name('tagore.platform.finance');
