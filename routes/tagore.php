@@ -14,6 +14,7 @@ use App\Http\Controllers\Tagore\OnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use App\Http\Controllers\Tagore\TaskController;
+use App\Http\Controllers\Tagore\PayrollController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -83,6 +84,11 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/accounts/fees/import/{batchId}/mapping/suggestions', [LegacyStudentMappingController::class, 'suggestions'])->whereNumber('batchId')->name('tagore.fees.import.mapping.suggestions');
     Route::post('/accounts/fees/import/{batchId}/mapping/auto', [LegacyStudentMappingController::class, 'autoMatch'])->whereNumber('batchId')->name('tagore.fees.import.mapping.auto');
     Route::post('/accounts/fees/import/{batchId}/mapping/{rowId}', [LegacyStudentMappingController::class, 'store'])->whereNumber('batchId')->whereNumber('rowId')->name('tagore.fees.import.mapping.store');
+    Route::get('/payroll', [PayrollController::class, 'index'])->name('tagore.payroll.index');
+    Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('tagore.payroll.generate');
+    Route::patch('/payroll/{runId}/approve', [PayrollController::class, 'approve'])->whereNumber('runId')->name('tagore.payroll.approve');
+    Route::patch('/payroll/{runId}/paid', [PayrollController::class, 'markPaid'])->whereNumber('runId')->name('tagore.payroll.paid');
+    Route::get('/payroll/payslip/{itemId}', [PayrollController::class, 'payslip'])->whereNumber('itemId')->name('tagore.payroll.payslip');
     Route::get('/operations', [\App\Http\Controllers\Tagore\OperationsController::class, 'index'])->name('tagore.operations.index');
     Route::post('/operations/{module}', [\App\Http\Controllers\Tagore\OperationsController::class, 'store'])->whereIn('module', ['payroll','inventory','expense','transport','hostel','alumni','visitor','gatepass','survey','notification','document','course','content','report','social','website','store','fee-plan','integration','automation','creative'])->name('tagore.operations.store');
     Route::patch('/operations/{module}/{id}', [\App\Http\Controllers\Tagore\OperationsController::class, 'update'])->whereIn('module', ['payroll','inventory','expense','transport','hostel','alumni','visitor','gatepass','survey','notification','document','course','content','report','social','website','store','fee-plan','integration','automation','creative'])->whereNumber('id')->name('tagore.operations.update');
