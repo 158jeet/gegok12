@@ -20,7 +20,9 @@ class ArchiveClosedTagoreFeeYears extends Command
             ->get(['ay.id as academic_year_id','i.id as institution_id']);
 
         foreach($rows as $row){
-            $vault->closeYear((int)$row->academic_year_id,(int)$row->institution_id,1);
+            $ownerId=(int)config('tagore.fee_vault_owner_user_id');
+            if ($ownerId <= 0) { $this->error('TAGORE_FEE_VAULT_OWNER_USER_ID is not configured.'); return self::FAILURE; }
+            $vault->closeYear((int)$row->academic_year_id,(int)$row->institution_id,$ownerId);
             $this->line("Archived academic year {$row->academic_year_id}, institution {$row->institution_id}");
         }
 
