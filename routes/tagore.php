@@ -23,6 +23,7 @@ use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
+use App\Http\Controllers\Tagore\FeeWalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -102,6 +103,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
     Route::get('/documents', [DocumentController::class, 'index'])->name('tagore.documents.index');
+    Route::get('/accounts/fees/wallet', [FeeWalletController::class, 'index'])->name('tagore.fees.wallet');
+    Route::post('/accounts/fees/wallet/credit', [FeeWalletController::class, 'credit'])->name('tagore.fees.wallet.credit');
+    Route::post('/accounts/fees/wallet/pay', [FeeWalletController::class, 'pay'])->name('tagore.fees.wallet.pay');
     Route::post('/documents', [DocumentController::class, 'upload'])->name('tagore.documents.upload');
     Route::get('/documents/{id}/download', [DocumentController::class, 'download'])->whereNumber('id')->name('tagore.documents.download');
     Route::get('/documents/{id}/versions', [DocumentController::class, 'versions'])->whereNumber('id')->name('tagore.documents.versions');
