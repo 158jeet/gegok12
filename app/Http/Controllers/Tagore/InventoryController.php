@@ -37,6 +37,7 @@ class InventoryController extends Controller
         [$roles,$ids]=$this->context($request); $this->authorize($roles);
         $d=$request->validate(['institution_id'=>'required|integer','name'=>'required|string|max:190','sku'=>'nullable|string|max:100','category'=>'nullable|string|max:100','unit'=>'nullable|string|max:30','reorder_level'=>'numeric|min:0','unit_cost'=>'numeric|min:0','vendor_id'=>'nullable|integer']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
+        if (!empty($d['vendor_id'])) abort_unless(DB::table('tagore_inventory_vendors')->where('id',$d['vendor_id'])->where('institution_id',$d['institution_id'])->exists(),422,'Vendor is outside the institution.');
         DB::table('tagore_inventory_items')->insert($d+['quantity'=>0,'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
         return back()->with('success','Inventory item added.');
     }
@@ -55,6 +56,7 @@ class InventoryController extends Controller
         [$roles,$ids]=$this->context($request); $this->authorize($roles);
         $d=$request->validate(['institution_id'=>'required|integer','vendor_id'=>'required|integer','items_json'=>'required|json']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
+        abort_unless(DB::table('tagore_inventory_vendors')->where('id',$d['vendor_id'])->where('institution_id',$d['institution_id'])->exists(),422,'Vendor is outside the institution.');
         $items=json_decode($d['items_json'],true); abort_unless(is_array($items) && $items,422);
         $total=0;
         foreach($items as $line){
