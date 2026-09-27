@@ -14,10 +14,18 @@ class FeeWalletController extends Controller
     public function index(Request $request): View
     {
         $roles=$this->roles($request);
-        if($roles->contains('PARENT')) $studentIds=DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('status','active')->pluck('student_id');
-        elseif($roles->contains('STUDENT')) $studentIds=collect([$request->user()->id]);
-        else abort_unless($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403)->with();
-        $wallets=DB::table('tagore_fee_wallets')->whereIn('student_id',$studentIds)->get();
+        if($roles->contains('PARENT')) {
+            $studentIds=DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('status','active')->pluck('student_id');
+            $wallets=DB::table('tagore_fee_wallets')->whereIn('student_id',$studentIds)->get();
+        } elseif($roles->contains('STUDENT')) {
+            $wallets=DB::table('tagore_fee_wallets')->where('student_id',$request->user()->id)->get();
+        } else {
+            abort_unless($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
+            $institutionIds=$roles->contains('OWNER')
+                ? DB::table('tagore_institutions')->where('status','active')->pluck('id')
+                : DB::table('tagore_user_roles')->where('user_id',$request->user()->id)->where('status','active')->whereNotNull('institution_id')->pluck('institution_id');
+            $wallets=DB::table('tagore_fee_wallets')->whereIn('institution_id',$institutionIds)->get();
+        }
         return view('tagore.fees.wallet',compact('wallets','roles'));
     }
 
@@ -27,6 +35,8 @@ class FeeWalletController extends Controller
         abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
         $d=$request->validate(['institution_id'=>'required|integer','student_id'=>'required|integer','amount'=>'required|numeric|min:0.01','notes'=>'nullable|string|max:1000']);
         abort_unless(DB::table('tagore_institutions')->where('id',$d['institution_id'])->where('status','active')->exists(),403);
+        $student=DB::table('users')->where('id',$d['student_id'])->where('usergroup_id',6)->whereNull('deleted_at')->first(); abort_unless($student,422,'Student not found.');
+        abort_unless((int)DB::table('tagore_institutions')->where('id',$d['institution_id'])->value('school_id')===(int)$student->school_id,403);
         $wallets->credit((int)$d['student_id'],(int)$d['institution_id'],(float)$d['amount'],(int)$request->user()->id,$d['notes']??null);
         return back()->with('success','Wallet credited.');
     }
@@ -35,6 +45,8 @@ class FeeWalletController extends Controller
     {
         $roles=$this->roles($request);
         $d=$request->validate(['student_id'=>'required|integer','institution_id'=>'required|integer','amount'=>'required|numeric|min:0.01']);
+        $student=DB::table('users')->where('id',$d['student_id'])->where('usergroup_id',6)->whereNull('deleted_at')->first(); abort_unless($student,422,'Student not found.');
+        abort_unless((int)DB::table('tagore_institutions')->where('id',$d['institution_id'])->where('status','active')->value('school_id')===(int)$student->school_id,403);
         if($roles->contains('PARENT')) abort_unless(DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('student_id',$d['student_id'])->where('status','active')->exists(),403);
         elseif($roles->contains('STUDENT')) abort_unless((int)$request->user()->id===(int)$d['student_id'],403);
         else abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
