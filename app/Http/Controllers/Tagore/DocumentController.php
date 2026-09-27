@@ -61,6 +61,8 @@ class DocumentController extends Controller
         [$roles,$ids]=$this->context($request);
         $document=DB::table('tagore_document_records')->where('id',$id)->whereIn('institution_id',$ids)->first(); abort_unless($document,404);
         abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','TEACHER','HR','ACCOUNTS'])->isNotEmpty(),403);
+        $access=json_decode((string)$document->access_json,true) ?: [];
+        if (!empty($access['roles']) && !$roles->intersect((array)$access['roles'])->isNotEmpty()) abort(403);
         abort_unless(Storage::disk('private')->exists($document->path),404);
         return Storage::disk('private')->download($document->path,$document->title);
     }
