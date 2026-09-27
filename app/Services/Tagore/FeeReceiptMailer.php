@@ -15,7 +15,7 @@ class FeeReceiptMailer
             ->join('tagore_institutions as i','i.id','=','p.institution_id')
             ->leftJoin('users as pu','pu.id','=','p.parent_user_id')
             ->where('p.id',$paymentId)->where('p.status','success')
-            ->first(['p.*','s.name as student_name','i.display_name as institution','pu.email as parent_email','pu.id as parent_id']);
+            ->first(['p.*','s.name as student_name','s.name as student','i.display_name as institution','pu.email as parent_email','pu.id as parent_id']);
 
         if(!$payment) return false;
         $parentId=$payment->parent_id;
