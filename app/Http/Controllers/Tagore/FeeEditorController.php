@@ -52,6 +52,17 @@ class FeeEditorController extends Controller
         return back()->with('success','Fee year archived. The original vault copy is immutable and remains separate from ERP editing.');
     }
 
+    public function vaultSearch(Request $request, FeeVaultService $vault)
+    {
+        $roles=$this->roles((int)$request->user()->id);
+        abort_unless($roles->contains('OWNER') && config('tagore.fee_vault_owner_user_id') > 0 && (int)$request->user()->id === (int)config('tagore.fee_vault_owner_user_id'),403);
+        $q=trim((string)$request->get('q',''));
+        $students=$q===''?collect():DB::table('users')->where('usergroup_id',6)->whereNull('deleted_at')
+            ->where(function($x)use($q){$x->where('name','like','%'.$q.'%')->orWhere('id',$q)->orWhere('email','like','%'.$q.'%');})
+            ->orderBy('name')->limit(50)->get(['id','name','email']);
+        return view('tagore.fees.vault-search',compact('students','q'));
+    }
+
     public function vaultStudent(Request $request, int $studentId, FeeVaultService $vault)
     {
         $roles=$this->roles((int)$request->user()->id);
