@@ -164,4 +164,66 @@ class TagoreManagerDashboardTest extends TestCase
         $this->actingAs($teacher)->get(route('tagore.staff.leave'))->assertForbidden();
     }
 
+    public function test_staff_can_use_self_service_center_and_submit_leave(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $schoolId = $teacher->school_id;
+        $this->actingAs($teacher)->get(route('tagore.staff.self'))
+            ->assertOk()->assertSee('My Staff Center')->assertSee('Apply for leave')->assertSee('My work');
+
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
+        $this->assertGreaterThan(0,$academicYearId);
+        $this->assertGreaterThan(0,$leaveTypeId);
+
+        $from = now()->addDays(5)->toDateString();
+        $to = now()->addDays(6)->toDateString();
+        $this->actingAs($teacher)->post(route('tagore.staff.self.leave'),[
+            'leave_type_id'=>$leaveTypeId,'from_date'=>$from,'to_date'=>$to,'session'=>'day','remarks'=>'Personal work',
+        ])->assertSessionHas('success','Leave application submitted for approval.');
+
+        $this->assertDatabaseHas('teacher_leave_applications',[
+            'user_id'=>$teacher->id,'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,
+            'from_date'=>$from,'to_date'=>$to,'status'=>'pending','remarks'=>'Personal work',
+        ]);
+    }
+
+    public function test_staff_cannot_submit_overlapping_leave(): void
+    {
+        $teacher = User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $schoolId = $teacher->school_id;
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
+        $from = now()->addDays(10)->toDateString();
+        $to = now()->addDays(11)->toDateString();
+        $id = DB::table('teacher_leave_applications')->insertGetId([
+            'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,'user_id'=>$teacher->id,
+            'from_date'=>$from,'to_date'=>$to,'leave_type_id'=>$leaveTypeId,'session'=>'day','status'=>'pending',
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $this->assertGreaterThan(0,$id);
+
+        $this->actingAs($teacher)->post(route('tagore.staff.self.leave'),[
+            'leave_type_id'=>$leaveTypeId,'from_date'=>$from,'to_date'=>$to,'session'=>'day',
+        ])->assertStatus(422)->assertSessionHasErrors();
+        $this->assertSame(1,DB::table('teacher_leave_applications')->where('user_id',$teacher->id)->whereDate('from_date',$from)->count());
+    }
+
+    public function test_staff_can_cancel_own_pending_leave(): void
+    {
+        $teacher = User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $schoolId = $teacher->school_id;
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
+        $leaveId = DB::table('teacher_leave_applications')->insertGetId([
+            'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,'user_id'=>$teacher->id,
+            'from_date'=>now()->addDays(15),'to_date'=>now()->addDays(16),'leave_type_id'=>$leaveTypeId,'session'=>'day',
+            'status'=>'pending','created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $this->actingAs($teacher)->patch(route('tagore.staff.self.leave.cancel',$leaveId))
+            ->assertSessionHas('success','Leave application cancelled.');
+        $this->assertDatabaseHas('teacher_leave_applications',['id'=>$leaveId,'user_id'=>$teacher->id,'status'=>'cancelled']);
+    }
+
+
 }
