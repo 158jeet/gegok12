@@ -90,4 +90,36 @@ class TagoreManagerDashboardTest extends TestCase
         $this->actingAs($teacher)->get(route('tagore.department.profile', ['departmentId' => $departmentId]))->assertForbidden();
     }
 
+    public function test_owner_can_create_department_and_assign_staff(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->where('school_id', $owner->school_id)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+        $code = 'QA' . now()->format('His');
+
+        $this->actingAs($owner)->post(route('tagore.admin.department'), [
+            'institution_id' => $institutionId,
+            'name' => 'QA Operations',
+            'code' => $code,
+        ])->assertSessionHas('success', 'Department added.');
+
+        $departmentId = (int) DB::table('tagore_departments')->where('institution_id', $institutionId)->where('code', $code)->value('id');
+        $this->assertGreaterThan(0, $departmentId);
+
+        $this->actingAs($owner)->post(route('tagore.admin.department.assign'), [
+            'user_id' => $teacher->id,
+            'department_id' => $departmentId,
+            'designation' => 'QA Coordinator',
+            'is_primary' => 1,
+        ])->assertSessionHas('success', 'Department assignment saved.');
+
+        $this->assertDatabaseHas('tagore_user_departments', [
+            'user_id' => $teacher->id,
+            'department_id' => $departmentId,
+            'designation' => 'QA Coordinator',
+            'is_primary' => 1,
+            'status' => 'active',
+        ]);
+    }
+
 }
