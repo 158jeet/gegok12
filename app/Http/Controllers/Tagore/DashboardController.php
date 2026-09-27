@@ -38,6 +38,24 @@ class DashboardController extends Controller
             'pending_fees' => $isParent ? DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count() : DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->whereIn('status', ['pending', 'partial', 'overdue'])->count(),
             'open_feedback' => $isParent ? DB::table('tagore_feedback')->where('submitted_by', $userId)->whereIn('status', ['open', 'in_review'])->count() : DB::table('tagore_feedback')->whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_review'])->count(),
         ];
+        $erp = [
+            'students' => 0, 'staff' => 0, 'fee_outstanding' => 0, 'fee_collected' => 0,
+            'admission_leads' => 0, 'pending_leads' => 0, 'active_tasks' => 0, 'overdue_tasks' => 0,
+            'pending_leave' => 0, 'departments' => 0,
+        ];
+        if (!$isParent && !empty($institutionIds)) {
+            $schoolIds = $institutions->pluck('school_name')->count() ? DB::table('tagore_institutions')->whereIn('id',$institutionIds)->pluck('school_id') : collect();
+            $erp['students'] = DB::table('users')->whereIn('school_id',$schoolIds)->where('usergroup_id',6)->whereNull('deleted_at')->count();
+            $erp['staff'] = DB::table('tagore_user_roles')->whereIn('institution_id',$institutionIds)->where('status','active')->distinct('user_id')->count('user_id');
+            $erp['fee_outstanding'] = round((float) DB::table('tagore_fee_obligations')->whereIn('institution_id',$institutionIds)->whereIn('status',['pending','partial','overdue'])->sum('net_amount'),2);
+            $erp['fee_collected'] = round((float) DB::table('tagore_payments')->whereIn('institution_id',$institutionIds)->where('status','success')->sum('amount'),2);
+            $erp['admission_leads'] = DB::table('tagore_admission_leads')->whereIn('institution_id',$institutionIds)->count();
+            $erp['pending_leads'] = DB::table('tagore_admission_leads')->whereIn('institution_id',$institutionIds)->whereIn('status',['new','follow_up','qualified'])->count();
+            $erp['active_tasks'] = DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->count();
+            $erp['overdue_tasks'] = DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->whereNotNull('due_at')->where('due_at','<',now())->count();
+            $erp['pending_leave'] = DB::table('teacher_leave_applications')->whereIn('school_id',$schoolIds)->where('status','pending')->whereNull('deleted_at')->count();
+            $erp['departments'] = DB::table('tagore_departments')->whereIn('institution_id',$institutionIds)->where('status','active')->count();
+        }
         $managerCommand = [
             'is_manager' => false,
             'action_items' => collect(),
