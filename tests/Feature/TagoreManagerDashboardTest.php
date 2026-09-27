@@ -192,7 +192,7 @@ class TagoreManagerDashboardTest extends TestCase
     {
         $teacher = User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $schoolId = $teacher->school_id;
-        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->orderByDesc('id')->value('id');
         $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
         $from = now()->addDays(10)->toDateString();
         $to = now()->addDays(11)->toDateString();
@@ -213,7 +213,7 @@ class TagoreManagerDashboardTest extends TestCase
     {
         $teacher = User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $schoolId = $teacher->school_id;
-        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->orderByDesc('id')->value('id');
         $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
         $leaveId = DB::table('teacher_leave_applications')->insertGetId([
             'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,'user_id'=>$teacher->id,
