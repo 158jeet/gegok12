@@ -94,6 +94,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::patch('/inventory/purchase-order/{id}/approve', [InventoryController::class, 'approvePurchaseOrder'])->whereNumber('id')->name('tagore.inventory.po.approve');
     Route::patch('/inventory/purchase-order/{id}/receive', [InventoryController::class, 'receivePurchaseOrder'])->whereNumber('id')->name('tagore.inventory.po.receive');
     Route::post('/inventory/expense', [InventoryController::class, 'expense'])->name('tagore.inventory.expense');
+    Route::post('/inventory/asset', [InventoryController::class, 'asset'])->name('tagore.inventory.asset');
     Route::patch('/inventory/expense/{id}/decide', [InventoryController::class, 'decideExpense'])->whereNumber('id')->name('tagore.inventory.expense.decide');
     Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('tagore.payroll.generate');
     Route::patch('/payroll/{runId}/approve', [PayrollController::class, 'approve'])->whereNumber('runId')->name('tagore.payroll.approve');
