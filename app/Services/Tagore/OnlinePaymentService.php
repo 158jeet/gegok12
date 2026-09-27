@@ -49,14 +49,16 @@ class OnlinePaymentService
         $expected=hash_hmac('sha256',$payload,(string)config('services.razorpay.webhook_secret'));
         if(!hash_equals($expected,$signature)) throw ValidationException::withMessages(['webhook'=>'Invalid webhook signature.']);
         $eventId=$eventId ?: hash('sha256',$payload);
-        DB::transaction(function() use($event,$eventId){
-            if(DB::table('tagore_payment_events')->where('gateway','razorpay')->where('event_id',$eventId)->lockForUpdate()->exists()) return;
+        $paymentId = DB::transaction(function() use($event,$eventId){
+            if(DB::table('tagore_payment_events')->where('gateway','razorpay')->where('event_id',$eventId)->lockForUpdate()->exists()) return 0;
             DB::table('tagore_payment_events')->insert(['gateway'=>'razorpay','event_id'=>$eventId,'event_type'=>(string)($event['event']??'unknown'),'payload_json'=>json_encode($event),'received_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
             if(($event['event']??'')==='payment.captured'){
                 $entity=$event['payload']['payment']['entity']??[];
-                if(!empty($entity['order_id'])&&!empty($entity['id'])) $this->settleByGatewayOrder((string)$entity['order_id'],(string)$entity['id']);
+                if(!empty($entity['order_id'])&&!empty($entity['id'])) return $this->settleByGatewayOrder((string)$entity['order_id'],(string)$entity['id']);
             }
+            return 0;
         });
+        if ($paymentId) app(FeeReceiptMailer::class)->send((int)$paymentId);
     }
 
     private function settleByGatewayOrder(string $gatewayOrderId,string $gatewayPaymentId): int
