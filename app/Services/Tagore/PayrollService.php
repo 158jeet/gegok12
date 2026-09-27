@@ -27,8 +27,9 @@ class PayrollService
             DB::table('tagore_payroll_items')->where('payroll_run_id',$runId)->delete();
 
             $grossTotal = 0; $deductionTotal = 0; $netTotal = 0;
+            $schoolId=DB::table('tagore_institutions')->where('id',$institutionId)->value('school_id');
+            abort_unless($schoolId,422,'Institution is not linked to a school.');
             foreach ($employees as $employee) {
-                $schoolId=DB::table('tagore_institutions')->where('id',$institutionId)->value('school_id');
                 $employeeId = (int)($employee['employee_id'] ?? 0);
                 $basic = round((float)($employee['basic_salary'] ?? 0),2);
                 $employeeUser=DB::table('users')->where('id',$employeeId)->where('school_id',$schoolId)->whereNull('deleted_at')->first(['id','usergroup_id']);
