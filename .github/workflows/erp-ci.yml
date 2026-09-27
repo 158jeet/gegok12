@@ -37,6 +37,10 @@ jobs:
       - name: PHP syntax check
         run: |
           find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Bootstrap migrations
+        run: php artisan migrate --force --no-interaction
+      - name: Bootstrap routes
+        run: php artisan route:list --json > /tmp/tagore-routes.json
       - name: Run Laravel tests
         run: php artisan test
 
