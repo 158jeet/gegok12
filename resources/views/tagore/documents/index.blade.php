@@ -1,0 +1,12 @@
+@extends('layouts.app')
+@section('content')
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
+<div class="tg-app"><div class="tg-shell">
+<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Document Centre</span></div></div><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>
+@if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
+@if($errors->any())<div class="tg-alert danger">{{ $errors->first() }}</div>@endif
+<section class="tg-hero"><div><span class="tg-eyebrow">Documents</span><h1>Private document storage</h1><p>Files are stored on the private disk, versioned and restricted to institution-authorized staff.</p></div></section>
+<section class="tg-card"><h2>Upload document</h2><form class="tg-form" method="POST" action="{{ route('tagore.documents.upload') }}" enctype="multipart/form-data">@csrf<div class="tg-grid"><label class="tg-field"><span>Institution</span><select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select></label><label class="tg-field"><span>Title</span><input name="title" required></label><label class="tg-field"><span>Type</span><input name="document_type" placeholder="ID / certificate / salary"></label><label class="tg-field"><span>Owner type</span><input name="owner_type" placeholder="student / employee"></label><label class="tg-field"><span>Owner ID</span><input name="owner_id" type="number"></label><label class="tg-field"><span>Access JSON</span><input name="access_json" placeholder='{"roles":["OWNER","HR"]}'></label><label class="tg-field" style="grid-column:1/-1"><span>File (max 20 MB)</span><input type="file" name="file" required></label></div><button class="tg-btn primary">Upload</button></form></section>
+<section class="tg-card"><h2>Documents</h2><div class="tg-table-wrap"><table><thead><tr><th>Title</th><th>Type</th><th>Version</th><th>Status</th><th>Action</th></tr></thead><tbody>@foreach($documents as $d)<tr><td>{{ $d->title }}</td><td>{{ $d->document_type }}</td><td>{{ $d->version }}</td><td>{{ $d->status }}</td><td><a class="tg-btn" href="{{ route('tagore.documents.download',$d->id) }}">Download</a><a class="tg-btn" href="{{ route('tagore.documents.versions',$d->id) }}">Versions</a></td></tr>@endforeach</tbody></table></div></section>
+</div></div>
+@endsection
