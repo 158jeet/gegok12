@@ -28,8 +28,11 @@ class PayrollService
 
             $grossTotal = 0; $deductionTotal = 0; $netTotal = 0;
             foreach ($employees as $employee) {
+                $schoolId=DB::table('tagore_institutions')->where('id',$institutionId)->value('school_id');
                 $employeeId = (int)($employee['employee_id'] ?? 0);
                 $basic = round((float)($employee['basic_salary'] ?? 0),2);
+                $employeeUser=DB::table('users')->where('id',$employeeId)->where('school_id',$schoolId)->whereNull('deleted_at')->first(['id','usergroup_id']);
+                if (!$employeeUser || $employeeUser->usergroup_id === 6) throw ValidationException::withMessages(['employees' => 'Each payroll employee must belong to the selected institution and not be a student.']);
                 if ($employeeId <= 0 || $basic < 0) {
                     throw ValidationException::withMessages(['employees' => 'Each payroll row needs a valid employee and non-negative basic salary.']);
                 }
