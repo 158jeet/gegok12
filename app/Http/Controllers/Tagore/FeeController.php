@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tagore;
 
 use App\Http\Controllers\Controller;
+use App\Services\Tagore\FeeReceiptMailer;
 use App\Services\Tagore\FeeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
