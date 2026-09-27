@@ -21,9 +21,9 @@ class FeeVaultService
             'students'=>DB::table('tagore_fee_obligations')->where('academic_year_id',$academicYearId)->where('institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
             'items'=>DB::table('tagore_fee_obligation_items as i')->join('tagore_fee_obligations as o','o.id','=','i.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->where('o.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
             'installments'=>DB::table('tagore_fee_installments as i')->join('tagore_fee_obligations as o','o.id','=','i.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->where('o.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
-            'payments'=>DB::table('tagore_payments')->where('institution_id',$institutionId)->whereBetween('paid_at',[$academicYearId ? '2000-01-01' : now()->toDateString(), now()])->get()->map(fn($r)=>(array)$r)->all(),
+            'payments'=>DB::table('tagore_payments')->where('institution_id',$institutionId)->whereBetween('paid_at',[$this->yearStart($academicYearId),$this->yearEnd($academicYearId)])->get()->map(fn($r)=>(array)$r)->all(),
             'allocations'=>DB::table('tagore_payment_allocations as a')->join('tagore_payments as p','p.id','=','a.payment_id')->where('p.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
-            'transactions'=>DB::table('tagore_financial_transactions')->where('institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
+            'transactions'=>DB::table('tagore_financial_transactions')->where('institution_id',$institutionId)->whereBetween('transaction_date',[$this->yearStart($academicYearId),$this->yearEnd($academicYearId)])->get()->map(fn($r)=>(array)$r)->all(),
         ];
 
         $bytes=json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
@@ -43,6 +43,9 @@ class FeeVaultService
         ]);
         return (array)DB::table('tagore_fee_year_closures')->find($id);
     }
+
+    private function yearStart(int $academicYearId): string { return (string) DB::table('academic_years')->where('id',$academicYearId)->value('start_date'); }
+    private function yearEnd(int $academicYearId): string { return (string) DB::table('academic_years')->where('id',$academicYearId)->value('end_date'); }
 
     public function studentArchives(int $studentId): array
     {
