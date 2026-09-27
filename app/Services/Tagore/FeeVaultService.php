@@ -3,9 +3,8 @@
 namespace App\Services\Tagore;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Crypt;
 
 class FeeVaultService
 {
@@ -22,11 +21,12 @@ class FeeVaultService
             'items'=>DB::table('tagore_fee_obligation_items as i')->join('tagore_fee_obligations as o','o.id','=','i.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->where('o.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
             'installments'=>DB::table('tagore_fee_installments as i')->join('tagore_fee_obligations as o','o.id','=','i.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->where('o.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
             'payments'=>DB::table('tagore_payments')->where('institution_id',$institutionId)->where(function($q)use($academicYearId,$institutionId){$q->whereBetween('paid_at',[$this->yearStart($academicYearId),$this->yearEnd($academicYearId)])->orWhereIn('id',DB::table('tagore_payment_allocations as pa')->join('tagore_fee_obligations as o','o.id','=','pa.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->where('o.institution_id',$institutionId)->pluck('pa.payment_id'));})->get()->map(fn($r)=>(array)$r)->all(),
-            'allocations'=>DB::table('tagore_payment_allocations as a')->join('tagore_payments as p','p.id','=','a.payment_id')->where('p.institution_id',$institutionId)->get()->map(fn($r)=>(array)$r)->all(),
+            'allocations'=>DB::table('tagore_payment_allocations as a')->whereIn('a.payment_id',DB::table('tagore_payments')->where('institution_id',$institutionId)->where(function($q)use($academicYearId){$q->whereBetween('paid_at',[$this->yearStart($academicYearId),$this->yearEnd($academicYearId)])->orWhereIn('id',DB::table('tagore_payment_allocations as pa')->join('tagore_fee_obligations as o','o.id','=','pa.fee_obligation_id')->where('o.academic_year_id',$academicYearId)->pluck('pa.payment_id'));})->pluck('id'))->get()->map(fn($r)=>(array)$r)->all(),
             'transactions'=>DB::table('tagore_financial_transactions')->where('institution_id',$institutionId)->whereBetween('transaction_date',[$this->yearStart($academicYearId),$this->yearEnd($academicYearId)])->get()->map(fn($r)=>(array)$r)->all(),
         ];
 
-        $bytes=json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        $plain=json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        $bytes=Crypt::encryptString($plain);
         $relative='tagore-fee-vault/'.$institutionId.'/'.$academicYearId.'/archive-'.now()->format('YmdHis').'.json';
         Storage::disk('local')->put($relative,$bytes);
         $sha=hash('sha256',$bytes);
@@ -55,7 +55,7 @@ class FeeVaultService
         $out=[];
         foreach($rows as $row){
             if(!Storage::disk('local')->exists($row->archive_path)) continue;
-            $data=json_decode(Storage::disk('local')->get($row->archive_path),true);
+            $data=json_decode(Crypt::decryptString(Storage::disk('local')->get($row->archive_path)),true);
             $out[]=['closure'=>(array)$row,'records'=>array_values(array_filter($data['students']??[],fn($x)=>(int)($x['student_id']??0)===$studentId)),'payments'=>array_values(array_filter($data['payments']??[],fn($x)=>(int)($x['student_id']??0)===$studentId)),'transactions'=>array_values(array_filter($data['transactions']??[],fn($x)=>(int)($x['student_id']??0)===$studentId))];
         }
         return $out;
