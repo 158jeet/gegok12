@@ -20,7 +20,7 @@ class OperationsController extends Controller
     ];
 
     private const ACCESS = [
-        'payroll'=>['OWNER','PRINCIPAL'],'inventory'=>['OWNER','PRINCIPAL','ACCOUNTS'],'expense'=>['OWNER','PRINCIPAL','ACCOUNTS'],
+        'payroll'=>['OWNER','PRINCIPAL','ACCOUNTS','HR'],'inventory'=>['OWNER','PRINCIPAL','ACCOUNTS'],'expense'=>['OWNER','PRINCIPAL','ACCOUNTS'],
         'transport'=>['OWNER','PRINCIPAL','TRANSPORT'],'hostel'=>['OWNER','PRINCIPAL','HOSTEL'],'alumni'=>['OWNER','PRINCIPAL','COORDINATOR'],
         'visitor'=>['OWNER','PRINCIPAL','COORDINATOR'],'gatepass'=>['OWNER','PRINCIPAL','COORDINATOR'],'survey'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER'],
         'notification'=>['OWNER','PRINCIPAL','COORDINATOR'],'document'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER','HR','ACCOUNTS'],
@@ -235,7 +235,7 @@ class OperationsController extends Controller
 
         DB::table('tagore_audit_events')->insert([
             'user_id'=>(int)$request->user()->id,
-            'institution_id'=>(int)$request->input('institution_id'),
+            'institution_id'=>(int)($request->input('institution_id') ?: ($old->institution_id ?? 0)),
             'action'=>'OPERATIONS_'.strtoupper($action),
             'entity_type'=>'tagore_'.$module.'_records',
             'entity_id'=>$id,
