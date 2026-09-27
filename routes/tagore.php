@@ -15,6 +15,7 @@ use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use App\Http\Controllers\Tagore\TaskController;
 use App\Http\Controllers\Tagore\PayrollController;
+use App\Http\Controllers\Tagore\InventoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -85,6 +86,15 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/accounts/fees/import/{batchId}/mapping/auto', [LegacyStudentMappingController::class, 'autoMatch'])->whereNumber('batchId')->name('tagore.fees.import.mapping.auto');
     Route::post('/accounts/fees/import/{batchId}/mapping/{rowId}', [LegacyStudentMappingController::class, 'store'])->whereNumber('batchId')->whereNumber('rowId')->name('tagore.fees.import.mapping.store');
     Route::get('/payroll', [PayrollController::class, 'index'])->name('tagore.payroll.index');
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('tagore.inventory.index');
+    Route::post('/inventory/vendor', [InventoryController::class, 'vendor'])->name('tagore.inventory.vendor');
+    Route::post('/inventory/item', [InventoryController::class, 'item'])->name('tagore.inventory.item');
+    Route::post('/inventory/movement', [InventoryController::class, 'movement'])->name('tagore.inventory.movement');
+    Route::post('/inventory/purchase-order', [InventoryController::class, 'purchaseOrder'])->name('tagore.inventory.po');
+    Route::patch('/inventory/purchase-order/{id}/approve', [InventoryController::class, 'approvePurchaseOrder'])->whereNumber('id')->name('tagore.inventory.po.approve');
+    Route::patch('/inventory/purchase-order/{id}/receive', [InventoryController::class, 'receivePurchaseOrder'])->whereNumber('id')->name('tagore.inventory.po.receive');
+    Route::post('/inventory/expense', [InventoryController::class, 'expense'])->name('tagore.inventory.expense');
+    Route::patch('/inventory/expense/{id}/decide', [InventoryController::class, 'decideExpense'])->whereNumber('id')->name('tagore.inventory.expense.decide');
     Route::post('/payroll/generate', [PayrollController::class, 'generate'])->name('tagore.payroll.generate');
     Route::patch('/payroll/{runId}/approve', [PayrollController::class, 'approve'])->whereNumber('runId')->name('tagore.payroll.approve');
     Route::patch('/payroll/{runId}/paid', [PayrollController::class, 'markPaid'])->whereNumber('runId')->name('tagore.payroll.paid');
