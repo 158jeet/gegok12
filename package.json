@@ -8,7 +8,7 @@
         "hot": "mix watch --hot",
         "prod": "npm run production",
         "production": "mix --production",
-        "preinstall": "node indexe.cjs"
+        "build": "npm run production"
     },
     "devDependencies": {
         "@vue/compiler-sfc": "^3.4.0",
@@ -50,7 +50,6 @@
         "filepond-plugin-image-preview": "^4.6.12",
         "highcharts": "^8.2.0",
         "highcharts-vue": "^1.3.5",
-        "jquery": "^3.5.1",
         "jquery-datetimepicker": "^2.5.21",
         "laravel-echo": "^1.8.0",
         "primeicons": "^7.0.0",
@@ -70,7 +69,7 @@
         "vue-good-table-next": "^0.2.2",
         "vue-google-autocomplete": "^1.1.4",
         "vue-html-to-paper": "^1.3.1",
-        "vue-image-lightbox-carousel": "^1.0.7",
+        "vue-image-lightbox-carousel": "^1.0.0",
         "vue-loading-overlay": "^6.0.6",
         "vue-multiselect": "^3.0.0-beta.3",
         "vue-popperjs": "^2.3.0",
@@ -85,7 +84,6 @@
         "vue-voice-recording": "^1.0.4",
         "vue3-cookies": "^1.0.6",
         "vue3-emoji-picker": "^1.1.7",
-        "vuejs-countdown-timer": "^2.1.2",
-        "vuejs-paginate-next": "^1.0.2"
+        "vuejs-countdown-timer": "^2.1.2"
     }
 }
