@@ -1,47 +1,84 @@
-# TagoreK12 Prototype
+# TagoreK12 Complete ERP
 
-TagoreK12 is the Tagore Group integration layer built on top of GegoK12. The prototype is intentionally additive: existing GegoK12 school, student, parent, attendance and authentication concepts remain the system of record while Tagore-specific group, scope, fee, payment, feedback and audit boundaries live in `tagore_*` tables.
+TagoreK12 is the Tagore Group ERP integration layer built on top of GegoK12. The existing GegoK12 application remains the operational school-management system of record; TagoreK12 adds the group-wide management, finance, admissions, people, scope and automation layer without replacing the upstream school workflows.
 
-## Local prototype setup
+## Completed ERP scope
+
+- Multi-institution Tagore Group hierarchy
+- Role and institution-scoped authorization: Owner, Principal, Coordinator, Teacher, Parent, Student and Accounts
+- Explicit parent/student relationships
+- Academic years, streams, sections and departments
+- Admissions CRM with lead pipeline, assignments, follow-ups, campaigns and conversion tracking
+- KoboToolbox submission synchronization and admission importing
+- Fee structures, assignments, demand generation, student ledgers and outstanding balances
+- Offline payment recording, receipts, reconciliation and online payment adapter/webhook flow
+- Legacy fee workbook import, student matching, migration and reconciliation
+- Staff self-service and leave approval workflows
+- Employee tasks, priorities, progress, reviews, follow-ups and recurring task automation
+- Group and manager dashboards with workload, department and finance snapshots
+- Feedback and audit foundations
+- Parent and student dashboards
+- Authenticated API/mobile integration
+- Performance middleware and database indexes for the new ERP paths
+- Automated structural and feature-test workflow
+- Existing GegoK12 attendance, results, notices, homework, assignments, timetable, lesson plans, library and other school operations remain available through the existing application rather than being duplicated.
+
+## First-time setup
 
 From the project root:
 
 ```bash
-php artisan migrate:fresh
-php artisan db:seed
-php artisan db:seed --class=Database\\Seeders\\TagorePrototypeSeeder
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --force
+php artisan db:seed --force
+php artisan db:seed --class=TagorePrototypeSeeder --force
+npm install --no-audit --no-fund
+npm run build
 ```
 
-The first seed command creates the normal GegoK12 demo schools/users and academic data. The Tagore seeder then links those existing GegoK12 records into the Tagore layer. Do not run the Tagore seeder first on a fresh database.
+Then sign in to GegoK12 and open:
 
-Then sign in to GegoK12 and open `/tagore/dashboard`.
+```
+/tagore/dashboard
+```
 
-The prototype API is available at `/tagore/v1/dashboard` for an authenticated Sanctum session/token.
+## Production configuration
 
-## Design boundaries
+Configure the normal GegoK12 database, mail, storage and authentication settings first. For admissions lead ingestion, optionally configure:
 
-- Do not install Fee Pro or Exam Pro to use this foundation.
-- Fee/payment tables are Tagore-owned and expose adapter points for gateways and future GegoK12 add-ons.
-- Exam integration should use an adapter rather than depending on private Pro tables.
-- Parent-child authorization is based on explicit `tagore_parent_students` relationships.
-- Institution scope is represented independently from role permissions.
-- Financial events should be treated as append-only business events; corrections use adjustments/refunds rather than rewriting successful payments.
+```
+KOBO_BASE_URL=https://kf.kobotoolbox.org
+KOBO_API_TOKEN=
+KOBO_ASSET_UID=
+KOBO_INSTITUTION_ID=
+KOBO_TIMEOUT=30
+```
 
-## Prototype testing order
+For online payments, configure the existing gateway settings and keep production credentials outside source control.
 
-1. Confirm `migrate:fresh` completes against MySQL.
-2. Seed the base GegoK12 data.
-3. Seed the Tagore integration data.
-4. Sign in and verify the normal GegoK12 dashboard still works.
-5. Open `/tagore/dashboard` and verify Tagore roles/scopes.
-6. Test a parent account and verify child visibility.
-7. Test attendance visibility against GegoK12 attendance data.
-8. Test fee statement, offline payment, receipt and reconciliation.
-9. Test legacy fee import in preview/review mode only.
-10. Record any failures before adding new features.
+## Operating principle
 
-The prototype should remain frozen for major feature work until this local workflow passes.
+The ERP is additive. Existing GegoK12 student, parent, attendance and school workflows are reused as the source of operational truth. Tagore tables hold group-level scope, finance, admissions, people/work-management and audit data.
 
-## Next prototype iteration
+Financial success events should not be rewritten. Corrections use reconciliation, adjustment or refund records.
 
-After local validation, connect any remaining dashboard cards to real GegoK12 data, resolve only bugs or structural gaps found during testing, and then move the same branch to a private test server. Gateway production credentials and live financial data must remain out of the prototype test phase.
+## Verification
+
+The repository contains a dedicated Tagore CI workflow covering:
+
+1. MySQL migration smoke test
+2. Base and Tagore seed preparation
+3. Composer validation and optimized autoload checks
+4. Tagore route/view structural checks
+5. PHP syntax checks
+6. Tagore feature tests
+7. Seeded end-to-end tests
+8. Frontend dependency installation and production build
+
+The repository's npm lifecycle no longer executes the former custom preinstall script. The Composer setup's `npm run build` command now resolves to the existing Laravel Mix production build.
+
+## Architecture decision
+
+Do not rebuild the ERP from scratch and do not duplicate GegoK12 modules that already provide the required school operations. Continue extending the Tagore layer through adapters and institution-scoped services when a genuinely new group-level capability is required.
