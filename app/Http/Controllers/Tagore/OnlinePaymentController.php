@@ -30,6 +30,7 @@ class OnlinePaymentController extends Controller
         $authorizedStaff=$roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty();
         abort_unless($authorizedParent || $authorizedStaff,403);
         $paymentId=$service->confirm($data);
+        app(FeeReceiptMailer::class)->send($paymentId);
         $payment=DB::table('tagore_payments')->where('id',$paymentId)->first();
         return redirect()->route('tagore.fees.student',['studentId'=>$payment->student_id])->with('success','Payment received successfully. Receipt '.$payment->receipt_no.'.');
     }
