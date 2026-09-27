@@ -67,6 +67,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/accounts/fees/editor', [FeeEditorController::class, 'index'])->name('tagore.fees.editor');
     Route::post('/accounts/fees/editor/bulk', [FeeEditorController::class, 'bulkAdjust'])->name('tagore.fees.editor.bulk');
     Route::post('/accounts/fees/editor/close-year', [FeeEditorController::class, 'closeYear'])->name('tagore.fees.editor.close-year');
+    Route::get('/accounts/fees/vault', [FeeEditorController::class, 'vaultSearch'])->name('tagore.fees.vault');
     Route::get('/accounts/fees/vault/student/{studentId}', [FeeEditorController::class, 'vaultStudent'])->whereNumber('studentId')->name('tagore.fees.vault.student');
     Route::post('/accounts/fees/manage/structure', [FeeManagementController::class, 'storeStructure'])->name('tagore.fees.manage.structure');
     Route::post('/accounts/fees/manage/demand', [FeeManagementController::class, 'generateDemand'])->name('tagore.fees.manage.demand');
