@@ -19,9 +19,11 @@ use App\Http\Controllers\Tagore\InventoryController;
 use App\Http\Controllers\Tagore\TransportController;
 use App\Http\Controllers\Tagore\CommunicationController;
 use App\Http\Controllers\Tagore\ReportController;
+use App\Http\Controllers\Tagore\SecurityController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
@@ -93,6 +95,12 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/transport', [TransportController::class, 'index'])->name('tagore.transport.index');
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
+    Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    Route::post('/security/visitor', [SecurityController::class, 'visitor'])->name('tagore.security.visitor');
+    Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->name('tagore.security.visitor.checkin');
+    Route::post('/security/visitor/{id}/checkout', [SecurityController::class, 'checkOut'])->whereNumber('id')->name('tagore.security.visitor.checkout');
+    Route::post('/security/gatepass', [SecurityController::class, 'gatepass'])->name('tagore.security.gatepass');
+    Route::patch('/security/gatepass/{id}/decide', [SecurityController::class, 'decidePass'])->whereNumber('id')->name('tagore.security.gatepass.decide');
     Route::post('/reports', [ReportController::class, 'save'])->name('tagore.reports.save');
     Route::get('/reports/{id}/export', [ReportController::class, 'export'])->whereNumber('id')->name('tagore.reports.export');
     Route::post('/communication/campaign', [CommunicationController::class, 'create'])->name('tagore.communication.create');
