@@ -112,6 +112,16 @@ class InventoryController extends Controller
         return back()->with('success','Expense submitted for approval.');
     }
 
+    public function asset(Request $request)
+    {
+        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        $d=$request->validate(['institution_id'=>'required|integer','asset_tag'=>'required|string|max:100','name'=>'required|string|max:190','category'=>'nullable|string|max:100','purchase_date'=>'nullable|date','cost'=>'numeric|min:0','department'=>'nullable|string|max:100','assigned_to'=>'nullable|integer']);
+        abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
+        if (!empty($d['assigned_to'])) abort_unless(DB::table('users')->where('id',$d['assigned_to'])->whereNull('deleted_at')->exists(),422,'Assigned user was not found.');
+        DB::table('tagore_assets')->insert($d+['status'=>'active','created_at'=>now(),'updated_at'=>now()]);
+        return back()->with('success','Asset registered.');
+    }
+
     public function decideExpense(Request $request,int $id,InventoryService $service)
     {
         [$roles,$ids]=$this->context($request); abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
