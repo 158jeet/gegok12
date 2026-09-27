@@ -22,6 +22,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
+    Route::get('/staff/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'leave'])->name('tagore.staff.leave');
+    Route::post('/staff/leave/{leaveId}/decide', [\App\Http\Controllers\Tagore\StaffController::class, 'decideLeave'])->whereNumber('leaveId')->name('tagore.staff.leave.decide');
     Route::post('/admin/institution', [AdministrationController::class, 'storeInstitution'])->name('tagore.admin.institution');
     Route::post('/admin/academic-year', [AdministrationController::class, 'storeAcademicYear'])->name('tagore.admin.academic-year');
     Route::post('/admin/role', [AdministrationController::class, 'assignRole'])->name('tagore.admin.role');
