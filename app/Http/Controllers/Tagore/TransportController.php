@@ -44,6 +44,7 @@ class TransportController extends Controller
         [$roles,$ids]=$this->context($request); $this->authorize($roles);
         $d=$request->validate(['institution_id'=>'required|integer','user_id'=>'required|integer','license_no'=>'nullable|string|max:80','license_expiry'=>'nullable|date']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
+        abort_unless(DB::table('users')->where('id',$d['user_id'])->whereNull('deleted_at')->exists(),422,'Driver user was not found.');
         DB::table('tagore_transport_drivers')->insert($d+['status'=>'active','created_at'=>now(),'updated_at'=>now()]);
         return back()->with('success','Driver registered.');
     }
@@ -55,6 +56,7 @@ class TransportController extends Controller
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         abort_unless(DB::table('tagore_transport_routes')->where('id',$d['route_id'])->where('institution_id',$d['institution_id'])->exists(),422);
         abort_unless(DB::table('tagore_transport_vehicles')->where('id',$d['vehicle_id'])->where('institution_id',$d['institution_id'])->exists(),422);
+        if (!empty($d['driver_id'])) abort_unless(DB::table('tagore_transport_drivers')->where('id',$d['driver_id'])->where('institution_id',$d['institution_id'])->exists(),422);
         $id=DB::table('tagore_transport_trips')->insertGetId($d+['status'=>'active','started_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
         return back()->with('success','Trip started (#'.$id.').');
     }
@@ -72,8 +74,15 @@ class TransportController extends Controller
     public function live(Request $request,int $tripId)
     {
         [$roles,$ids]=$this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['TRANSPORT','PRINCIPAL','PARENT'])->isNotEmpty(),403);
-        $trip=DB::table('tagore_transport_trips')->where('id',$tripId)->whereIn('institution_id',$ids)->first(); abort_unless($trip,404);
+        abort_unless($roles->contains('OWNER') || $roles->intersect(['TRANSPORT','PRINCIPAL'])->isNotEmpty() || $roles->contains('PARENT'),403);
+        $trip=DB::table('tagore_transport_trips')->where('id',$tripId)->first();
+        abort_unless($trip,404);
+        if ($roles->contains('PARENT') && !$roles->contains('OWNER') && !$roles->intersect(['TRANSPORT','PRINCIPAL'])->isNotEmpty()) {
+            $studentIds=DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('status','active')->pluck('student_id');
+            abort_unless(DB::table('tagore_transport_assignments')->where('route_id',$trip->route_id)->whereIn('student_id',$studentIds)->where('status','active')->exists(),403);
+        } else {
+            abort_unless(in_array((int)$trip->institution_id,$ids,true),403);
+        }
         $gps=DB::table('tagore_transport_gps_events')->where('trip_id',$tripId)->orderByDesc('recorded_at')->first();
         return response()->json(['trip'=>$trip,'gps'=>$gps]);
     }
