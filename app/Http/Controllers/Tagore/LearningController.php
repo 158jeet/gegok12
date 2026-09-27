@@ -69,14 +69,6 @@ class LearningController extends Controller
         return back()->with('success','Survey published.');
     }
 
-    public function respond(Request $request,int $surveyId)
-    {
-        $survey=DB::table('tagore_surveys')->where('id',$surveyId)->where('status','published')->first(); abort_unless($survey,404);
-        $d=$request->validate(['answers_json'=>'required|json']);
-        DB::table('tagore_survey_responses')->insert(['survey_id'=>$surveyId,'user_id'=>$survey->anonymous?null:$request->user()->id,'answers_json'=>$d['answers_json'],'created_at'=>now(),'updated_at'=>now()]);
-        return response()->json(['ok'=>true]);
-    }
-
     public function createProduct(Request $request)
     {
         [$roles,$ids]=$this->context($request); abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
