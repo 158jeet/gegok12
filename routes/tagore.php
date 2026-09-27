@@ -16,6 +16,7 @@ use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use App\Http\Controllers\Tagore\TaskController;
 use App\Http\Controllers\Tagore\PayrollController;
 use App\Http\Controllers\Tagore\InventoryController;
+use App\Http\Controllers\Tagore\TransportController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
