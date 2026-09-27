@@ -342,7 +342,29 @@ class DashboardController extends Controller
     public function api(Request $request): JsonResponse
     {
         $userId = (int) $request->user()->id;
-        return response()->json(['success' => true, 'data' => ['user_id' => $userId, 'roles' => $this->roles($userId)->values(), 'children' => $this->childrenForUser($userId, true)]]);
+        $roles = $this->roles($userId);
+        $children = $this->childrenForUser($userId, true);
+        $institutionIds = DB::table('tagore_user_roles')->where('user_id',$userId)->where('status','active')->whereNotNull('institution_id')->pluck('institution_id');
+        if ($roles->contains('OWNER')) $institutionIds = DB::table('tagore_institutions')->where('status','active')->pluck('id');
+        $data = [
+            'user_id' => $userId,
+            'roles' => $roles->values(),
+            'children' => $children,
+            'institutions' => DB::table('tagore_institutions')->whereIn('id',$institutionIds)->where('status','active')->get(['id','code','display_name','school_id']),
+            'tasks' => DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->where(fn($q)=>$q->where('assigned_to',$userId)->orWhere('created_by',$userId))->whereNotIn('status',['completed','cancelled'])->orderBy('due_at')->limit(25)->get(['id','institution_id','title','status','priority','progress','due_at']),
+            'leave' => DB::table('teacher_leave_applications')->where('user_id',$userId)->whereIn('school_id',DB::table('tagore_institutions')->whereIn('id',$institutionIds)->pluck('school_id'))->whereNull('deleted_at')->orderByDesc('from_date')->limit(20)->get(['id','from_date','to_date','status','session','remarks']),
+        ];
+        if ($roles->contains('PARENT')) {
+            $studentIds = $children->pluck('student_id');
+            $data['fees'] = DB::table('tagore_fee_obligations')->whereIn('student_id',$studentIds)->whereIn('status',['pending','partial','overdue'])->orderBy('due_date')->limit(50)->get(['id','student_id','due_date','net_amount','paid_amount','balance_amount','status']);
+        } elseif ($institutionIds->isNotEmpty()) {
+            $data['manager'] = [
+                'active_tasks' => DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->count(),
+                'overdue_tasks' => DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->whereNotNull('due_at')->where('due_at','<',now())->count(),
+                'fee_outstanding' => (float) DB::table('tagore_fee_obligations')->whereIn('institution_id',$institutionIds)->whereIn('status',['pending','partial','overdue'])->sum('net_amount'),
+            ];
+        }
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     private function roles(int $userId)
