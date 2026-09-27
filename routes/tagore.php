@@ -25,6 +25,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/institution', [AdministrationController::class, 'storeInstitution'])->name('tagore.admin.institution');
     Route::post('/admin/academic-year', [AdministrationController::class, 'storeAcademicYear'])->name('tagore.admin.academic-year');
     Route::post('/admin/role', [AdministrationController::class, 'assignRole'])->name('tagore.admin.role');
+    Route::post('/admin/department', [AdministrationController::class, 'storeDepartment'])->name('tagore.admin.department');
+    Route::post('/admin/department/assign', [AdministrationController::class, 'assignDepartment'])->name('tagore.admin.department.assign');
     Route::get('/admin/academic-structure', [AcademicStructureController::class, 'index'])->name('tagore.academic.structure');
     Route::post('/admin/academic-structure/stream', [AcademicStructureController::class, 'storeStream'])->name('tagore.academic.stream');
     Route::post('/admin/academic-structure/section', [AcademicStructureController::class, 'storeSection'])->name('tagore.academic.section');
