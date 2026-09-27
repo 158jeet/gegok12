@@ -122,4 +122,46 @@ class TagoreManagerDashboardTest extends TestCase
         ]);
     }
 
+    public function test_manager_can_review_staff_leave_application(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $schoolId = $owner->school_id;
+        $academicYearId = (int) DB::table('academic_years')->where('school_id', $schoolId)->orderByDesc('id')->value('id');
+        $leaveTypeId = DB::table('leave_types')->where('school_id', $schoolId)->whereNull('deleted_at')->value('id');
+
+        $leaveId = DB::table('teacher_leave_applications')->insertGetId([
+            'school_id' => $schoolId,
+            'academic_year_id' => $academicYearId,
+            'user_id' => $owner->id,
+            'from_date' => now()->addDay(),
+            'to_date' => now()->addDays(2),
+            'leave_type_id' => $leaveTypeId,
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->get(route('tagore.staff.leave'))
+            ->assertOk()->assertSee('Staff Leave Management')->assertSee('Pending decisions');
+
+        $this->actingAs($owner)->post(route('tagore.staff.leave.decide', $leaveId), [
+            'decision' => 'approved',
+            'comments' => 'Approved by management.',
+        ])->assertSessionHas('success', 'Leave approved.');
+
+        $this->assertDatabaseHas('teacher_leave_applications', [
+            'id' => $leaveId,
+            'status' => 'approved',
+            'approved_by' => $owner->id,
+            'comments' => 'Approved by management.',
+        ]);
+    }
+
+    public function test_non_manager_cannot_review_staff_leave(): void
+    {
+        $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
+
+        $this->actingAs($teacher)->get(route('tagore.staff.leave'))->assertForbidden();
+    }
+
 }
