@@ -1,6 +1,7 @@
 name: ERP CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -29,6 +30,8 @@ jobs:
           php-version: '8.4'
           extensions: mbstring, bcmath, sqlite3, pdo_sqlite, intl
           coverage: none
+      - name: Validate Composer manifest
+        run: composer validate --no-check-publish --no-interaction
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: PHP syntax check
