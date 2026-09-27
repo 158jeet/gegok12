@@ -19,6 +19,17 @@ class OperationsController extends Controller
         'integration'=>'Integrations','automation'=>'Automation','creative'=>'Branded Creatives',
     ];
 
+    private const ACCESS = [
+        'payroll'=>['OWNER','PRINCIPAL'],'inventory'=>['OWNER','PRINCIPAL','ACCOUNTS'],'expense'=>['OWNER','PRINCIPAL','ACCOUNTS'],
+        'transport'=>['OWNER','PRINCIPAL','TRANSPORT'],'hostel'=>['OWNER','PRINCIPAL','HOSTEL'],'alumni'=>['OWNER','PRINCIPAL','COORDINATOR'],
+        'visitor'=>['OWNER','PRINCIPAL','COORDINATOR'],'gatepass'=>['OWNER','PRINCIPAL','COORDINATOR'],'survey'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER'],
+        'notification'=>['OWNER','PRINCIPAL','COORDINATOR'],'document'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER','HR','ACCOUNTS'],
+        'course'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER'],'content'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER'],
+        'report'=>['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'],'social'=>['OWNER','PRINCIPAL','COORDINATOR','TEACHER'],
+        'website'=>['OWNER','PRINCIPAL','COORDINATOR'],'store'=>['OWNER','PRINCIPAL','ACCOUNTS'],'fee-plan'=>['OWNER','PRINCIPAL','ACCOUNTS'],
+        'integration'=>['OWNER'],'automation'=>['OWNER','PRINCIPAL','COORDINATOR'],'creative'=>['OWNER','PRINCIPAL','COORDINATOR'],
+    ];
+
     private const COLUMNS = [
         'payroll'=>['employee_id','month','gross_amount','deductions','net_amount','status'],
         'inventory'=>['item_name','category','sku','quantity','unit','reorder_level','unit_cost','vendor','status'],
@@ -46,7 +57,6 @@ class OperationsController extends Controller
     public function index(Request $request): View
     {
         $roles=$this->roles((int)$request->user()->id);
-        abort_unless($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','LIBRARY','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty(),403);
         $module=$request->query('module','payroll');
         abort_unless(isset(self::MODULES[$module]),404);
         $table=$this->table($module);
