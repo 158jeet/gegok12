@@ -56,6 +56,7 @@ class FeeEditorController extends Controller
     {
         $roles=$this->roles((int)$request->user()->id);
         abort_unless($roles->contains('OWNER'),403);
+        abort_unless(config('tagore.fee_vault_owner_user_id') > 0 && (int)$request->user()->id === (int)config('tagore.fee_vault_owner_user_id'),403);
         $student=DB::table('users')->where('id',$studentId)->first(['id','name','email']);
         abort_unless($student,404);
         DB::table('tagore_fee_vault_access_events')->insert(['owner_user_id'=>$request->user()->id,'student_id'=>$studentId,'action'=>'VIEW_STUDENT_ARCHIVE','created_at'=>now(),'updated_at'=>now()]);
