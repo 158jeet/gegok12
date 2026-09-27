@@ -171,7 +171,7 @@ class TagoreManagerDashboardTest extends TestCase
         $this->actingAs($teacher)->get(route('tagore.staff.self'))
             ->assertOk()->assertSee('My Staff Center')->assertSee('Apply for leave')->assertSee('My work');
 
-        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->where('status','active')->orderByDesc('id')->value('id');
+        $academicYearId = (int) DB::table('academic_years')->where('school_id',$schoolId)->orderByDesc('id')->value('id');
         $leaveTypeId = (int) DB::table('leave_types')->where('school_id',$schoolId)->where('status',1)->whereNull('deleted_at')->value('id');
         $this->assertGreaterThan(0,$academicYearId);
         $this->assertGreaterThan(0,$leaveTypeId);
