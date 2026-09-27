@@ -6,6 +6,7 @@ return [
     'prototype' => (bool) env('TAGORE_PROTOTYPE', true),
     'payment_gateway' => env('TAGORE_PAYMENT_GATEWAY', null),
     'api_prefix' => 'tagore/v1',
+    'fee_vault_owner_user_id' => (int) env('TAGORE_FEE_VAULT_OWNER_USER_ID', 0),
 
     'performance' => [
         'log_slow_requests' => (bool) env('TAGORE_LOG_SLOW_REQUESTS', false),
