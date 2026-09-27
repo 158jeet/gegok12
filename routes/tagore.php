@@ -6,6 +6,7 @@ use App\Http\Controllers\Tagore\AdmissionsController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
+use App\Http\Controllers\Tagore\FeeEditorController;
 use App\Http\Controllers\Tagore\FeeManagementController;
 use App\Http\Controllers\Tagore\LegacyStudentMappingController;
 use App\Http\Controllers\Tagore\LegacyFeeReconciliationController;
