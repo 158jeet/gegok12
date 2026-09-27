@@ -22,7 +22,8 @@ class StaffController extends Controller
         $institution = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('school_id', $user->school_id)->where('status','active')->first(['id','display_name','school_id']);
         abort_unless($institution, 403);
 
-        $academicYearId = DB::table('academic_years')->where('school_id',$user->school_id)->where('status','active')->orderByDesc('id')->value('id');
+        $academicYearId = DB::table('academic_years')->where('school_id',$user->school_id)->where('status','active')->orderByDesc('id')->value('id')
+            ?: DB::table('academic_years')->where('school_id',$user->school_id)->orderByDesc('id')->value('id');
         $leaveTypes = DB::table('leave_types')->where('school_id',$user->school_id)->where('status',1)->whereNull('deleted_at')->orderBy('name')->get(['id','name','max_no_of_days']);
         $leaves = DB::table('teacher_leave_applications as l')
             ->leftJoin('leave_types as lt','lt.id','=','l.leave_type_id')
@@ -74,7 +75,8 @@ class StaffController extends Controller
 
         $leaveType = DB::table('leave_types')->where('id',$data['leave_type_id'])->where('school_id',$user->school_id)->where('status',1)->whereNull('deleted_at')->first();
         abort_unless($leaveType,422,'Invalid leave type for your institution.');
-        $academicYearId = DB::table('academic_years')->where('school_id',$user->school_id)->where('status','active')->orderByDesc('id')->value('id');
+        $academicYearId = DB::table('academic_years')->where('school_id',$user->school_id)->where('status','active')->orderByDesc('id')->value('id')
+            ?: DB::table('academic_years')->where('school_id',$user->school_id)->orderByDesc('id')->value('id');
         abort_unless($academicYearId,422,'No active academic year is configured.');
 
         $overlap = DB::table('teacher_leave_applications')->where('user_id',$userId)->where('school_id',$user->school_id)->whereNull('deleted_at')
