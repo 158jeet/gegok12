@@ -226,4 +226,21 @@ class TagoreManagerDashboardTest extends TestCase
     }
 
 
+    public function test_manager_dashboard_exposes_group_erp_snapshot(): void
+    {
+        $owner = User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $response = $this->actingAs($owner)->get(route('tagore.dashboard'));
+        $response->assertOk()->assertSee('ERP Modules')->assertSee('Group Snapshot')->assertSee('Fee outstanding')->assertSee('Admission leads');
+    }
+
+    public function test_mobile_dashboard_api_returns_scoped_erp_payload(): void
+    {
+        $owner = User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $response = $this->actingAs($owner)->get(route('tagore.dashboard.api'));
+        $response->assertOk()->assertJsonPath('success', true)->assertJsonStructure([
+            'data' => ['user_id','roles','children','institutions','tasks','leave','manager'],
+        ]);
+    }
+
+
 }
