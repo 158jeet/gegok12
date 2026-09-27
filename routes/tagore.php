@@ -124,6 +124,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/learning/enroll', [LearningController::class, 'enroll'])->name('tagore.learning.enroll');
     Route::post('/learning/progress', [LearningController::class, 'progress'])->name('tagore.learning.progress');
     Route::post('/learning/store/order', [LearningController::class, 'order'])->name('tagore.learning.store.order');
+    Route::post('/learning/store/product', [LearningController::class, 'createProduct'])->name('tagore.learning.product');
     Route::post('/security/visitor', [SecurityController::class, 'visitor'])->name('tagore.security.visitor');
     Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->name('tagore.security.visitor.checkin');
     Route::post('/security/visitor/{id}/checkout', [SecurityController::class, 'checkOut'])->whereNumber('id')->name('tagore.security.visitor.checkout');
