@@ -20,6 +20,7 @@ use App\Http\Controllers\Tagore\TransportController;
 use App\Http\Controllers\Tagore\CommunicationController;
 use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
+use App\Http\Controllers\Tagore\LearningController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -96,6 +97,16 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
+    Route::post('/learning/room', [LearningController::class, 'room'])->name('tagore.learning.room');
+    Route::post('/learning/allocate', [LearningController::class, 'allocate'])->name('tagore.learning.allocate');
+    Route::post('/learning/course', [LearningController::class, 'createCourse'])->name('tagore.learning.course');
+    Route::post('/learning/content', [LearningController::class, 'addContent'])->name('tagore.learning.content');
+    Route::post('/learning/survey', [LearningController::class, 'createSurvey'])->name('tagore.learning.survey');
+    Route::post('/learning/survey/{surveyId}/respond', [LearningController::class, 'surveyResponse'])->whereNumber('surveyId')->name('tagore.learning.survey.respond');
+    Route::post('/learning/enroll', [LearningController::class, 'enroll'])->name('tagore.learning.enroll');
+    Route::post('/learning/progress', [LearningController::class, 'progress'])->name('tagore.learning.progress');
+    Route::post('/learning/store/order', [LearningController::class, 'order'])->name('tagore.learning.store.order');
     Route::post('/security/visitor', [SecurityController::class, 'visitor'])->name('tagore.security.visitor');
     Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->name('tagore.security.visitor.checkin');
     Route::post('/security/visitor/{id}/checkout', [SecurityController::class, 'checkOut'])->whereNumber('id')->name('tagore.security.visitor.checkout');
