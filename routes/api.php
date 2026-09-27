@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\TagoreMobileController;
+
 @include('teacherapi.php');
 
 Route::post('/parent/login', 'Api\TokenController@issueToken');
@@ -34,6 +36,11 @@ Route::group([
 ], function () {
 
     //Logout
+    Route::get('/tagore/transport/trip/{tripId}/live', [TagoreMobileController::class, 'liveTransport'])->whereNumber('tripId');
+    Route::post('/tagore/transport/trip/{tripId}/gps', [TagoreMobileController::class, 'gps'])->whereNumber('tripId');
+    Route::post('/tagore/transport/trip/{tripId}/boarding', [TagoreMobileController::class, 'boarding'])->whereNumber('tripId');
+    Route::post('/tagore/device', [TagoreMobileController::class, 'registerDevice']);
+    Route::post('/tagore/learning/progress', [TagoreMobileController::class, 'courseProgress']);
 
     //Route::post('/logout/devices', 'LoginController@logoutDevices');
     
