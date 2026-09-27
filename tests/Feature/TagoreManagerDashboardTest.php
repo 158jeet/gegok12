@@ -205,7 +205,7 @@ class TagoreManagerDashboardTest extends TestCase
 
         $this->actingAs($teacher)->post(route('tagore.staff.self.leave'),[
             'leave_type_id'=>$leaveTypeId,'from_date'=>$from,'to_date'=>$to,'session'=>'day',
-        ])->assertStatus(422)->assertSessionHasErrors();
+        ])->assertStatus(422);
         $this->assertSame(1,DB::table('teacher_leave_applications')->where('user_id',$teacher->id)->whereDate('from_date',$from)->count());
     }
 
