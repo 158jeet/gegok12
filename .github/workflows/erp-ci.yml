@@ -43,7 +43,12 @@ jobs:
         run: php artisan migrate --force --no-interaction
       - name: Bootstrap routes
         run: |
-          php artisan route:list > /tmp/tagore-routes.txt 2> /tmp/tagore-route-errors.txt || { cat /tmp/tagore-route-errors.txt; exit 1; }
+          set +e
+          php artisan route:list -vvv > /tmp/tagore-routes.txt 2>&1
+          code=$?
+          cat /tmp/tagore-routes.txt
+          echo "route:list exit code: $code"
+          exit $code
       - name: Run Laravel tests
         run: php artisan test
 
