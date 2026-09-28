@@ -34,8 +34,6 @@ jobs:
         run: composer validate --no-check-publish --no-interaction
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Diagnose events schema
-        run: grep -RIn "Schema::create('events'\|table('events'" database/migrations | head -80
       - name: PHP syntax check
         run: |
           find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
