@@ -141,6 +141,23 @@ class TagorePrototypeSeeder extends Seeder
             }
         }
 
+        // Ensure the deterministic first parent fixture used by E2E tests has a linked child.
+        $defaultStudent = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->first(['id', 'school_id']);
+        if ($defaultStudent) {
+            foreach (DB::table('users')->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->get(['id', 'school_id']) as $parent) {
+                $hasLink = DB::table('tagore_parent_students')
+                    ->where('parent_user_id', $parent->id)
+                    ->where('status', 'active')
+                    ->exists();
+                if (!$hasLink && (int) $parent->school_id === (int) $defaultStudent->school_id) {
+                    DB::table('tagore_parent_students')->updateOrInsert(
+                        ['parent_user_id' => $parent->id, 'student_id' => $defaultStudent->id],
+                        ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+                    );
+                }
+            }
+        }
+
         foreach(DB::table('users')->where('usergroup_id',6)->whereNull('deleted_at')->orderBy('id')->limit(12)->get(['id','school_id']) as $student){
             $institutionId=DB::table('tagore_institutions')->where('school_id',$student->school_id)->value('id');if(!$institutionId)continue;
             if(!DB::table('tagore_fee_obligations')->where('student_id',$student->id)->exists())DB::table('tagore_fee_obligations')->insert(['student_id'=>$student->id,'institution_id'=>$institutionId,'due_date'=>$now->copy()->addDays(20)->toDateString(),'gross_amount'=>45000,'discount_amount'=>5000,'concession_amount'=>0,'net_amount'=>40000,'paid_amount'=>20000,'outstanding_amount'=>20000,'status'=>'partial','created_at'=>$now,'updated_at'=>$now]);
