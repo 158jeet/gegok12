@@ -21,7 +21,7 @@ return new class extends Migration {
             $table->unsignedInteger('sent_count')->default(0);
             $table->unsignedInteger('failed_count')->default(0);
             $table->timestamps();
-            $table->index(['institution_id','status','scheduled_at']);
+            $table->index(['institution_id','status','scheduled_at'], 'tag_msg_campaign_schedule_idx');
         });
 
         Schema::create('tagore_message_deliveries', function (Blueprint $table) {
