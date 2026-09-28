@@ -15,6 +15,9 @@ class KoboSubmission extends Model
         'submitted_by',
         'data',
         'synced_at',
+        'tagore_admission_lead_id',
+        'imported_at',
+        'import_error',
     ];
 
     protected $casts = [
