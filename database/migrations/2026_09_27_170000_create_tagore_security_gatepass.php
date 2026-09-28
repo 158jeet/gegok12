@@ -38,7 +38,7 @@ return new class extends Migration {
             $table->string('token_hash',128)->unique();
             $table->string('status',30)->default('pending');
             $table->timestamps();
-            $table->index(['institution_id','student_id','status']);
+            $table->index(['institution_id','student_id','status'], 'tag_sec_gatepass_student_idx');
         });
 
         Schema::create('tagore_security_events', function (Blueprint $table) {
