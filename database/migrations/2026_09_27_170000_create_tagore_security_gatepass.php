@@ -52,7 +52,7 @@ return new class extends Migration {
             $table->json('metadata_json')->nullable();
             $table->string('ip_address',64)->nullable();
             $table->timestamps();
-            $table->index(['institution_id','event_type','created_at']);
+            $table->index(['institution_id','event_type','created_at'], 'tag_sec_events_scope_idx');
         });
     }
 
