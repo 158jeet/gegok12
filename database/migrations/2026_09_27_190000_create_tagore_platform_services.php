@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('tagore_alumni_profiles', function(Blueprint $t){
             $t->id(); $t->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $t->unsignedBigInteger('student_id'); $t->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
+            $t->unsignedInteger('student_id'); $t->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $t->integer('passout_year')->nullable(); $t->string('course',100)->nullable(); $t->string('phone',30)->nullable();
             $t->string('email',190)->nullable(); $t->string('current_org',190)->nullable(); $t->string('designation',190)->nullable();
             $t->text('notes')->nullable(); $t->timestamps(); $t->unique(['institution_id','student_id']);
@@ -32,7 +32,7 @@ return new class extends Migration {
         });
         Schema::create('tagore_fee_finance_applications', function(Blueprint $t){
             $t->id(); $t->foreignId('plan_id')->constrained('tagore_fee_finance_plans')->cascadeOnDelete();
-            $t->unsignedBigInteger('student_id'); $t->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
+            $t->unsignedInteger('student_id'); $t->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $t->decimal('principal',12,2); $t->decimal('emi',12,2); $t->string('external_reference',190)->nullable();
             $t->string('status',30)->default('pending'); $t->timestamps();
         });
@@ -45,13 +45,13 @@ return new class extends Migration {
         });
         Schema::create('tagore_social_posts', function(Blueprint $t){
             $t->id(); $t->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $t->unsignedBigInteger('author_id'); $t->foreign('author_id')->references('id')->on('users')->cascadeOnDelete();
+            $t->unsignedInteger('author_id'); $t->foreign('author_id')->references('id')->on('users')->cascadeOnDelete();
             $t->string('group_name',100)->nullable(); $t->string('title',190)->nullable(); $t->text('body'); $t->string('attachment_path',1000)->nullable();
             $t->string('status',30)->default('published'); $t->timestamps(); $t->index(['institution_id','created_at']);
         });
         Schema::create('tagore_social_comments', function(Blueprint $t){
             $t->id(); $t->foreignId('post_id')->constrained('tagore_social_posts')->cascadeOnDelete();
-            $t->unsignedBigInteger('author_id'); $t->foreign('author_id')->references('id')->on('users')->cascadeOnDelete();
+            $t->unsignedInteger('author_id'); $t->foreign('author_id')->references('id')->on('users')->cascadeOnDelete();
             $t->text('body'); $t->timestamps();
         });
 
