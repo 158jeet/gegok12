@@ -201,7 +201,6 @@ class OfflineSyncService
         }
 
         $attendance->fill([
-            [
             'status' => (int) $payload['status'],
             'reason_id' => $payload['reason_id'] ?? 0,
             'remarks' => $payload['remarks'] ?? null,
