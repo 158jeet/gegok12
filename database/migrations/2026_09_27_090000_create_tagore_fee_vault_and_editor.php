@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('tagore_fee_year_closures', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('academic_year_id');
+            $table->unsignedInteger('academic_year_id');
             $table->foreign('academic_year_id')->references('id')->on('academic_years')->cascadeOnDelete();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->dateTime('closed_at');
