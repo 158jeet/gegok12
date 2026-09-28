@@ -20,3 +20,5 @@ jobs:
           grep -RIn "tagore_transport_" database/migrations || true
           echo "=== controller authorize definitions ==="
           grep -RInE "(private|protected)[[:space:]]+function[[:space:]]+authorize[[:space:]]*\\(" app/Http/Controllers || true
+          echo "=== missing exam controller references ==="
+          grep -RIn "AddonInstallExamController" routes app config || true
