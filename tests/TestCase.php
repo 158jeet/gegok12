@@ -6,8 +6,14 @@
 
 namespace Tests;
 
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use IlluminateFoundationTestingTestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * RefreshDatabase-based feature tests need the same baseline fixtures as CI.
+     * This keeps seeded users, schools, academic years, and ERP fixtures available
+     * after Laravel refreshes the database between tests.
+     */
+    protected $seed = true;
 }
