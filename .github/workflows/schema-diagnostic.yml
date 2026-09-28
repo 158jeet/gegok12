@@ -21,4 +21,5 @@ jobs:
           echo "=== controller authorize definitions ==="
           grep -RInE "(private|protected)[[:space:]]+function[[:space:]]+authorize[[:space:]]*\\(" app/Http/Controllers || true
           echo "=== missing exam controller references ==="
-          grep -RIn --exclude-dir=.git --exclude-dir=vendor "AddonInstallExamController" . || true
+          grep -RIn --exclude-dir=.git --exclude-dir=vendor "AddonInstall" . || true
+          grep -RIn --exclude-dir=.git --exclude-dir=vendor "InstallExam" . || true
