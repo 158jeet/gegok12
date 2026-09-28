@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->text('message');
             $table->timestamp('scheduled_at')->nullable();
             $table->string('status',30)->default('draft');
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->unsignedInteger('sent_count')->default(0);
             $table->unsignedInteger('failed_count')->default(0);
@@ -27,7 +27,7 @@ return new class extends Migration {
         Schema::create('tagore_message_deliveries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('campaign_id')->constrained('tagore_message_campaigns')->cascadeOnDelete();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('channel',30);
             $table->string('destination',190)->nullable();
@@ -41,7 +41,7 @@ return new class extends Migration {
 
         Schema::create('tagore_user_devices', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('token',500);
             $table->string('platform',30)->nullable();
