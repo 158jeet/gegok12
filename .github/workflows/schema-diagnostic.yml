@@ -18,3 +18,5 @@ jobs:
           grep -RIn "tagore_transport_routes" database/migrations || true
           echo "=== all transport table definitions ==="
           grep -RIn "tagore_transport_" database/migrations || true
+          echo "=== controller authorize definitions ==="
+          grep -RInE "(private|protected)[[:space:]]+function[[:space:]]+authorize[[:space:]]*\\(" app/Http/Controllers || true
