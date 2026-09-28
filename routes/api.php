@@ -28,12 +28,17 @@ Route::post('/reset/change/password', 'Api\UserController@resetChangePassword');
 
 Route::get('/school/info', 'Api\SchoolController@schooldetail');
 
+Route::post('/v2/tagore/sync/login', [\App\Http\Controllers\Api\TagoreSyncController::class, 'login']);
+
 Route::group([
 	'prefix' => 'v2', 
 	'namespace' =>'Api' ,
     
 	'middleware' => ['auth:sanctum'],
 ], function () {
+
+    Route::post('/tagore/sync/bootstrap', [\App\Http\Controllers\Api\TagoreSyncController::class, 'bootstrap']);
+    Route::post('/tagore/sync/push', [\App\Http\Controllers\Api\TagoreSyncController::class, 'push']);
 
     //Logout
     Route::get('/tagore/transport/trip/{tripId}/live', [TagoreMobileController::class, 'liveTransport'])->whereNumber('tripId');
