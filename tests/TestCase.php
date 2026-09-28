@@ -6,7 +6,7 @@
 
 namespace Tests;
 
-use IlluminateFoundationTestingTestCase as BaseTestCase;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
