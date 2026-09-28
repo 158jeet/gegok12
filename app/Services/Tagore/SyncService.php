@@ -144,7 +144,7 @@ class SyncService
                 'u.id',
                 'u.name',
                 'u.email',
-                'u.registration_no',
+                'sa.id_card_number as registration_no',
                 'sa.standardLink_id',
                 'sa.academic_year_id',
                 'sl.standard_id',
