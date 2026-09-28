@@ -39,8 +39,12 @@ jobs:
           find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Prepare persistent SQLite database
         run: touch database/ci.sqlite
+      - name: Generate testing application key
+        run: php artisan key:generate --force --no-interaction
       - name: Bootstrap migrations
         run: php artisan migrate --force --no-interaction
+      - name: Seed testing database
+        run: php artisan db:seed --force --no-interaction
       - name: Bootstrap routes
         run: |
           set +e
