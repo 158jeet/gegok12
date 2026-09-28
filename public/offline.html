@@ -52,7 +52,7 @@ $('standard').addEventListener('change',()=>document.querySelectorAll('.student'
 $('students').addEventListener('change',async e=>{
   if(!e.target.matches('select'))return;
   const row=e.target.closest('.student');
-  await TagoreOffline.queue('attendance','upsert',{user_id:Number(row.dataset.id),standardLink_id:Number(row.dataset.standard),date:$('date').value,session:$('session').value,status:Number(e.target.value)});
+  await TagoreOffline.queue('attendance','upsert',{user_id:Number(row.dataset.id),standardLink_id:Number(row.dataset.standard),academic_year_id:Number((await TagoreOffline.getBootstrap())?.academic_year?.id||0),date:$('date').value,session:$('session').value,status:Number(e.target.value)});
   $('message').textContent='Saved locally. It will sync automatically when online.';
 });
 window.addEventListener('tagore-sync',e=>$('message').textContent=(e.detail.accepted||[]).length+' record(s) synchronized.');
