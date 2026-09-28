@@ -167,6 +167,13 @@ class OfflineSyncService
 
         abort_unless(in_array((int) $user->usergroup_id, [5, 3, 4, 2], true), 403);
 
+        abort_unless(DB::table('class_teacher_links')
+            ->where('school_id', $user->school_id)
+            ->where('teacher_id', $user->id)
+            ->where('standardLink_id', $payload['standard_link_id'])
+            ->when(isset($payload['subject_id']), fn ($q) => $q->where('subject_id', $payload['subject_id']))
+            ->exists(), 403);
+
         $student = DB::table('student_academics')
             ->where('school_id', $user->school_id)
             ->where('user_id', $payload['student_id'])
@@ -175,21 +182,31 @@ class OfflineSyncService
         abort_unless($student, 403);
 
         $academicYearId = $student->academic_year_id;
-        Attendance::updateOrCreate(
+        $attendance = Attendance::where('school_id', $user->school_id)
+            ->where('academic_year_id', $academicYearId)
+            ->where('standardLink_id', $payload['standard_link_id'])
+            ->where('user_id', $payload['student_id'])
+            ->whereDate('date', $payload['date'])
+            ->where('session', $payload['session'])
+            ->first();
+
+        if (!$attendance) {
+            $attendance = new Attendance();
+            $attendance->school_id = $user->school_id;
+            $attendance->academic_year_id = $academicYearId;
+            $attendance->standardLink_id = $payload['standard_link_id'];
+            $attendance->user_id = $payload['student_id'];
+            $attendance->date = $payload['date'];
+            $attendance->session = $payload['session'];
+        }
+
+        $attendance->fill([
             [
-                'school_id' => $user->school_id,
-                'academic_year_id' => $academicYearId,
-                'standardLink_id' => $payload['standard_link_id'],
-                'user_id' => $payload['student_id'],
-                'date' => $payload['date'],
-                'session' => $payload['session'],
-            ],
-            [
-                'status' => (int) $payload['status'],
-                'reason_id' => $payload['reason_id'] ?? 0,
-                'remarks' => $payload['remarks'] ?? null,
-                'recorded_by' => $user->id,
-            ]
-        );
+            'status' => (int) $payload['status'],
+            'reason_id' => $payload['reason_id'] ?? 0,
+            'remarks' => $payload['remarks'] ?? null,
+            'recorded_by' => $user->id,
+        ]);
+        $attendance->save();
     }
 }
