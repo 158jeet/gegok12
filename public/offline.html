@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TagoreK12 Offline</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#111827;color:#f9fafb;margin:0;padding:24px}
+.wrap{max-width:1000px;margin:auto}.card{background:#1f2937;border:1px solid #374151;border-radius:16px;padding:20px;margin:16px 0}
+h1{margin:0 0 6px}.muted{color:#9ca3af}.status{font-weight:700}.online{color:#86efac}.offline{color:#fbbf24}
+select,input,button{width:100%;box-sizing:border-box;padding:11px;margin-top:8px;border-radius:10px;border:1px solid #4b5563;background:#111827;color:#fff}
+button{background:#166534;border:0;font-weight:700;cursor:pointer}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+#students{max-height:55vh;overflow:auto}.student{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #374151}
+.student select{width:130px;margin:0}.pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#374151}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TagoreK12 Offline Workspace</h1>
+  <div class="muted">Attendance can be recorded without internet and will synchronize automatically when the connection returns.</div>
+  <div class="card">
+    <div>Status: <span id="status" class="status offline">Offline</span></div>
+    <div>Pending sync: <span id="pending" class="pill">0</span></div>
+    <div id="message" class="muted"></div>
+  </div>
+  <div class="card">
+    <div class="grid">
+      <label>Date<input id="date" type="date"></label>
+      <label>Session<input id="session" value="regular"></label>
+    </div>
+    <label>Class / Section<select id="standard"></select></label>
+  </div>
+  <div class="card">
+    <h2>Student Attendance</h2>
+    <div id="students">Loading cached students…</div>
+  </div>
+  <div class="card"><button id="sync">Sync pending records</button></div>
+</div>
+<script src="/js/tagore-offline.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+$('date').value=new Date().toISOString().slice(0,10);
+const render=async()=>{
+  const data=await TagoreOffline.getBootstrap();
+  if(!data){$('students').textContent='No offline roster is cached yet. Connect once to the server and reload.';return;}
+  const standards=[...new Map((data.students||[]).filter(s=>s.standardLink_id).map(s=>[s.standardLink_id,s.standard_name||('Class '+s.standardLink_id)])).entries()];
+  $('standard').innerHTML=standards.map(([id,name])=>'<option value="'+id+'">'+name+'</option>').join('');
+  $('students').innerHTML=(data.students||[]).map(s=>'<div class="student" data-id="'+s.id+'" data-standard="'+(s.standardLink_id||'')+'"><span>'+s.name+' <small class="muted">'+(s.registration_no||'')+'</small></span><select><option value="1">Present</option><option value="0">Absent</option><option value="2">Late</option></select></div>').join('');
+};
+$('standard').addEventListener('change',()=>document.querySelectorAll('.student').forEach(el=>el.style.display=(!el.dataset.standard||el.dataset.standard===$('standard').value)?'grid':'none'));
+$('students').addEventListener('change',async e=>{
+  if(!e.target.matches('select'))return;
+  const row=e.target.closest('.student');
+  await TagoreOffline.queue('attendance','upsert',{user_id:Number(row.dataset.id),standardLink_id:Number(row.dataset.standard),date:$('date').value,session:$('session').value,status:Number(e.target.value)});
+  $('message').textContent='Saved locally. It will sync automatically when online.';
+});
+window.addEventListener('tagore-sync',e=>$('message').textContent=(e.detail.accepted||[]).length+' record(s) synchronized.');
+window.addEventListener('online',()=>{$('status').textContent='Online';$('status').className='status online';});
+window.addEventListener('offline',()=>{$('status').textContent='Offline';$('status').className='status offline';});
+document.addEventListener('DOMContentLoaded',render);
+</script>
+</body>
+</html>
