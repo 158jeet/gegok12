@@ -77,7 +77,7 @@ return new class extends Migration {
             $table->foreign('performed_by')->references('id')->on('users')->nullOnDelete();
             $table->text('notes')->nullable();
             $table->timestamps();
-            $table->index(['institution_id','inventory_item_id','created_at']);
+            $table->index(['institution_id','inventory_item_id','created_at'], 'tag_inv_movements_scope_idx');
         });
 
         Schema::create('tagore_assets', function (Blueprint $table) {
