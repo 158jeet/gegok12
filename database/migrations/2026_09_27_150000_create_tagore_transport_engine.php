@@ -107,7 +107,7 @@ return new class extends Migration {
                 $table->foreign('recorded_by')->references('id')->on('users')->nullOnDelete();
                 $table->timestamp('recorded_at');
                 $table->timestamps();
-                $table->index(['trip_id', 'student_id', 'recorded_at']);
+                $table->index(['trip_id', 'student_id', 'recorded_at'], 'tag_transport_boarding_scan_idx');
             });
         }
     }
