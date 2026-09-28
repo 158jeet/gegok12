@@ -1,0 +1,20 @@
+name: Temporary schema diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate transport schema definitions
+        run: |
+          echo "=== tagore_transport_routes definitions ==="
+          grep -RIn "tagore_transport_routes" database/migrations || true
+          echo "=== all transport table definitions ==="
+          grep -RIn "tagore_transport_" database/migrations || true
