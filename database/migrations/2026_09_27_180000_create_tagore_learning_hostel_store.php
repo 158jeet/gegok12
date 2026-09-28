@@ -22,7 +22,7 @@ return new class extends Migration {
         Schema::create('tagore_hostel_allocations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('room_id')->constrained('tagore_hostel_rooms')->cascadeOnDelete();
-            $table->unsignedBigInteger('student_id');
+            $table->unsignedInteger('student_id');
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('bed_no',30);
             $table->date('check_in');
@@ -35,7 +35,7 @@ return new class extends Migration {
         Schema::create('tagore_course_enrollments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')->constrained('tagore_course_records')->cascadeOnDelete();
-            $table->unsignedBigInteger('student_id');
+            $table->unsignedInteger('student_id');
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->timestamp('enrolled_at');
             $table->decimal('progress',5,2)->default(0);
@@ -47,7 +47,7 @@ return new class extends Migration {
         Schema::create('tagore_content_progress', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')->constrained('tagore_course_records')->cascadeOnDelete();
-            $table->unsignedBigInteger('student_id');
+            $table->unsignedInteger('student_id');
             $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
             $table->unsignedBigInteger('content_id')->nullable();
             $table->decimal('progress',5,2)->default(0);
@@ -70,7 +70,7 @@ return new class extends Migration {
         Schema::create('tagore_survey_responses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('survey_id')->constrained('tagore_surveys')->cascadeOnDelete();
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedInteger('user_id')->nullable();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->json('answers_json');
             $table->timestamps();
@@ -93,7 +93,7 @@ return new class extends Migration {
         Schema::create('tagore_store_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
-            $table->unsignedBigInteger('buyer_user_id');
+            $table->unsignedInteger('buyer_user_id');
             $table->foreign('buyer_user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->decimal('total_amount',12,2)->default(0);
             $table->string('status',30)->default('pending');
