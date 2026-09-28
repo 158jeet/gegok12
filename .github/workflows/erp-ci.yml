@@ -37,6 +37,8 @@ jobs:
       - name: PHP syntax check
         run: |
           find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Diagnose duplicate transport schema definitions
+        run: grep -RIn "tagore_transport_routes" database/migrations || true
       - name: Bootstrap migrations
         run: php artisan migrate --force --no-interaction
       - name: Bootstrap routes
