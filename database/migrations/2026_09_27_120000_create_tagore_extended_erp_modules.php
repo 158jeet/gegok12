@@ -45,7 +45,7 @@ return new class extends Migration {
                     else $t->text($column)->nullable();
                 }
                 $t->timestamps();
-                $t->index(['institution_id','status']);
+                if(in_array('status',$columns,true)) $t->index(['institution_id','status']);
             });
         }
     }
