@@ -143,7 +143,7 @@ class AuthenticationAdvancedTest extends TestCase
 
         $this->actingAs($student)
             ->get('/admin/dashboard')
-            ->assertStatus(403); // Forbidden or redirected
+            ->assertRedirect('/student/dashboard');
     }
 
     /**
