@@ -64,5 +64,7 @@ class DatabaseSeeder extends Seeder
         $this->call(NoticeBoardSeeder::class); //test
         $this->call(PayrollSeeder::class); //test
         $this->call(TagSeeder::class);
+        // Seed the Tagore ERP prototype roles, permissions, institution memberships, departments and demo ERP fixtures.
+        $this->call(TagorePrototypeSeeder::class);
     }
 }

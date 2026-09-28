@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\TagoreMobileController;
+use App\Http\Controllers\Api\TagoreSyncController;
 
 @include('teacherapi.php');
 
@@ -34,6 +35,11 @@ Route::group([
     
 	'middleware' => ['auth:sanctum'],
 ], function () {
+
+    // Offline-first client synchronization
+    Route::get('/tagore/offline/bootstrap', [TagoreSyncController::class, 'bootstrap']);
+    Route::post('/tagore/offline/device', [TagoreSyncController::class, 'registerDevice']);
+    Route::post('/tagore/sync', [TagoreSyncController::class, 'sync']);
 
     //Logout
     Route::get('/tagore/transport/trip/{tripId}/live', [TagoreMobileController::class, 'liveTransport'])->whereNumber('tripId');

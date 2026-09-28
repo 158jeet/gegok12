@@ -76,6 +76,8 @@ class HolidaySeeder extends Seeder
                     DB::table('events')->insert([
                         'school_id' => $school->id,
                         'academic_year_id' => $academic_year->id,
+                        'batch' => $academic_year->id,
+                        'color' => '#3B82F6',
                         'select_type' => 'school',
                         'title' => $h[0],
                         'category' => 'holidays',

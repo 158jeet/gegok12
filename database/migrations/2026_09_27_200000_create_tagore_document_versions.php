@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->string('original_name',255);
             $table->string('mime_type',190)->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
-            $table->unsignedBigInteger('uploaded_by')->nullable();
+            $table->unsignedInteger('uploaded_by')->nullable();
             $table->foreign('uploaded_by')->references('id')->on('users')->nullOnDelete();
             $table->string('sha256',64);
             $table->timestamps();

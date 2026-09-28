@@ -23,7 +23,7 @@ class SecurityController extends Controller
 
     public function visitor(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','visitor_name'=>'required|string|max:190','phone'=>'nullable|string|max:30','purpose'=>'required|string|max:190','host_user_id'=>'nullable|integer']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         $otp=(string)random_int(100000,999999);
@@ -34,7 +34,7 @@ class SecurityController extends Controller
 
     public function checkIn(Request $request,int $id)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['otp'=>'required|digits:6']);
         $visitor=DB::table('tagore_security_visitors')->where('id',$id)->whereIn('institution_id',$ids)->first(); abort_unless($visitor,404);
         abort_unless($visitor->status==='expected' && $visitor->otp_expires_at && now()->lt($visitor->otp_expires_at),422,'Visitor OTP has expired or visitor is already processed.');
@@ -46,7 +46,7 @@ class SecurityController extends Controller
 
     public function checkOut(Request $request,int $id)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $visitor=DB::table('tagore_security_visitors')->where('id',$id)->whereIn('institution_id',$ids)->first(); abort_unless($visitor,404);
         abort_unless($visitor->status==='checked_in',422,'Visitor is not checked in.');
         DB::table('tagore_security_visitors')->where('id',$id)->update(['status'=>'checked_out','checked_out_at'=>now(),'updated_at'=>now()]);
@@ -90,7 +90,7 @@ class SecurityController extends Controller
         return response()->json(['valid'=>$valid,'pass'=>$pass]);
     }
 
-    private function authorize($roles): void { abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty(),403); }
+    private function authorizeModule($roles): void { abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty(),403); }
 
     private function event(Request $request,int $institutionId,string $type,string $subjectType,int $subjectId,array $meta=[]): void
     {

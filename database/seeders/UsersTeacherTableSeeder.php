@@ -27,7 +27,7 @@ class UsersTeacherTableSeeder extends Seeder
     public function run()
     {
         $schools = School::where('status',1)->get();
-        if (env('APP_ENV') == 'local' || env('APP_ENV') == 'development') 
+        if (in_array(env('APP_ENV'), ['local', 'development', 'testing'], true)) 
         {
             foreach ($schools as $school) 
             {

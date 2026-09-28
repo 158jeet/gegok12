@@ -25,7 +25,7 @@ class InventoryController extends Controller
 
     public function vendor(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','name'=>'required|string|max:190','phone'=>'nullable|string|max:30','email'=>'nullable|email|max:190','address'=>'nullable|string|max:2000','gstin'=>'nullable|string|max:30']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         DB::table('tagore_inventory_vendors')->insert($d+['status'=>'active','created_at'=>now(),'updated_at'=>now()]);
@@ -34,7 +34,7 @@ class InventoryController extends Controller
 
     public function item(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','name'=>'required|string|max:190','sku'=>'nullable|string|max:100','category'=>'nullable|string|max:100','unit'=>'nullable|string|max:30','reorder_level'=>'numeric|min:0','unit_cost'=>'numeric|min:0','vendor_id'=>'nullable|integer']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         if (!empty($d['vendor_id'])) abort_unless(DB::table('tagore_inventory_vendors')->where('id',$d['vendor_id'])->where('institution_id',$d['institution_id'])->exists(),422,'Vendor is outside the institution.');
@@ -44,7 +44,7 @@ class InventoryController extends Controller
 
     public function movement(Request $request,InventoryService $service)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','item_id'=>'required|integer','quantity'=>'required|numeric|min:0.001','type'=>'required|in:in,out,adjust','notes'=>'nullable|string|max:2000']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         $service->moveStock((int)$d['institution_id'],(int)$d['item_id'],(float)$d['quantity'],$d['type'],(int)$request->user()->id,$d['notes']??null);
@@ -53,7 +53,7 @@ class InventoryController extends Controller
 
     public function purchaseOrder(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','vendor_id'=>'required|integer','items_json'=>'required|json']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         abort_unless(DB::table('tagore_inventory_vendors')->where('id',$d['vendor_id'])->where('institution_id',$d['institution_id'])->exists(),422,'Vendor is outside the institution.');
@@ -105,7 +105,7 @@ class InventoryController extends Controller
 
     public function expense(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','expense_date'=>'required|date','department'=>'nullable|string|max:100','category'=>'required|string|max:100','description'=>'required|string|max:2000','amount'=>'required|numeric|min:0.01','vendor'=>'nullable|string|max:190']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         DB::table('tagore_expense_claims')->insert($d+['submitted_by'=>$request->user()->id,'status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
@@ -114,7 +114,7 @@ class InventoryController extends Controller
 
     public function asset(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->authorize($roles);
+        [$roles,$ids]=$this->context($request); $this->authorizeModule($roles);
         $d=$request->validate(['institution_id'=>'required|integer','asset_tag'=>'required|string|max:100','name'=>'required|string|max:190','category'=>'nullable|string|max:100','purchase_date'=>'nullable|date','cost'=>'numeric|min:0','department'=>'nullable|string|max:100','assigned_to'=>'nullable|integer']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         if (!empty($d['assigned_to'])) abort_unless(DB::table('users')->where('id',$d['assigned_to'])->whereNull('deleted_at')->exists(),422,'Assigned user was not found.');
@@ -131,7 +131,7 @@ class InventoryController extends Controller
         return back()->with('success','Expense decision saved.');
     }
 
-    private function authorize($roles): void { abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403); }
+    private function authorizeModule($roles): void { abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403); }
 
     private function context(Request $request): array
     {

@@ -77,18 +77,17 @@ trait AuthenticatesUsers
          * @return bool True if school is active or user is superadmin
          */
         Validator::extend('checkschool', function ($attribute, $value, $parameters, $validator) {
-            $users = User::orWhere('email', request('email'))
-                ->orWhere('mobile_no', request('email'))
-                ->orWhere('name', request('email'))
-                ->orWhere('registration_number', request('email'))
-                ->first();
+            $users = $this->findLoginUser();
 
-            if ($users->usergroup_id == 1) {
-                return TRUE;
+            if (!$users) {
+                return false;
             }
 
-            $school = School::IsActive($users->school_id)->exists();
-            return $school == TRUE;
+            if ($users->usergroup_id == 1) {
+                return true;
+            }
+
+            return School::IsActive($users->school_id)->exists();
         }, 'Invalid Credentials. You are not in this school');
 
         /**
@@ -102,8 +101,7 @@ trait AuthenticatesUsers
          * @return bool True if user exists
          */
         Validator::extend('checkusers', function ($attribute, $value, $parameters, $validator) {
-            $users = User::where('email', request('email'))->with('userprofile')->first();
-            return $users != null;
+            return $this->findLoginUser() !== null;
         }, 'Invalid Credentials');
 
         /**
@@ -117,8 +115,11 @@ trait AuthenticatesUsers
          * @return bool True if user is active
          */
         Validator::extend('checkactive', function ($attribute, $value, $parameters, $validator) {
-            $users = User::where('email', request('email'))->with('userprofile')->first();
-            return $users->userprofile->status != 'inactive';
+            $users = $this->findLoginUser();
+
+            return $users
+                && $users->status !== 'inactive'
+                && (!$users->userprofile || $users->userprofile->status !== 'inactive');
         }, 'You are suspended by site admin');
 
         /**
@@ -132,14 +133,25 @@ trait AuthenticatesUsers
          * @return bool True if user status is not 'exit'
          */
         Validator::extend('checkexit', function ($attribute, $value, $parameters, $validator) {
-            $users = User::where('email', request('email'))->with('userprofile')->first();
-            return $users->userprofile->status != 'exit';
+            $users = $this->findLoginUser();
+
+            return $users
+                && $users->status !== 'exit'
+                && (!$users->userprofile || $users->userprofile->status !== 'exit');
         }, 'You have exited this school');
 
-        $this->validate($request, [
-            $this->username() => 'required|string|checkactive|checkexit',
+        $field = $this->username();
+
+        $rules = [
+            $field => 'bail|required|string|checkactive|checkexit',
             'password' => 'bail|required|string|checkschool',
-        ]);
+        ];
+
+        if ($field === 'email') {
+            $rules[$field] .= '|email';
+        }
+
+        $this->validate($request, $rules);
     }
 
     /**
@@ -163,7 +175,17 @@ trait AuthenticatesUsers
      */
     protected function credentials(Request $request)
     {
-        return $request->only($this->username(), 'password');
+        $field = $this->username();
+        $value = $request->input($field);
+
+        if ($field === 'email' && $value !== null) {
+            $user = User::whereRaw('LOWER(email) = LOWER(?)', [$value])->first();
+            if ($user) {
+                $value = $user->email;
+            }
+        }
+
+        return [$field => $value, 'password' => $request->input('password')];
     }
 
     /**
@@ -219,10 +241,38 @@ trait AuthenticatesUsers
      */
     public function username()
     {
-       $login = request()->input('email');
-       $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'registration_number';
-       request()->merge([$field => $login]);
-       return $field;
+        $login = request()->input('email');
+
+        if ($login === null || $login === '') {
+            $field = 'email';
+        } elseif (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $field = 'email';
+        } else {
+            $existsAsRegistration = User::where('registration_number', $login)->exists();
+            $field = $existsAsRegistration ? 'registration_number' : 'email';
+        }
+
+        request()->merge([$field => $login]);
+
+        return $field;
+    }
+
+    protected function findLoginUser(): ?User
+    {
+        $field = $this->username();
+        $value = request()->input($field);
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $query = User::with('userprofile');
+
+        if ($field === 'email') {
+            return $query->whereRaw('LOWER(email) = LOWER(?)', [$value])->first();
+        }
+
+        return $query->where('registration_number', $value)->first();
     }
 
     /**

@@ -16,7 +16,7 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: sqlite
-      DB_DATABASE: ":memory:"
+      DB_DATABASE: database/ci.sqlite
       CACHE_STORE: array
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
@@ -37,10 +37,22 @@ jobs:
       - name: PHP syntax check
         run: |
           find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Prepare persistent SQLite database
+        run: touch database/ci.sqlite
+      - name: Generate testing application key
+        run: php artisan key:generate --force --no-interaction
       - name: Bootstrap migrations
         run: php artisan migrate --force --no-interaction
+      - name: Seed testing database
+        run: php artisan db:seed --force --no-interaction
       - name: Bootstrap routes
-        run: php artisan route:list --json > /tmp/tagore-routes.json
+        run: |
+          set +e
+          php artisan route:list -vvv > /tmp/tagore-routes.txt 2>&1
+          code=$?
+          cat /tmp/tagore-routes.txt
+          echo "route:list exit code: $code"
+          exit $code
       - name: Run Laravel tests
         run: php artisan test
 
@@ -53,7 +65,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund
       - name: Build frontend

@@ -15,9 +15,9 @@ return new class extends Migration {
             $table->decimal('gross_total', 14, 2)->default(0);
             $table->decimal('deduction_total', 14, 2)->default(0);
             $table->decimal('net_total', 14, 2)->default(0);
-            $table->unsignedBigInteger('generated_by')->nullable();
+            $table->unsignedInteger('generated_by')->nullable();
             $table->foreign('generated_by')->references('id')->on('users')->nullOnDelete();
-            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->unsignedInteger('approved_by')->nullable();
             $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('paid_at')->nullable();
@@ -29,7 +29,7 @@ return new class extends Migration {
         Schema::create('tagore_payroll_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payroll_run_id')->constrained('tagore_payroll_runs')->cascadeOnDelete();
-            $table->unsignedBigInteger('employee_id');
+            $table->unsignedInteger('employee_id');
             $table->foreign('employee_id')->references('id')->on('users')->cascadeOnDelete();
             $table->decimal('basic_salary', 14, 2)->default(0);
             $table->decimal('gross_amount', 14, 2)->default(0);

@@ -45,7 +45,7 @@ return new class extends Migration {
             $table->date('order_date');
             $table->decimal('total_amount', 14, 2)->default(0);
             $table->string('status', 30)->default('draft');
-            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->unsignedInteger('approved_by')->nullable();
             $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('received_at')->nullable();
@@ -73,11 +73,11 @@ return new class extends Migration {
             $table->decimal('unit_cost', 14, 2)->default(0);
             $table->string('reference_type', 50)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
-            $table->unsignedBigInteger('performed_by')->nullable();
+            $table->unsignedInteger('performed_by')->nullable();
             $table->foreign('performed_by')->references('id')->on('users')->nullOnDelete();
             $table->text('notes')->nullable();
             $table->timestamps();
-            $table->index(['institution_id','inventory_item_id','created_at']);
+            $table->index(['institution_id','inventory_item_id','created_at'], 'tag_inv_movements_scope_idx');
         });
 
         Schema::create('tagore_assets', function (Blueprint $table) {
@@ -89,7 +89,7 @@ return new class extends Migration {
             $table->date('purchase_date')->nullable();
             $table->decimal('cost', 14, 2)->default(0);
             $table->string('department', 100)->nullable();
-            $table->unsignedBigInteger('assigned_to')->nullable();
+            $table->unsignedInteger('assigned_to')->nullable();
             $table->foreign('assigned_to')->references('id')->on('users')->nullOnDelete();
             $table->string('status', 30)->default('active');
             $table->timestamps();
@@ -105,9 +105,9 @@ return new class extends Migration {
             $table->text('description');
             $table->decimal('amount', 14, 2);
             $table->string('vendor', 190)->nullable();
-            $table->unsignedBigInteger('submitted_by')->nullable();
+            $table->unsignedInteger('submitted_by')->nullable();
             $table->foreign('submitted_by')->references('id')->on('users')->nullOnDelete();
-            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->unsignedInteger('approved_by')->nullable();
             $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
             $table->string('status', 30)->default('pending');
             $table->text('approval_notes')->nullable();

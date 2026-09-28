@@ -1,0 +1,23 @@
+{
+  "name": "tagorek12-windows",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TagoreK12 offline-first Windows client",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^38.2.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "in.tagorek12.erp",
+    "productName": "TagoreK12",
+    "directories": {"output": "dist"},
+    "files": ["main.js", "preload.js", "README.md"],
+    "win": {"target": [{"target":"nsis","arch":["x64"]}]},
+    "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true}
+  }
+}

@@ -39,12 +39,13 @@ return new class extends Migration {
                 foreach($columns as $column){
                     $type=str_ends_with($column,'_json')||in_array($column,['questions_json','access_json','recipients_json','definition_json','config_json','template_json','brand_json'])?'json':'string';
                     if($type==='json') $t->json($column)->nullable();
+                    elseif($column==='status') $t->string($column,30)->default('active');
                     elseif(in_array($column,['gross_amount','deductions','net_amount','unit_cost','amount','fee','emi_amount','price'])) $t->decimal($column,12,2)->nullable();
                     elseif(in_array($column,['quantity','reorder_level','capacity','stock','version','sent_count','failed_count'])) $t->integer($column)->default(0);
                     else $t->text($column)->nullable();
                 }
                 $t->timestamps();
-                $t->index(['institution_id','status']);
+                if(in_array('status',$columns,true)) $t->index(['institution_id','status']);
             });
         }
     }

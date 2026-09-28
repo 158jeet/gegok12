@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Models\User;
 
 class TagorePrototypeSeeder extends Seeder
 {
@@ -68,6 +69,46 @@ class TagorePrototypeSeeder extends Seeder
             }
         }
 
+        // Keep the ERP test/demo dataset self-contained even when the legacy
+        // classroom seeders have no StandardLink rows.
+        $fallbackSchool = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first(['id']);
+        if ($fallbackSchool) {
+            $fallbackInstitutionId = DB::table('tagore_institutions')->where('school_id', $fallbackSchool->id)->value('id');
+
+            $fallbackStudent = User::where('email', 'tagore-demo-student@example.com')->first();
+            if (!$fallbackStudent) {
+                $fallbackStudent = User::factory()->create([
+                    'school_id' => $fallbackSchool->id,
+                    'usergroup_id' => 6,
+                    'name' => 'Tagore Demo Student',
+                    'email' => 'tagore-demo-student@example.com',
+                ]);
+            }
+
+            $fallbackParent = User::where('email', 'tagore-demo-parent@example.com')->first();
+            if (!$fallbackParent) {
+                $fallbackParent = User::factory()->create([
+                    'school_id' => $fallbackSchool->id,
+                    'usergroup_id' => 7,
+                    'name' => 'Tagore Demo Parent',
+                    'email' => 'tagore-demo-parent@example.com',
+                ]);
+            }
+
+            foreach ([[$fallbackStudent, 'STUDENT'], [$fallbackParent, 'PARENT']] as [$user, $roleCode]) {
+                $roleId = DB::table('tagore_roles')->where('code', $roleCode)->value('id');
+                DB::table('tagore_user_roles')->updateOrInsert(
+                    ['user_id' => $user->id, 'role_id' => $roleId, 'institution_id' => $fallbackInstitutionId],
+                    ['status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+                );
+            }
+
+            DB::table('tagore_parent_students')->updateOrInsert(
+                ['parent_user_id' => $fallbackParent->id, 'student_id' => $fallbackStudent->id],
+                ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+            );
+        }
+
         foreach (DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
             ->where('ur.status', 'active')
@@ -97,6 +138,23 @@ class TagorePrototypeSeeder extends Seeder
                     ['parent_user_id' => $parent->id, 'student_id' => $student->id],
                     ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
                 );
+            }
+        }
+
+        // Ensure the deterministic first parent fixture used by E2E tests has a linked child.
+        $defaultStudent = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->first(['id', 'school_id']);
+        if ($defaultStudent) {
+            foreach (DB::table('users')->where('usergroup_id', 7)->whereNull('deleted_at')->orderBy('id')->get(['id', 'school_id']) as $parent) {
+                $hasLink = DB::table('tagore_parent_students')
+                    ->where('parent_user_id', $parent->id)
+                    ->where('status', 'active')
+                    ->exists();
+                if (!$hasLink && (int) $parent->school_id === (int) $defaultStudent->school_id) {
+                    DB::table('tagore_parent_students')->updateOrInsert(
+                        ['parent_user_id' => $parent->id, 'student_id' => $defaultStudent->id],
+                        ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
+                    );
+                }
             }
         }
 
