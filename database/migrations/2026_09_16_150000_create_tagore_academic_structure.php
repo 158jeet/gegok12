@@ -7,6 +7,23 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        // Some legacy deployments already have academic_years, while clean
+        // installs of the public GegoK12 tree may not. Tagore's existing
+        // models and migrations require this canonical legacy table.
+        if (!Schema::hasTable('academic_years')) {
+            Schema::create('academic_years', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedInteger('school_id')->nullable()->index();
+                $table->string('name', 100);
+                $table->text('description')->nullable();
+                $table->dateTime('start_date')->nullable();
+                $table->dateTime('end_date')->nullable();
+                $table->unsignedTinyInteger('status')->default(1)->index();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
+
         Schema::create('tagore_academic_streams', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
