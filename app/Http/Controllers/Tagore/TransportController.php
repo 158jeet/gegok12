@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TransportController extends Controller
@@ -24,9 +25,21 @@ class TransportController extends Controller
     public function route(Request $request)
     {
         [$roles,$ids]=$this->context($request); $this->authorize($roles);
-        $d=$request->validate(['institution_id'=>'required|integer','name'=>'required|string|max:190','stops_json'=>'nullable|json','estimated_minutes'=>'integer|min:0','fee'=>'numeric|min:0']);
+        $d=$request->validate(['institution_id'=>'required|integer','name'=>'required|string|max:190','route_code'=>'nullable|string|max:80','academic_year_id'=>'nullable|integer','stops_json'=>'nullable|json','estimated_minutes'=>'nullable|integer|min:0','fee'=>'nullable|numeric|min:0']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
-        DB::table('tagore_transport_routes')->insert($d+['status'=>'active','created_at'=>now(),'updated_at'=>now()]);
+        $routeCode=$d['route_code'] ?? 'R-'.Str::upper(Str::random(8));
+        DB::table('tagore_transport_routes')->insert([
+            'institution_id'=>(int)$d['institution_id'],
+            'academic_year_id'=>$d['academic_year_id'] ?? null,
+            'route_code'=>$routeCode,
+            'route_name'=>$d['name'],
+            'annual_amount'=>(float)($d['fee'] ?? 0),
+            'name'=>$d['name'],
+            'stops_json'=>$d['stops_json'] ?? null,
+            'estimated_minutes'=>(int)($d['estimated_minutes'] ?? 0),
+            'fee'=>(float)($d['fee'] ?? 0),
+            'status'=>'active','created_at'=>now(),'updated_at'=>now(),
+        ]);
         return back()->with('success','Transport route created.');
     }
 
