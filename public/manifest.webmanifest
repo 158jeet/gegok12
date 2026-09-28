@@ -1,0 +1,12 @@
+{
+  "name": "TagoreK12 ERP",
+  "short_name": "TagoreK12",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "description": "TagoreK12 school ERP with offline-first staff workflows.",
+  "icons": [
+    {"src": "/favicon.ico", "sizes": "32x32", "type": "image/x-icon"}
+  ]
+}
