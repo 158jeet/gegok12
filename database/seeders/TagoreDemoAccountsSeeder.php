@@ -31,7 +31,7 @@ class TagoreDemoAccountsSeeder extends Seeder
 
         $ids = [];
         foreach ($accounts as [$email,$name,$group,$role]) {
-            $existing = DB::table('users')->where('email',$email)->whereNull('deleted_at')->first(['id']);
+            $existing = DB::table('users')->whereNull('deleted_at')->where(function ($q) use ($email, $name) { $q->where('email',$email)->orWhere('name',$name); })->first(['id']);
             $data = [
                 'name'=>$name,
                 'email'=>$email,
