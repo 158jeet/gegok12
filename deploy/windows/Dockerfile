@@ -2,7 +2,7 @@ FROM php:8.4-cli-bookworm AS vendor
 RUN apt-get update && apt-get install -y libzip-dev libonig-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev unzip git && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install mbstring exif bcmath intl gd zip && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
-COPY composer.json composer.lock* ./
+COPY . .
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
 FROM node:22-alpine AS assets
 WORKDIR /app
