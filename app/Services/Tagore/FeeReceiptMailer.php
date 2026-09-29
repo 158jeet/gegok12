@@ -87,7 +87,7 @@ class FeeReceiptMailer
                 'password'=>$profile['password'] ?? '',
                 'timeout'=>(int)($profile['timeout'] ?? 30),
                 'from_address'=>$profile['from_address'] ?? $from['from_address'] ?? $profile['username'],
-                'from_name'=>$profile['from_name'] ?? $from['from_name'] ?? $payment->institution ?? config('mail.from.name'),
+                'from_name'=>$profile['from_name'] ?? $from['from_name'] ?? config('mail.from.name'),
             ];
         }
 
