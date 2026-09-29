@@ -50,7 +50,7 @@ class FeeReceiptMailer
         try {
             $mailer = $mailConfig ? Mail::build($mailConfig) : Mail::mailer(config('mail.default'));
             $mailer->send('tagore.fees.receipt-email',['payment'=>$payment],function($message) use($email,$payment,$pdf,$mailConfig){
-                if (!empty($mailConfig['from_address'])) $message->from($mailConfig['from_address'], $mailConfig['from_name'] ?? config('mail.from.name'));
+                if (!empty($mailConfig['from']['address'])) $message->from($mailConfig['from']['address'], $mailConfig['from']['name'] ?? config('mail.from.name'));
                 $message->to($email)->subject('Fee Receipt '.$payment->receipt_no.' - '.$payment->institution)
                     ->attachData($pdf,($payment->receipt_no?:'tagore-receipt-'.$payment->id).'.pdf',['mime'=>'application/pdf']);
             });
@@ -86,8 +86,10 @@ class FeeReceiptMailer
                 'username'=>$profile['username'],
                 'password'=>$profile['password'] ?? '',
                 'timeout'=>(int)($profile['timeout'] ?? 30),
-                'from_address'=>$profile['from_address'] ?? $from['from_address'] ?? $profile['username'],
-                'from_name'=>$profile['from_name'] ?? $from['from_name'] ?? config('mail.from.name'),
+                'from'=>[
+                    'address'=>$profile['from_address'] ?? $from['from_address'] ?? $profile['username'],
+                    'name'=>$profile['from_name'] ?? $from['from_name'] ?? config('mail.from.name'),
+                ],
             ];
         }
 
@@ -99,8 +101,10 @@ class FeeReceiptMailer
             'username'=>config('mail.username'),
             'password'=>config('mail.password'),
             'timeout'=>(int)config('mail.timeout',30),
-            'from_address'=>$from['from_address'],
-            'from_name'=>$from['from_name'] ?? config('mail.from.name'),
+            'from'=>[
+                'address'=>$from['from_address'],
+                'name'=>$from['from_name'] ?? config('mail.from.name'),
+            ],
         ] : null;
     }
 }
