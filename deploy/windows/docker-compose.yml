@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/windows/Dockerfile
+    env_file: ../../.env.school
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app_storage:/var/www/html/storage
+  web:
+    image: nginx:1.27-alpine
+    depends_on: [app]
+    ports: ['8080:80']
+    volumes:
+      - ../../deploy/windows/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - app_storage:/var/www/html/storage:ro
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/windows/Dockerfile
+    env_file: ../../.env.school
+    command: ['php','artisan','queue:work','--sleep=2','--tries=2','--timeout=120']
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app_storage:/var/www/html/storage
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: tagore_erp
+      MYSQL_USER: tagore
+      MYSQL_PASSWORD: TagoreDbPilot2026!
+      MYSQL_ROOT_PASSWORD: TagoreRootPilot2026!
+    volumes: [db_data:/var/lib/mysql]
+    healthcheck:
+      test: ['CMD-SHELL','mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+volumes:
+  db_data:
+  app_storage:
