@@ -1,4 +1,5 @@
 name: TagoreK12 Android Clients
+# CI validates both pinned Android clients.
 
 on:
   push:
