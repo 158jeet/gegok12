@@ -1,0 +1,79 @@
+name: Tagore ERP Testing Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [parent, teacher]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare Android client
+        env:
+          TAGORE_API_BASE_URL: ''
+        run: bash scripts/mobile/prepare-tagore-android.sh
+      - name: Build APK
+        working-directory: mobile/${{ matrix.app }}
+        run: gradle testDebugUnitTest assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.app }}
+          path: mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Windows installer
+        working-directory: desktop
+        run: |
+          npm install
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: desktop/src-tauri/target/release/bundle/**/*
+          if-no-files-found: error
+
+  release:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p assets
+          find release-files -type f -name '*.apk' -exec cp {} assets/ \;
+          find release-files -type f \( -name '*.exe' -o -name '*.msi' \) -exec cp {} assets/ \;
+          mv assets/* assets/ 2>/dev/null || true
+          ls -lah assets
+      - name: Create testing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete tagore-testing-v1.0.0 --yes --cleanup-tag 2>/dev/null || true
+          gh release create tagore-testing-v1.0.0 assets/*             --title "Tagore ERP — Testing Package v1.0.0"             --notes "Testing package for the Tagore ERP pilot. Includes Parent Android APK, Teacher Android APK and Windows desktop installer. These are testing builds; provider integrations and production signing are not enabled."
