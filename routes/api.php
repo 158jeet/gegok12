@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\TagoreMobileController;
-use App\Http\Controllers\Api\TagoreSyncController;
 
 @include('teacherapi.php');
 
@@ -29,6 +28,8 @@ Route::post('/reset/change/password', 'Api\UserController@resetChangePassword');
 
 Route::get('/school/info', 'Api\SchoolController@schooldetail');
 
+Route::post('/v2/tagore/sync/login', [\App\Http\Controllers\Api\TagoreSyncController::class, 'login']);
+
 Route::group([
 	'prefix' => 'v2', 
 	'namespace' =>'Api' ,
@@ -36,10 +37,8 @@ Route::group([
 	'middleware' => ['auth:sanctum'],
 ], function () {
 
-    // Offline-first client synchronization
-    Route::get('/tagore/offline/bootstrap', [TagoreSyncController::class, 'bootstrap']);
-    Route::post('/tagore/offline/device', [TagoreSyncController::class, 'registerDevice']);
-    Route::post('/tagore/sync', [TagoreSyncController::class, 'sync']);
+    Route::post('/tagore/sync/bootstrap', [\App\Http\Controllers\Api\TagoreSyncController::class, 'bootstrap']);
+    Route::post('/tagore/sync/push', [\App\Http\Controllers\Api\TagoreSyncController::class, 'push']);
 
     //Logout
     Route::get('/tagore/transport/trip/{tripId}/live', [TagoreMobileController::class, 'liveTransport'])->whereNumber('tripId');

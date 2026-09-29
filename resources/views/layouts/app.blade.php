@@ -7,8 +7,6 @@
         @include('layouts.partials.favicon')
         <!-- CSRF Token -->
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-        <meta name="theme-color" content="#111827">
         <title>{{ config('app.name', 'GegoK12') }}</title>
         <!-- Styles -->
 
@@ -44,9 +42,6 @@
 
     </head>
     <body class="font-primary antialiased min-h-screen overflow-x-hidden">
-        <div id="tagore-offline-bar" style="position:fixed;right:14px;bottom:14px;z-index:99999;background:#111827;color:#fff;border:1px solid #374151;border-radius:999px;padding:7px 12px;font:600 12px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.2)">
-            <span data-tagore-connection>Checking connection…</span> · <span data-tagore-sync-count>0</span> pending
-        </div>
         <div id="app">
             @yield('base-navigation')
             <main class="flex w-full h-full min-h-screen">
@@ -67,7 +62,6 @@
         <script src="{{ mix('js/vendor.js') }}"></script>
         <script src="{{ mix('js/app.js') }}"></script>
         <script src="{{ asset('js/custom.js') }}" ></script>
-        <script src="{{ asset('js/tagore-offline.js') }}" defer></script>
         @stack('scripts')
 
         <livewire:scripts>
