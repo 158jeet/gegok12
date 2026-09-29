@@ -31,7 +31,8 @@ url = sys.argv[2].replace('\\', '\\\\').replace('"', '\\"')
 text = path.read_text()
 needle = '        versionName "1.0"'
 if "TAGORE_API_BASE_URL" not in text:
-    text = text.replace(needle, needle + f'\n        buildConfigField "String", "TAGORE_API_BASE_URL", "{url}"')
+    value = '\\"' + url + '\\"'
+    text = text.replace(needle, needle + f'\n        buildConfigField "String", "TAGORE_API_BASE_URL", "{value}"')
 path.write_text(text)
 PY
 
