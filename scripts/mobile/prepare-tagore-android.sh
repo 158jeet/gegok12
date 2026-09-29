@@ -16,6 +16,8 @@ for APP in parent teacher; do
 
   sed -i 's/[[:space:]]*package="com.tagoregroup.[^"]*"//' "$DIR/app/src/main/AndroidManifest.xml"
 
+  sed -i -e "s/com\\.gegosoft\\.yourappname/$PKG/g" "$DIR/app/build.gradle"
+
   # Firebase/Maps secrets are intentionally optional for the open build.
   sed -i "/apply plugin: 'com.google.gms.google-services'/d" "$DIR/app/build.gradle"
   sed -i "/apply plugin: 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'/d" "$DIR/app/build.gradle" || true
