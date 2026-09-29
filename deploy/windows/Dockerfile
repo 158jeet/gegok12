@@ -1,4 +1,6 @@
-FROM composer:2 AS vendor
+FROM php:8.4-cli-bookworm AS vendor
+RUN apt-get update && apt-get install -y libzip-dev libonig-dev libicu-dev unzip git && docker-php-ext-install mbstring exif bcmath intl zip && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY composer.json composer.lock* ./
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
