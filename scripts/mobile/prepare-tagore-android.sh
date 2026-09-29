@@ -36,8 +36,7 @@ if "TAGORE_API_BASE_URL" not in text:
 path.write_text(text)
 PY
 
-  mkdir -p "$DIR/app/src/main/java/$PKG/Helper"
-  cat > "$DIR/app/src/main/java/$PKG/Helper/ApiClient.java" <<JAVA
+  cat > "$DIR/app/src/main/java/com/gegosoft/yourappname/Helper/ApiClient.java" <<JAVA
 package $PKG.Helper;
 
 import java.util.concurrent.TimeUnit;
