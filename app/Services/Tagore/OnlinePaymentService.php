@@ -11,6 +11,7 @@ class OnlinePaymentService
 {
     public function createOrder(int $studentId, int $parentUserId, float $amount): array
     {
+        $this->assertGatewayConfigured();
         return DB::transaction(function () use ($studentId, $parentUserId, $amount) {
             $student = DB::table('users')->where('id', $studentId)->first(['id', 'name', 'school_id']);
             if (!$student) throw ValidationException::withMessages(['student' => 'Student not found.']);
@@ -19,7 +20,7 @@ class OnlinePaymentService
             $amount = round($amount, 2);
             $outstanding = (float) DB::table('tagore_fee_obligations')->where('student_id', $studentId)->where('institution_id', $institutionId)->whereIn('status', ['pending','partial','overdue'])->sum('outstanding_amount');
             if ($amount <= 0 || $amount > round($outstanding, 2) + 0.009) throw ValidationException::withMessages(['amount' => 'Payment amount must be positive and cannot exceed outstanding fees.']);
-            $orderId = DB::table('tagore_payment_orders')->insertGetId(['student_id'=>$studentId,'parent_user_id'=>$parentUserId,'institution_id'=>$institutionId,'amount'=>$amount,'currency'=>'INR','purpose'=>'School fee payment','status'=>'created','gateway'=>'razorpay','expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now()]);
+            $orderId = DB::table('tagore_payment_orders')->insertGetId(['student_id'=>$studentId,'parent_user_id'=>$parentUserId,'institution_id'=>$institutionId,'amount'=>$amount,'currency'=>'INR','purpose'=>'School fee payment','status'=>'created','gateway'=>config('tagore.payment_gateway'),'expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now()]);
             $remaining = $amount;
             foreach (DB::table('tagore_fee_obligations')->where('student_id',$studentId)->where('institution_id',$institutionId)->where('outstanding_amount','>',0)->orderBy('due_date')->orderBy('id')->lockForUpdate()->get() as $obligation) {
                 if ($remaining <= 0.009) break;
@@ -38,6 +39,7 @@ class OnlinePaymentService
 
     public function confirm(array $data): int
     {
+        $this->assertGatewayConfigured();
         $order=DB::table('tagore_payment_orders')->where('gateway_order_id',$data['razorpay_order_id'])->lockForUpdate()->first();
         if(!$order) throw ValidationException::withMessages(['payment'=>'Payment order not found.']);
         $expected=hash_hmac('sha256',$order->gateway_order_id.'|'.$data['razorpay_payment_id'],(string)config('services.razorpay.secret'));
@@ -47,6 +49,7 @@ class OnlinePaymentService
 
     public function webhook(string $signature, string $payload, array $event, ?string $eventId=null): void
     {
+        $this->assertGatewayConfigured();
         $expected=hash_hmac('sha256',$payload,(string)config('services.razorpay.webhook_secret'));
         if(!hash_equals($expected,$signature)) throw ValidationException::withMessages(['webhook'=>'Invalid webhook signature.']);
         $eventId=$eventId ?: hash('sha256',$payload);
@@ -60,6 +63,14 @@ class OnlinePaymentService
             return 0;
         });
         if ($paymentId) app(FeeReceiptMailer::class)->send((int)$paymentId);
+    }
+
+    private function assertGatewayConfigured(): void
+    {
+        $gateway = config('tagore.payment_gateway');
+        if (!$gateway) throw ValidationException::withMessages(['payment' => 'Online payments are disabled until a payment gateway is configured.']);
+        if ($gateway !== 'razorpay') throw ValidationException::withMessages(['payment' => 'Configured payment gateway is not supported yet: '.$gateway]);
+        if (!config('services.razorpay.key') || !config('services.razorpay.secret')) throw ValidationException::withMessages(['payment' => 'Payment gateway credentials are not configured.']);
     }
 
     private function settleByGatewayOrder(string $gatewayOrderId,string $gatewayPaymentId): int
