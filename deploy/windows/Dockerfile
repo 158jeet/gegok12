@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y libzip-dev libpng-dev libjpeg62-turbo-d
 WORKDIR /var/www/html
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
-COPY --from=assets /app/public/build ./public/build
+COPY --from=assets /app/public/js ./public/js
+COPY --from=assets /app/public/css ./public/css
+COPY --from=assets /app/mix-manifest.json ./mix-manifest.json
 RUN mkdir -p storage bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache
 CMD ["php-fpm"]
