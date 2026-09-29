@@ -27,6 +27,8 @@ jobs:
         with:
           submodules: recursive
       - uses: docker/setup-buildx-action@v3
+      - name: Prepare pilot env
+        run: cp deploy/windows/.env.school.example .env.school
       - name: Validate compose
         run: docker compose -f deploy/windows/docker-compose.yml config
       - name: Build pilot image
