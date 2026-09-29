@@ -1,7 +1,7 @@
 name: Tagore ERP Testing Release
 on:
   push:
-    branches: [release/testing-downloads]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
