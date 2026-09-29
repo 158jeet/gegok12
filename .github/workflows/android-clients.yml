@@ -34,6 +34,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
       - name: Prepare Tagore Android client
         env:
           TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
@@ -42,8 +47,7 @@ jobs:
       - name: Build and test Android client
         run: |
           cd mobile/${{ matrix.app }}
-          chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug --stacktrace
+          gradle testDebugUnitTest assembleDebug --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
