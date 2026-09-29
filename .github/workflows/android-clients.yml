@@ -40,8 +40,8 @@ jobs:
         run: bash scripts/mobile/prepare-tagore-android.sh
 
       - name: Build and test Android client
-        working-directory: mobile/${{ matrix.app }}
         run: |
+          cd mobile/${{ matrix.app }}
           chmod +x gradlew
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
