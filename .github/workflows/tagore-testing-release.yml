@@ -82,3 +82,5 @@ jobs:
           gh release create tagore-testing-v1.0.0 assets/* \
             --title "Tagore ERP — Testing Package v1.0.0" \
             --notes "Testing package for the Tagore ERP pilot. Includes Parent Android APK, Teacher Android APK, and Windows desktop installers. These are testing builds; provider integrations and production signing are not enabled."
+
+# Keep this workflow on the main branch so release publishing is triggered by merge pushes.
