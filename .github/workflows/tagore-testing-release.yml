@@ -60,20 +60,25 @@ jobs:
     needs: [android, windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: release-files
       - name: Prepare release assets
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p assets
-          find release-files -type f -name '*.apk' -exec cp {} assets/ \;
-          find release-files -type f \( -name '*.exe' -o -name '*.msi' \) -exec cp {} assets/ \;
-          mv assets/* assets/ 2>/dev/null || true
+          cp release-files/android-parent/*.apk assets/Tagore-ERP-Parent-Test.apk
+          cp release-files/android-teacher/*.apk assets/Tagore-ERP-Teacher-Test.apk
+          find release-files/windows-installer -type f -name '*.exe' -print -quit | xargs -I{} cp "{}" assets/Tagore-ERP-Windows-Installer.exe
+          find release-files/windows-installer -type f -name '*.msi' -print -quit | xargs -I{} cp "{}" assets/Tagore-ERP-Windows-Installer.msi
           ls -lah assets
       - name: Create testing release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete tagore-testing-v1.0.0 --yes --cleanup-tag 2>/dev/null || true
-          gh release create tagore-testing-v1.0.0 assets/*             --title "Tagore ERP — Testing Package v1.0.0"             --notes "Testing package for the Tagore ERP pilot. Includes Parent Android APK, Teacher Android APK and Windows desktop installer. These are testing builds; provider integrations and production signing are not enabled."
+          gh release create tagore-testing-v1.0.0 assets/* \
+            --title "Tagore ERP — Testing Package v1.0.0" \
+            --notes "Testing package for the Tagore ERP pilot. Includes Parent Android APK, Teacher Android APK, and Windows desktop installers. These are testing builds; provider integrations and production signing are not enabled."
