@@ -1,5 +1,5 @@
 name: TagoreK12 Android Clients
-# CI validates both pinned Android clients. Package cleanup is performed before Gradle.
+# CI validates both pinned Android clients. Package cleanup is performed before Gradle.\n# Android verification intentionally runs on every mobile integration change.
 
 on:
   push:
