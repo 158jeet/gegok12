@@ -39,6 +39,7 @@ PY
   cat > "$DIR/app/src/main/java/com/gegosoft/yourappname/Helper/ApiClient.java" <<JAVA
 package $PKG.Helper;
 
+import $PKG.BuildConfig;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
