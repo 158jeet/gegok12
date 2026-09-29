@@ -8,6 +8,9 @@ if (-not (Test-Path '.env.school')) { Copy-Item 'deploy\windows\.env.school.exam
 Write-Host '[Tagore] Building and starting pilot...' -ForegroundColor Cyan
 docker compose --env-file .env.school -f deploy/windows/docker-compose.yml up -d --build
 if ($LASTEXITCODE -ne 0) { throw 'Docker build/start failed.' }
+Write-Host '[Tagore] Generating application key...' -ForegroundColor Cyan
+docker compose --env-file .env.school -f deploy/windows/docker-compose.yml exec -T app php artisan key:generate --force
+if ($LASTEXITCODE -ne 0) { throw 'Application key generation failed.' }
 Write-Host '[Tagore] Migrating and seeding demo data...' -ForegroundColor Cyan
 docker compose --env-file .env.school -f deploy/windows/docker-compose.yml exec -T app php artisan migrate --seed --force
 if ($LASTEXITCODE -ne 0) { throw 'Migration/seed failed.' }
