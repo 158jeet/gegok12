@@ -80,7 +80,7 @@ class TagorePrototypeSeeder extends Seeder
                 $fallbackStudent = User::factory()->create([
                     'school_id' => $fallbackSchool->id,
                     'usergroup_id' => 6,
-                    'name' => 'Tagore Demo Student',
+                    'name' => 'Tagore Prototype Student',
                     'email' => 'tagore-demo-student@example.com',
                 ]);
             }
@@ -90,7 +90,7 @@ class TagorePrototypeSeeder extends Seeder
                 $fallbackParent = User::factory()->create([
                     'school_id' => $fallbackSchool->id,
                     'usergroup_id' => 7,
-                    'name' => 'Tagore Demo Parent',
+                    'name' => 'Tagore Prototype Parent',
                     'email' => 'tagore-demo-parent@example.com',
                 ]);
             }
