@@ -17,6 +17,5 @@ COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=assets /app/public/js ./public/js
 COPY --from=assets /app/public/css ./public/css
-COPY --from=assets /app/mix-manifest.json ./mix-manifest.json
 RUN mkdir -p storage bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache
 CMD ["php-fpm"]
