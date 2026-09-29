@@ -5,7 +5,7 @@ RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --opt
 FROM node:22-alpine AS assets
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install --no-audit --no-fund
 COPY . .
 RUN npm run build
 FROM php:8.4-fpm-bookworm
