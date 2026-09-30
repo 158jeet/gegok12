@@ -21,16 +21,17 @@ Set-Location $Root
 
 if (-not (Test-Path '.env.school')) {
     Copy-Item 'deploy\windows\.env.production.example' '.env.school'
-    Write-Host "Created .env.school. Fill TAGORE_DB_PASSWORD and TAGORE_DB_ROOT_PASSWORD, then run this script again." -ForegroundColor Yellow
+    Write-Host "Created .env.school. Fill DB_PASSWORD and TAGORE_DB_ROOT_PASSWORD, then run this script again." -ForegroundColor Yellow
     exit 2
 }
 
 $envText = Get-Content '.env.school' -Raw
-if ($envText -match 'TAGORE_DB_PASSWORD=\s*$' -or $envText -match 'TAGORE_DB_ROOT_PASSWORD=\s*$') {
-    throw "Set TAGORE_DB_PASSWORD and TAGORE_DB_ROOT_PASSWORD in .env.school before deployment."
+if ($envText -match 'DB_PASSWORD=\s*$' -or $envText -match 'TAGORE_DB_ROOT_PASSWORD=\s*$') {
+    throw "Set DB_PASSWORD and TAGORE_DB_ROOT_PASSWORD in .env.school before deployment."
 }
 
 New-Item -ItemType Directory -Force -Path 'deploy\windows\letsencrypt' | Out-Null
+New-Item -ItemType Directory -Force -Path 'deploy\windows\acme-challenge' | Out-Null
 
 $lanIp = Get-NetIPConfiguration |
     Where-Object { $_.IPv4DefaultGateway -and $_.IPv4Address } |
@@ -61,7 +62,9 @@ Invoke-Compose @('up','-d','db','redis','app','worker')
 Start-Sleep -Seconds 10
 
 Write-Host "[Tagore] Initializing Laravel..." -ForegroundColor Cyan
-Invoke-Compose @('exec','-T','app','php','artisan','key:generate','--force')
+if (-not ($envText -match '(?m)^APP_KEY=.+')) {
+    Invoke-Compose @('exec','-T','app','php','artisan','key:generate','--force')
+}
 Invoke-Compose @('exec','-T','app','php','artisan','migrate','--force')
 Invoke-Compose @('exec','-T','app','php','artisan','optimize:clear')
 
@@ -81,6 +84,7 @@ if (-not (Test-Path $certPath)) {
         'certonly','--standalone',
         '--preferred-profile','shortlived',
         '--ip-address',$PublicIp,
+        '--cert-name',$PublicIp,
         '--agree-tos',
         '--non-interactive'
     )
@@ -99,6 +103,10 @@ if (-not (Test-Path $certPath)) {
 
 Write-Host "[Tagore] Starting HTTPS reverse proxy..." -ForegroundColor Cyan
 Invoke-Compose @('up','-d','web')
+
+# Persist webroot renewal settings so future renewals do not need to stop nginx.
+docker run --rm -v ($Root + '\deploy\windows\letsencrypt:/etc/letsencrypt') -v ($Root + '\deploy\windows\acme-challenge:/var/www/acme') certbot/certbot:latest reconfigure --cert-name $PublicIp --webroot-path /var/www/acme --preferred-profile shortlived --non-interactive
+if ($LASTEXITCODE -ne 0) { throw "Could not configure automatic webroot renewal." }
 
 Write-Host "[Tagore] Final Laravel optimization..." -ForegroundColor Cyan
 Invoke-Compose @('exec','-T','app','php','artisan','config:cache')
