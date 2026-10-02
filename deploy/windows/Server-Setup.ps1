@@ -5,8 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Invoke-Compose([string[]]$Args) {
-    docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml @Args
+function Invoke-Compose([string[]]$ComposeArgs) {
+    & docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml @ComposeArgs
     if ($LASTEXITCODE -ne 0) { throw "Docker Compose command failed." }
 }
 
@@ -94,7 +94,7 @@ if (-not (Test-Path $certPath)) {
         $certbotArgs += '--register-unsafely-without-email'
     }
 
-    docker @certbotArgs
+    & docker @certbotArgs
     if ($LASTEXITCODE -ne 0) {
         Invoke-Compose @('start','web')
         throw "Let's Encrypt certificate issuance failed. Check that TCP 80 is forwarded to this server and that $PublicIp is the router's actual WAN IP."
@@ -105,7 +105,7 @@ Write-Host "[Tagore] Starting HTTPS reverse proxy..." -ForegroundColor Cyan
 Invoke-Compose @('up','-d','web')
 
 # Persist webroot renewal settings so future renewals do not need to stop nginx.
-docker run --rm -v ($Root + '\deploy\windows\letsencrypt:/etc/letsencrypt') -v ($Root + '\deploy\windows\acme-challenge:/var/www/acme') certbot/certbot:latest reconfigure --cert-name $PublicIp --webroot-path /var/www/acme --preferred-profile shortlived --non-interactive
+& docker run --rm -v ($Root + '\deploy\windows\letsencrypt:/etc/letsencrypt') -v ($Root + '\deploy\windows\acme-challenge:/var/www/acme') certbot/certbot:latest reconfigure --cert-name $PublicIp --webroot-path /var/www/acme --preferred-profile shortlived --non-interactive
 if ($LASTEXITCODE -ne 0) { throw "Could not configure automatic webroot renewal." }
 
 Write-Host "[Tagore] Final Laravel optimization..." -ForegroundColor Cyan
