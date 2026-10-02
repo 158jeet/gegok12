@@ -1,0 +1,15 @@
+.git
+.github
+.gitignore
+node_modules
+vendor
+deploy/windows/letsencrypt
+deploy/windows/acme-challenge
+deploy/windows/.env.school
+.env
+.env.*
+storage/logs
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+bootstrap/cache
