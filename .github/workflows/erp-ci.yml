@@ -96,9 +96,9 @@ jobs:
       - name: Prepare temporary TLS certificate for Nginx smoke test
         run: |
           mkdir -p deploy/windows/letsencrypt/live/59.90.66.12 deploy/windows/acme-challenge
-          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \\
-            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \\
-            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \\
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \
+            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \
             -subj "/CN=59.90.66.12"
       - name: Start production services
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker web
