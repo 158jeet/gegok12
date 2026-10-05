@@ -58,7 +58,7 @@ Write-Host "[Tagore] Pulling infrastructure images..." -ForegroundColor Cyan
 Invoke-Compose @('pull','db','redis','web')
 
 Write-Host "[Tagore] Starting application, database and worker..." -ForegroundColor Cyan
-Invoke-Compose @('up','-d','db','redis','app','worker')
+Invoke-Compose @('up','-d','--build','db','redis','app','worker')
 Start-Sleep -Seconds 10
 
 Write-Host "[Tagore] Initializing Laravel..." -ForegroundColor Cyan
