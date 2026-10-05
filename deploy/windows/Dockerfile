@@ -13,6 +13,7 @@ COPY . .
 RUN npm run build
 FROM php:8.4-fpm-bookworm
 RUN apt-get update && apt-get install -y libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev libicu-dev unzip git && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's/^;clear_env = yes/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf
 WORKDIR /var/www/html
 COPY deploy/windows/docker-entrypoint.sh /usr/local/bin/tagore-entrypoint
 RUN chmod +x /usr/local/bin/tagore-entrypoint
