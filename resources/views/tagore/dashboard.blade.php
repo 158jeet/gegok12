@@ -109,6 +109,28 @@
   </section>
   @endif
 
+  @if($isManager && $managerCommand['followups']->isNotEmpty())
+  <section class="tg-section">
+    <div class="tg-section-head">
+      <div><h2>Pending manager follow-ups</h2><p>People and work items that need a management decision.</p></div>
+      <span class="tg-status warning">{{ $managerCommand['followups']->count() }} open</span>
+    </div>
+    <div class="tg-card" style="padding:18px">
+      <div class="tg-list">
+      @foreach($managerCommand['followups']->take(6) as $followup)
+        <div class="tg-list-item">
+          <div>
+            <div class="tg-list-title">{{ $followup->task_title ?: 'Manager follow-up' }}</div>
+            <div class="tg-list-meta">{{ $followup->employee_name }} · {{ $followup->notes ?: ucfirst(str_replace('_',' ', $followup->outcome)) }}</div>
+          </div>
+          <span class="tg-status {{ $followup->state === 'overdue' ? 'danger' : 'warning' }}">{{ ucfirst($followup->state) }}</span>
+        </div>
+      @endforeach
+      </div>
+    </div>
+  </section>
+  @endif
+
   <section class="tg-section">
     <div class="tg-section-head"><div><h2>Go to work</h2><p>Common actions arranged around how your team actually works.</p></div></div>
     <div class="tg-module-grid">

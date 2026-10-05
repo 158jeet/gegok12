@@ -35,7 +35,7 @@ class TagorePrototypeE2ETest extends TestCase
         ]);
 
         $this->actingAs($owner)->get(route('tagore.dashboard'))
-            ->assertOk()->assertSee('TagoreK12')->assertSee('Demo School');
+            ->assertOk()->assertSee('Tagore ERP')->assertSee('Tagore Group of Institutions');
 
         $this->actingAs($owner)->get(route('tagore.admin'))
             ->assertOk()->assertSee('Tagore Administration')->assertSee('TAGORE-1');
@@ -75,7 +75,7 @@ class TagorePrototypeE2ETest extends TestCase
         $this->assertNotNull($childId, 'Expected the seeded parent to have a linked child.');
 
         $this->actingAs($parent)->get(route('tagore.parent.dashboard'))
-            ->assertOk()->assertSee('Fee outstanding')->assertSee('Attendance')->assertSee('Latest result');
+            ->assertOk()->assertSee('Fee due')->assertSee('Attendance')->assertSee('Latest result');
 
         $this->actingAs($parent)->get(route('tagore.child', ['studentId' => $childId]))->assertOk();
         $this->actingAs($parent)->get(route('tagore.fees.student', ['studentId' => $childId]))->assertOk();

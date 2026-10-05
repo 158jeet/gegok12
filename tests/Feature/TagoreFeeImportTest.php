@@ -63,7 +63,7 @@ class TagoreFeeImportTest extends TestCase
     {
         $controller=file_get_contents(base_path('app/Http/Controllers/Tagore/ParentDashboardController.php')); $view=file_get_contents(base_path('resources/views/tagore/parent-dashboard.blade.php'));
         foreach(['tagore_parent_students','attendances','tagore_results','status','published','outstanding_amount'] as $needle) $this->assertStringContainsString($needle,$controller);
-        foreach(['Fee outstanding','Attendance','Latest result','tagore.child','tagore.fees.student'] as $needle) $this->assertStringContainsString($needle,$view);
+        foreach(['Fee due','Attendance','Latest result','tagore.child','tagore.fees.student'] as $needle) $this->assertStringContainsString($needle,$view);
     }
 
     public function test_administration_has_group_institution_year_and_role_controls(): void

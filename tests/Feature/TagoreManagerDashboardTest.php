@@ -31,15 +31,13 @@ class TagoreManagerDashboardTest extends TestCase
         $this->actingAs($owner)
             ->get(route('tagore.dashboard', ['period' => 30]))
             ->assertOk()
-            ->assertSee('Manager Command Center')
+            ->assertSee('Command center')
             ->assertSee('Command center QA')
-            ->assertSee('Department health')
-            ->assertSee('Employee Performance')
-            ->assertSee('30-day workload trend')
-            ->assertSee('Manager follow-up')
-            ->assertSee('Workload balance')
-            ->assertSee('Created in period')
-            ->assertSee('Period completion')
+            ->assertSee('Workload')
+            ->assertSee('30-day')
+            ->assertSee('Created')
+            ->assertSee('Completed')
+            ->assertSee('Net')
             ->assertSee('Academic');
     }
 
@@ -230,7 +228,7 @@ class TagoreManagerDashboardTest extends TestCase
     {
         $owner = User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
         $response = $this->actingAs($owner)->get(route('tagore.dashboard'));
-        $response->assertOk()->assertSee('ERP Modules')->assertSee('Group Snapshot')->assertSee('Fee outstanding')->assertSee('Admission leads');
+        $response->assertOk()->assertSee('Go to work')->assertSee('Fee outstanding')->assertSee('Admissions pipeline');
     }
 
     public function test_mobile_dashboard_api_returns_scoped_erp_payload(): void
