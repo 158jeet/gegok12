@@ -34,7 +34,7 @@ class TagoreManagerDashboardTest extends TestCase
             ->assertSee('Command center')
             ->assertSee('Command center QA')
             ->assertSee('Workload')
-            ->assertSee('30-day')
+            ->assertSee('Last 30 days')
             ->assertSee('Created')
             ->assertSee('Completed')
             ->assertSee('Net')
