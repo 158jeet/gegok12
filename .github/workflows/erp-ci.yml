@@ -59,6 +59,8 @@ jobs:
 
   production-docker-smoke:
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: tagore-ci-${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
