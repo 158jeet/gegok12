@@ -69,7 +69,7 @@ jobs:
           cat > .env.school <<'EOF'
           APP_NAME="Tagore ERP"
           APP_ENV=production
-          APP_KEY=
+          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           APP_DEBUG=false
           APP_URL=http://127.0.0.1
           TIMEZONE=Asia/Kolkata
@@ -115,7 +115,6 @@ jobs:
       - name: Verify Laravel bootstrap and persistent storage
         run: |
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache && test -d /var/www/html/bootstrap/cache'
-          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan key:generate --force --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan migrate --force --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan optimize:clear --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
