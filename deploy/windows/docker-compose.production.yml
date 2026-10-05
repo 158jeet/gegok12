@@ -3,6 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/windows/Dockerfile
+      target: app
     env_file: ../../.env.school
     restart: unless-stopped
     depends_on:
@@ -36,6 +37,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/windows/Dockerfile
+      target: app
     env_file: ../../.env.school
     restart: unless-stopped
     command: ["php","artisan","queue:work","--sleep=2","--tries=2","--timeout=120"]
