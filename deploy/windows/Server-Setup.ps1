@@ -55,7 +55,7 @@ $envText = $envText -replace '(?m)^SESSION_SECURE_COOKIE=.*$', 'SESSION_SECURE_C
 Set-Content '.env.school' $envText -NoNewline
 
 Write-Host "[Tagore] Pulling infrastructure images..." -ForegroundColor Cyan
-Invoke-Compose @('pull','db','redis','web')
+Invoke-Compose @('pull','db','redis')
 
 Write-Host "[Tagore] Starting application, database and worker..." -ForegroundColor Cyan
 Invoke-Compose @('up','-d','--build','db','redis','app','worker')

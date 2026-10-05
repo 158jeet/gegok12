@@ -93,8 +93,15 @@ jobs:
           EOF
       - name: Build production images
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build
+      - name: Prepare temporary TLS certificate for Nginx smoke test
+        run: |
+          mkdir -p deploy/windows/letsencrypt/live/59.90.66.12 deploy/windows/acme-challenge
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \\
+            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \\
+            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \\
+            -subj "/CN=59.90.66.12"
       - name: Start production services
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker web
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
@@ -114,6 +121,9 @@ jobs:
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
+          curl --fail --silent --show-error --insecure --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -o /tmp/tagore-home.html
+          grep -q "Tagore" /tmp/tagore-home.html
       - name: Cleanup
         if: always()
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v

@@ -23,3 +23,8 @@ COPY --from=assets /app/public/css ./public/css
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache
 ENTRYPOINT ["tagore-entrypoint"]
 CMD ["php-fpm"]
+FROM nginx:1.27-alpine AS web
+COPY --from=assets /app/public /var/www/html/public
+RUN mkdir -p /var/www/html/storage/app/public \
+    && rm -rf /var/www/html/public/storage \
+    && ln -s /var/www/html/storage/app/public /var/www/html/public/storage
