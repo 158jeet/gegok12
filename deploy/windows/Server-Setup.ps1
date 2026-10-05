@@ -62,6 +62,8 @@ Invoke-Compose @('up','-d','--build','db','redis','app','worker')
 Start-Sleep -Seconds 10
 
 Write-Host "[Tagore] Initializing Laravel..." -ForegroundColor Cyan
+Write-Host "[Tagore] Preparing persistent Laravel storage directories..." -ForegroundColor Cyan
+Invoke-Compose @('exec','-T','app','sh','-lc','mkdir -p /var/www/html/storage/app /var/www/html/storage/framework/cache /var/www/html/storage/framework/sessions /var/www/html/storage/framework/views /var/www/html/storage/logs /var/www/html/bootstrap/cache && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache')
 if (-not ($envText -match '(?m)^APP_KEY=.+')) {
     Invoke-Compose @('exec','-T','app','php','artisan','key:generate','--force')
 }
