@@ -12,7 +12,10 @@ services:
     volumes:
       - app_storage:/var/www/html/storage
   web:
-    image: nginx:1.27-alpine
+    build:
+      context: ../..
+      dockerfile: deploy/windows/Dockerfile
+      target: web
     depends_on: [app]
     ports: ['8080:80']
     volumes:
