@@ -69,7 +69,7 @@ jobs:
           cat > .env.school <<'EOF'
           APP_NAME="Tagore ERP"
           APP_ENV=production
-          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_KEY=
           APP_DEBUG=false
           APP_URL=http://127.0.0.1
           TIMEZONE=Asia/Kolkata
@@ -96,9 +96,9 @@ jobs:
       - name: Prepare temporary TLS certificate for Nginx smoke test
         run: |
           mkdir -p deploy/windows/letsencrypt/live/59.90.66.12 deploy/windows/acme-challenge
-          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \
-            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \\
+            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \\
+            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \\
             -subj "/CN=59.90.66.12"
       - name: Start production services
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker web
@@ -112,38 +112,18 @@ jobs:
           done
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs db
           exit 1
-      - name: Verify persistent Laravel storage
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache && test -d /var/www/html/bootstrap/cache'
-
-      - name: Verify Laravel migrations
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan migrate --force --no-interaction
-
-      - name: Verify Laravel optimization
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan optimize:clear --no-interaction
-
-      - name: Verify Laravel config cache
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
-
-      - name: Verify Laravel route cache
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
-
-      - name: Verify Laravel view cache
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
-
-      - name: Verify Nginx configuration
-        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
-
-      - name: Verify production HTTPS response
+      - name: Verify Laravel bootstrap and persistent storage
         run: |
-          set +e
-          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web sh -lc 'wget -S -O /tmp/tagore-home.html --no-check-certificate https://127.0.0.1/' 2>&1
-          code=$?
-          echo "HTTP smoke exit code: $code"
-          echo "--- Laravel logs ---"
-          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs --no-color app --tail=200 || true
-          echo "--- Nginx logs ---"
-          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs --no-color web --tail=200 || true
-          exit $code
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache && test -d /var/www/html/bootstrap/cache'
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan key:generate --force --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan migrate --force --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan optimize:clear --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
+          curl --fail --silent --show-error --insecure --location --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -o /tmp/tagore-home.html
+          grep -Eiq "Tagore ERP|Tagore Group" /tmp/tagore-home.html
       - name: Cleanup
         if: always()
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v
