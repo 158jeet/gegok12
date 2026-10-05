@@ -122,7 +122,20 @@ jobs:
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
-          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web sh -lc 'wget -qO /tmp/tagore-home.html --no-check-certificate https://127.0.0.1/ && grep -q "Tagore" /tmp/tagore-home.html'
+          set +e
+          curl --silent --show-error --insecure https://127.0.0.1/ -H "Host: 59.90.66.12" -D /tmp/tagore-headers.txt -o /tmp/tagore-home.html
+          curl_code=$?
+          cat /tmp/tagore-headers.txt || true
+          printf '%s\n' '--- response body ---'
+          sed -n '1,120p' /tmp/tagore-home.html || true
+          printf '%s\n' '--- application logs ---'
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'tail -n 120 storage/logs/*.log 2>/dev/null || true'
+          printf '%s\n' '--- web logs ---'
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs --no-color web app || true
+          test "$curl_code" -eq 0
+          code=$(awk 'NR==1 {print $2}' /tmp/tagore-headers.txt)
+          test "$code" = "200" || test "$code" = "302" || test "$code" = "301"
+          grep -q "Tagore" /tmp/tagore-home.html
       - name: Cleanup
         if: always()
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v
