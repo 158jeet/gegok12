@@ -60,7 +60,7 @@ class TagorePrototypeE2ETest extends TestCase
         ]);
 
         $this->actingAs($teacher)->get(route('tagore.dashboard'))
-            ->assertOk()->assertSee('TagoreK12')->assertSee('Demo School');
+            ->assertOk()->assertSee('Tagore ERP')->assertSee('Tagore Group of Institutions');
     }
 
     public function test_parent_can_see_only_linked_children_and_phase_one_data(): void
