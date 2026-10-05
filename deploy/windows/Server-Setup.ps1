@@ -143,6 +143,12 @@ Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'config:cache')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'route:cache')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'view:cache')
 
+Write-Host "[Tagore] Installing certificate renewal task..." -ForegroundColor Cyan
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'deploy\windows\Install-TagoreServerTask.ps1')
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not install the Tagore certificate renewal scheduled task."
+}
+
 Write-Host ""
 Write-Host "TAGORE ERP SERVER READY" -ForegroundColor Green
 Write-Host "LAN:    https://$lanIp"
