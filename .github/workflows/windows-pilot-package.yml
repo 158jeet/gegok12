@@ -31,5 +31,8 @@ jobs:
         run: cp deploy/windows/.env.school.example .env.school
       - name: Validate compose
         run: docker compose -f deploy/windows/docker-compose.yml config
-      - name: Build pilot image
-        run: docker build -f deploy/windows/Dockerfile -t tagore-pilot:test .
+      - name: Build pilot images
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.yml build
+      - name: Verify pilot web image contains Laravel public files
+        run: |
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.yml run --rm web sh -lc 'test -f /var/www/html/public/index.php && test -f /var/www/html/public/tagore-erp.css'
