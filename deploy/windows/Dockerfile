@@ -3,6 +3,7 @@ RUN apt-get update && apt-get install -y libzip-dev libonig-dev libicu-dev libpn
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY . .
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && chmod -R ug+rwx bootstrap/cache storage
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
 FROM node:22-alpine AS assets
 WORKDIR /app
