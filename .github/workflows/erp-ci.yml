@@ -56,6 +56,66 @@ jobs:
       - name: Run Laravel tests
         run: php artisan test
 
+
+  production-docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create production test environment
+        run: |
+          cat > .env.school <<'EOF'
+          APP_NAME="Tagore ERP"
+          APP_ENV=production
+          APP_KEY=
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1
+          TIMEZONE=Asia/Kolkata
+          DB_CONNECTION=mysql
+          DB_HOST=db
+          DB_PORT=3306
+          DB_DATABASE=tagore_erp
+          DB_USERNAME=tagore
+          DB_PASSWORD=TagoreTest@2026
+          TAGORE_DB_ROOT_PASSWORD=TagoreRoot@2026
+          QUEUE_CONNECTION=database
+          CACHE_STORE=file
+          SESSION_DRIVER=file
+          SESSION_SECURE_COOKIE=false
+          LOG_CHANNEL=stderr
+          FILESYSTEM_DISK=local
+          MAIL_MAILER=array
+          REDIS_HOST=redis
+          REDIS_PASSWORD=null
+          REDIS_PORT=6379
+          EOF
+      - name: Build production images
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build
+      - name: Start production services
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db mysqladmin ping -h localhost -u root -p'TagoreRoot@2026' --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs db
+          exit 1
+      - name: Verify Laravel bootstrap and persistent storage
+        run: |
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache && test -d /var/www/html/bootstrap/cache'
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan key:generate --force --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan migrate --force --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan optimize:clear --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
+      - name: Cleanup
+        if: always()
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v
+
   frontend:
     runs-on: ubuntu-latest
     steps:
