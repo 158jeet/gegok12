@@ -21,4 +21,5 @@ COPY --from=vendor /app/vendor ./vendor
 COPY --from=assets /app/public/js ./public/js
 COPY --from=assets /app/public/css ./public/css
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwx storage bootstrap/cache
+ENTRYPOINT ["tagore-entrypoint"]
 CMD ["php-fpm"]
