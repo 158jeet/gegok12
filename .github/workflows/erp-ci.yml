@@ -91,6 +91,24 @@ jobs:
           REDIS_PASSWORD=null
           REDIS_PORT=6379
           EOF
+      - name: Validate Windows deployment scripts
+        shell: pwsh
+        run: |
+          $files = @(
+            'deploy/windows/Server-Setup.ps1',
+            'deploy/windows/Renew-TagoreCertificate.ps1',
+            'deploy/windows/Install-TagoreServerTask.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error ($file + ': ' + $_.Message) }
+              exit 1
+            }
+          }
+
       - name: Build production images
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build
       - name: Prepare temporary TLS certificate for Nginx smoke test
