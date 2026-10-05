@@ -122,7 +122,12 @@ jobs:
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
-          curl --fail --silent --show-error --insecure --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -o /tmp/tagore-home.html
+          curl --silent --show-error --insecure --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -D /tmp/tagore-headers.txt -o /tmp/tagore-home.html
+          cat /tmp/tagore-headers.txt
+          printf '\\n--- response body ---\\n'
+          sed -n '1,80p' /tmp/tagore-home.html
+          code=$(awk 'NR==1 {print $2}' /tmp/tagore-headers.txt)
+          test "$code" = "200" || test "$code" = "302" || test "$code" = "301"
           grep -q "Tagore" /tmp/tagore-home.html
       - name: Cleanup
         if: always()
