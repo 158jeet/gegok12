@@ -45,7 +45,11 @@ services:
       redis:
         condition: service_started
     volumes:
-      - app_storage:/var/www/html/storage
+      - type: volume
+        source: app_storage
+        target: /var/www/html/storage
+        volume:
+          nocopy: true
   db:
     image: mysql:8.4
     restart: unless-stopped
