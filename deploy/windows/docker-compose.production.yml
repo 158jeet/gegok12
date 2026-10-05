@@ -24,7 +24,12 @@ services:
       - "443:443"
     volumes:
       - ../../deploy/windows/nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
-      - app_storage:/var/www/html/storage:ro
+      - type: volume
+        source: app_storage
+        target: /var/www/html/storage
+        read_only: true
+        volume:
+          nocopy: true
       - ../../deploy/windows/letsencrypt:/etc/letsencrypt:ro
       - ../../deploy/windows/acme-challenge:/var/www/acme:ro
   worker:
