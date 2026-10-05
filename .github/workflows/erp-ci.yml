@@ -122,8 +122,8 @@ jobs:
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
           docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
-          curl --fail --silent --show-error --insecure --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -o /tmp/tagore-home.html
-          grep -q "Tagore" /tmp/tagore-home.html
+          curl --fail --silent --show-error --insecure --location --resolve 59.90.66.12:443:127.0.0.1 https://59.90.66.12/ -o /tmp/tagore-home.html
+          grep -Eiq "Tagore ERP|Tagore Group" /tmp/tagore-home.html
       - name: Cleanup
         if: always()
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v
