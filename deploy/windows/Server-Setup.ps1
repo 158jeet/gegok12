@@ -92,16 +92,14 @@ Set-Content '.env.school' $envText -NoNewline
 Write-Host "[Tagore] Pulling infrastructure images..." -ForegroundColor Cyan
 Invoke-Compose @('pull', 'db', 'redis')
 
-Write-Host "[Tagore] Starting application, database and worker..." -ForegroundColor Cyan
-Invoke-Compose @('up', '-d', '--build', 'db', 'redis', 'app')
-Start-Sleep -Seconds 10
+Write-Host "[Tagore] Building the single shared Laravel application image..." -ForegroundColor Cyan
+Invoke-Compose @('up', '-d', '--build', 'db', 'redis')
 
-Write-Host "[Tagore] Initializing Laravel..." -ForegroundColor Cyan
-Invoke-Compose @('exec', '-T', 'app', 'sh', '-lc', 'mkdir -p /var/www/html/storage/app /var/www/html/storage/framework/cache/data /var/www/html/storage/framework/sessions /var/www/html/storage/framework/views /var/www/html/storage/logs /var/www/html/bootstrap/cache && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache')
-Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'migrate', '--force')
-Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'optimize:clear')
-Write-Host "[Tagore] Starting queue worker after Laravel/database initialization..." -ForegroundColor Cyan
-Invoke-Compose @('up', '-d', 'worker')
+Write-Host "[Tagore] Initializing Laravel in an isolated one-off container..." -ForegroundColor Cyan
+Invoke-Compose @('run', '--rm', 'app', 'sh', '-lc', 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache/data && test -d /var/www/html/storage/framework/sessions && test -d /var/www/html/bootstrap/cache && echo "[Tagore] Laravel storage paths OK" && php artisan migrate --force && php artisan optimize:clear')
+
+Write-Host "[Tagore] Starting application and queue worker from the same verified image..." -ForegroundColor Cyan
+Invoke-Compose @('up', '-d', 'app', 'worker')
 
 $certPath = Join-Path $Root ("deploy\windows\letsencrypt\live\" + $PublicIp + "\fullchain.pem")
 
