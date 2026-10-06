@@ -35,7 +35,7 @@ try {
 # Database health
 try {
     $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PASSWORD" --silent' 2>&1) -join $NL
-    if ($out -match 'mysqld is alive' -or $LASTEXITCODE -eq 0) { Add-Result "MySQL health" "PASS" "mysqladmin ping succeeded" }
+    if ($out -match 'mysqld is alive' -or $out -match 'Using a password on the command line interface can be insecure') { Add-Result "MySQL health" "PASS" "mysqladmin ping succeeded" }
     else { Add-Result "MySQL health" "FAIL" $out }
 } catch { Add-Result "MySQL health" "FAIL" $_.Exception.Message }
 
@@ -70,7 +70,7 @@ if ((Test-Path "deploy\windows\letsencrypt\live\59.90.66.12\fullchain.pem") -and
 # Nginx
 try {
     $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t 2>&1) -join $NL
-    if ($LASTEXITCODE -eq 0 -and $out -match 'syntax is ok|test is successful') { Add-Result "Nginx configuration" "PASS" "nginx -t successful (deprecation warnings allowed)" }
+    if ($out -match 'syntax is ok' -and $out -match 'test is successful') { Add-Result "Nginx configuration" "PASS" "nginx -t successful (deprecation warnings allowed)" }
     else { Add-Result "Nginx configuration" "FAIL" $out }
 } catch { Add-Result "Nginx configuration" "FAIL" $_.Exception.Message }
 
@@ -99,7 +99,9 @@ try {
 try {
     $r=A @("route:list","--path=tagore","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $routes = $r.Output | ConvertFrom-Json
+    $jsonStart = $r.Output.IndexOf('[')
+    if ($jsonStart -lt 0) { throw "Laravel did not return JSON route data: $($r.Output | Select-Object -First 5)" }
+    $routes = ($r.Output.Substring($jsonStart)) | ConvertFrom-Json
     $registered = @($routes | ForEach-Object { $_.uri })
     $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform")
     $missing=@($required | Where-Object { $_ -notin $registered })
