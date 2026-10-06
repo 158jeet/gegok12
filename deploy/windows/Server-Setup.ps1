@@ -49,10 +49,27 @@ if ($envText -match '(?m)^APP_KEY=\s*$') {
 New-Item -ItemType Directory -Force -Path 'deploy\windows\letsencrypt' | Out-Null
 New-Item -ItemType Directory -Force -Path 'deploy\windows\acme-challenge' | Out-Null
 
-$lanIp = Get-NetIPConfiguration |
-    Where-Object { $_.IPv4DefaultGateway -and $_.IPv4Address } |
-    ForEach-Object { $_.IPv4Address.IPAddress } |
-    Select-Object -First 1
+$lanIp = $null
+try {
+    $lanIp = Get-NetIPConfiguration -ErrorAction Stop |
+        Where-Object { $_.IPv4DefaultGateway -and $_.IPv4Address } |
+        ForEach-Object { $_.IPv4Address.IPAddress } |
+        Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' } |
+        Select-Object -First 1
+} catch {
+    $lanIp = $null
+}
+
+if (-not $lanIp) {
+    $ipconfig = ipconfig.exe
+    $lanIp = $ipconfig |
+        Select-String -Pattern 'IPv4 Address|IPv4-Adresse' |
+        ForEach-Object {
+            if ($_.Line -match '(\d{1,3}(?:\.\d{1,3}){3})') { $matches[1] }
+        } |
+        Where-Object { $_ -notmatch '^(127\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.56\.)' } |
+        Select-Object -First 1
+}
 
 if (-not $lanIp) {
     throw "Could not detect the server LAN IPv4 address."
