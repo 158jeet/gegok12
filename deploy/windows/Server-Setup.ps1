@@ -160,6 +160,25 @@ Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'config:cache')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'route:cache')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'view:cache')
 
+Write-Host "[Tagore] Running final service health checks..." -ForegroundColor Cyan
+$runningServices = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps --services --filter status=running)
+if ($LASTEXITCODE -ne 0) { throw "Could not inspect Docker service state." }
+
+foreach ($requiredService in @('app','web','worker','db','redis')) {
+    if ($runningServices -notcontains $requiredService) {
+        & docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps
+        throw "Required service '$requiredService' is not running."
+    }
+}
+
+Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'about')
+if ($LASTEXITCODE -ne 0) { throw "Laravel runtime health check failed." }
+
+$http80 = Test-NetConnection -ComputerName $lanIp -Port 80 -WarningAction SilentlyContinue
+$https443 = Test-NetConnection -ComputerName $lanIp -Port 443 -WarningAction SilentlyContinue
+if (-not $http80.TcpTestSucceeded) { throw "TCP 80 is not reachable on LAN address $lanIp." }
+if (-not $https443.TcpTestSucceeded) { throw "TCP 443 is not reachable on LAN address $lanIp." }
+
 Write-Host "[Tagore] Installing certificate renewal task..." -ForegroundColor Cyan
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'deploy\windows\Install-TagoreServerTask.ps1')
 if ($LASTEXITCODE -ne 0) {
