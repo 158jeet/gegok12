@@ -5,7 +5,7 @@ set -e
 # Initialize its Laravel-required directory tree every time the container starts.
 mkdir -p \
   /var/www/html/storage/app \
-  /var/www/html/storage/framework/cache \
+  /var/www/html/storage/framework/cache/data \
   /var/www/html/storage/framework/sessions \
   /var/www/html/storage/framework/views \
   /var/www/html/storage/logs \
