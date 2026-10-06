@@ -93,13 +93,15 @@ Write-Host "[Tagore] Pulling infrastructure images..." -ForegroundColor Cyan
 Invoke-Compose @('pull', 'db', 'redis')
 
 Write-Host "[Tagore] Starting application, database and worker..." -ForegroundColor Cyan
-Invoke-Compose @('up', '-d', '--build', 'db', 'redis', 'app', 'worker')
+Invoke-Compose @('up', '-d', '--build', 'db', 'redis', 'app')
 Start-Sleep -Seconds 10
 
 Write-Host "[Tagore] Initializing Laravel..." -ForegroundColor Cyan
-Invoke-Compose @('exec', '-T', 'app', 'sh', '-lc', 'mkdir -p /var/www/html/storage/app /var/www/html/storage/framework/cache /var/www/html/storage/framework/sessions /var/www/html/storage/framework/views /var/www/html/storage/logs /var/www/html/bootstrap/cache && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache')
+Invoke-Compose @('exec', '-T', 'app', 'sh', '-lc', 'mkdir -p /var/www/html/storage/app /var/www/html/storage/framework/cache/data /var/www/html/storage/framework/sessions /var/www/html/storage/framework/views /var/www/html/storage/logs /var/www/html/bootstrap/cache && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'migrate', '--force')
 Invoke-Compose @('exec', '-T', 'app', 'php', 'artisan', 'optimize:clear')
+Write-Host "[Tagore] Starting queue worker after Laravel/database initialization..." -ForegroundColor Cyan
+Invoke-Compose @('up', '-d', 'worker')
 
 $certPath = Join-Path $Root ("deploy\windows\letsencrypt\live\" + $PublicIp + "\fullchain.pem")
 
