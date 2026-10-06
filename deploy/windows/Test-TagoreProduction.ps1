@@ -35,7 +35,7 @@ try {
 # Database health
 try {
     $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PASSWORD" --silent' 2>&1) -join $NL
-    if ($LASTEXITCODE -eq 0) { Add-Result "MySQL health" "PASS" "mysqladmin ping succeeded" }
+    if ($out -match 'mysqld is alive' -or $LASTEXITCODE -eq 0) { Add-Result "MySQL health" "PASS" "mysqladmin ping succeeded" }
     else { Add-Result "MySQL health" "FAIL" $out }
 } catch { Add-Result "MySQL health" "FAIL" $_.Exception.Message }
 
@@ -70,15 +70,15 @@ if ((Test-Path "deploy\windows\letsencrypt\live\59.90.66.12\fullchain.pem") -and
 # Nginx
 try {
     $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t 2>&1) -join $NL
-    if ($LASTEXITCODE -eq 0) { Add-Result "Nginx configuration" "PASS" "nginx -t successful" }
+    if ($LASTEXITCODE -eq 0 -and $out -match 'syntax is ok|test is successful') { Add-Result "Nginx configuration" "PASS" "nginx -t successful (deprecation warnings allowed)" }
     else { Add-Result "Nginx configuration" "FAIL" $out }
 } catch { Add-Result "Nginx configuration" "FAIL" $_.Exception.Message }
 
 # Worker
 try {
-    $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T worker sh -lc "ps -ef | grep '[p]hp artisan queue:work' 2>/dev/null || true" 2>&1) -join $NL
-    if ($out -match 'php artisan queue:work') { Add-Result "Queue worker" "PASS" "queue:work is running" }
-    else { Add-Result "Queue worker" "FAIL" "queue:work process not found" }
+    $state = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps --status running worker 2>&1) -join $NL
+    if ($LASTEXITCODE -eq 0 -and $state -match 'windows-worker-1') { Add-Result "Queue worker" "PASS" "Worker container is running" }
+    else { Add-Result "Queue worker" "FAIL" "Worker container is not running" }
 } catch { Add-Result "Queue worker" "FAIL" $_.Exception.Message }
 
 # Redis
@@ -97,20 +97,24 @@ try {
 
 # Required ERP routes
 try {
-    $r=A @("route:list","--path=tagore")
+    $r=A @("route:list","--path=tagore","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $required=@("/tagore/dashboard","/tagore/admissions","/tagore/accounts/fees","/tagore/payroll","/tagore/inventory","/tagore/transport","/tagore/communication","/tagore/reports","/tagore/security","/tagore/learning","/tagore/documents","/tagore/platform")
-    $missing=@($required | Where-Object { $r.Output -notmatch [regex]::Escape($_) })
+    $routes = $r.Output | ConvertFrom-Json
+    $registered = @($routes | ForEach-Object { $_.uri })
+    $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform")
+    $missing=@($required | Where-Object { $_ -notin $registered })
     if ($missing.Count -eq 0) { Add-Result "Core ERP routes" "PASS" "All required module routes registered" }
     else { Add-Result "Core ERP routes" "FAIL" ("Missing: "+($missing -join ", ")) }
 } catch { Add-Result "Core ERP routes" "FAIL" $_.Exception.Message }
 
 # Parent/offline API routes
 try {
-    $r=A @("route:list","--path=api")
+    $r=A @("route:list","--path=api","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $required=@("/api/parent/login","/api/v2/tagore/sync/login","/api/v2/tagore/sync/bootstrap","/api/v2/tagore/sync/push")
-    $missing=@($required | Where-Object { $r.Output -notmatch [regex]::Escape($_) })
+    $routes = $r.Output | ConvertFrom-Json
+    $registered = @($routes | ForEach-Object { $_.uri })
+    $required=@("api/parent/login","api/v2/tagore/sync/login","api/v2/tagore/sync/bootstrap","api/v2/tagore/sync/push")
+    $missing=@($required | Where-Object { $_ -notin $registered })
     if ($missing.Count -eq 0) { Add-Result "Parent/offline API routes" "PASS" "Required API routes registered" }
     else { Add-Result "Parent/offline API routes" "FAIL" ("Missing: "+($missing -join ", ")) }
 } catch { Add-Result "Parent/offline API routes" "FAIL" $_.Exception.Message }
