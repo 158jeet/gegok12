@@ -99,9 +99,10 @@ try {
 try {
     $r=A @("route:list","--path=tagore","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $jsonStart = $r.Output.IndexOf('[')
-    if ($jsonStart -lt 0) { throw "Laravel did not return JSON route data: $($r.Output | Select-Object -First 5)" }
-    $routes = ($r.Output.Substring($jsonStart)) | ConvertFrom-Json
+    $cleanOutput = [regex]::Replace($r.Output, '\x1B\[[0-9;]*[A-Za-z]', '')
+    $jsonStart = $cleanOutput.IndexOf('[')
+    if ($jsonStart -lt 0) { throw "Laravel did not return JSON route data: $($cleanOutput | Select-Object -First 5)" }
+    $routes = ($cleanOutput.Substring($jsonStart)) | ConvertFrom-Json
     $registered = @($routes | ForEach-Object { $_.uri })
     $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform")
     $missing=@($required | Where-Object { $_ -notin $registered })
