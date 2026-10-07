@@ -107,7 +107,7 @@ jobs:
         run: |
           nohup php -S 127.0.0.1:8000 public/index.php >/tmp/tagore-e2e-server.log 2>&1 &
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8000/login >/dev/null; then exit 0; fi
+            if curl -fsS http://127.0.0.1:8000/__e2e/routes >/dev/null; then exit 0; fi
             sleep 2
           done
           cat /tmp/tagore-e2e-server.log
