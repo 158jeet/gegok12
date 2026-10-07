@@ -23,7 +23,10 @@ async function checkPageHealth(page, context) {
   const consoleErrors = [];
   const notFoundResources = [];
   const onConsole = msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); };
-  const onResponse = response => { if (response.status() >= 500) failedRequests.push(response.status() + ' ' + response.url()); };
+  const onResponse = response => {
+    if (response.status() >= 500) failedRequests.push(response.status() + ' ' + response.url());
+    if (response.status() === 404) notFoundResources.push(response.url());
+  };
   page.on('console', onConsole);
   page.on('response', onResponse);
   await expect(page.locator('body')).toBeVisible();
