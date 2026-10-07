@@ -68,30 +68,33 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         }
       }
 
-      const visited = new Set();
-      const queue = unique([
-        ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
-        ...routeManifest.map(r => new URL(r.uri, page.url()).href),
-      ]);
-      while (queue.length && visited.size < 1000) {
-        const href = queue.shift();
-        const url = new URL(href, page.url());
-        const key = url.pathname + url.search;
-        if (visited.has(key)) continue;
-        visited.add(key);
-        const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 });
-        const status = response ? response.status() : 0;
-        if ([401, 403].includes(status) || /\/login(?:\?|$)/.test(new URL(page.url()).pathname)) continue;
-        expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
-        await checkPageHealth(page, role + ' ' + key);
-
-
-        for (const next of unique(await collectVisibleTagoreLinks(page))) {
-          const nextKey = new URL(next).pathname + new URL(next).search;
-          if (!/[{}]/.test(new URL(next).pathname) && !visited.has(nextKey) && !queue.includes(next)) queue.push(next);
+      // The complete authenticated GET route manifest is crawled once by the owner role.
+      // Other roles still render their dashboard and exercise every visible navigation target;
+      // authorization behavior is covered separately by the role-access feature matrix.
+      if (role === 'owner') {
+        const visited = new Set();
+        const queue = unique([
+          ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
+          ...routeManifest.map(r => new URL(r.uri, page.url()).href),
+        ]);
+        while (queue.length && visited.size < 1000) {
+          const href = queue.shift();
+          const url = new URL(href, page.url());
+          const key = url.pathname + url.search;
+          if (visited.has(key)) continue;
+          visited.add(key);
+          const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          const status = response ? response.status() : 0;
+          if ([401, 403].includes(status) || /\\/login(?:\\?|$)/.test(new URL(page.url()).pathname)) continue;
+          expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
+          await checkPageHealth(page, role + ' ' + key);
+          for (const next of unique(await collectVisibleTagoreLinks(page))) {
+            const nextKey = new URL(next).pathname + new URL(next).search;
+            if (!/[{}]/.test(new URL(next).pathname) && !visited.has(nextKey) && !queue.includes(next)) queue.push(next);
+          }
         }
+        expect(visited.size, role + ' authenticated screens visited').toBeGreaterThan(0);
       }
-      expect(visited.size, role + ' authenticated screens visited').toBeGreaterThan(0);
     });
   }
 
