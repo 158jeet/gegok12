@@ -31,7 +31,7 @@ async function checkPageHealth(page, context) {
   page.on('response', onResponse);
   await expect(page.locator('body')).toBeVisible();
   const bodyText = await page.locator('body').innerText().catch(() => '');
-  if (!bodyText.trim()) errors.push('empty body');
+  if (!bodyText.trim()) errors.push('empty body; final URL=' + page.url());
   if (/server error|exception|whoops/i.test(bodyText)) errors.push('server error text detected');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
   if (overflow) errors.push('horizontal overflow');
