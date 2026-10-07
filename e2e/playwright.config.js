@@ -4,7 +4,7 @@ module.exports = defineConfig({
   timeout: 60000,
   expect: { timeout: 10000 },
   fullyParallel: false,
-  workers: process.env.CI ? 4 : 1,
+  workers: process.env.CI ? 8 : 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
