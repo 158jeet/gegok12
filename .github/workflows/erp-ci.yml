@@ -57,6 +57,69 @@ jobs:
         run: php artisan test
 
 
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/e2e.sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      APP_URL: http://127.0.0.1:8000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, sqlite3, pdo_sqlite, intl
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare disposable E2E database
+        run: |
+          rm -f database/e2e.sqlite
+          touch database/e2e.sqlite
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser E2E dependencies
+        working-directory: e2e
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Start disposable Laravel server
+        run: |
+          nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/login >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/tagore-e2e-server.log
+          exit 1
+      - name: Run human-style authenticated E2E
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npm test
+      - name: Upload browser report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagore-human-style-e2e-report
+          path: e2e/playwright-report
+          if-no-files-found: warn
+
+
   production-docker-smoke:
     runs-on: ubuntu-latest
     env:
