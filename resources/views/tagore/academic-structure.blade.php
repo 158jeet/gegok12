@@ -18,7 +18,7 @@
                         </select>
                         <input name="name" class="form-control mb-2" placeholder="Science" required>
                         <input name="code" class="form-control mb-3" placeholder="SCI" required>
-                        <button class="btn btn-primary">Add Stream</button>
+                        <button type="submit" class="btn btn-primary">Add Stream</button>
                     </form>
                 </div>
 
