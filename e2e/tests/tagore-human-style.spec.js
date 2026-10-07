@@ -21,6 +21,7 @@ async function checkPageHealth(page, context) {
   const errors = [];
   const failedRequests = [];
   const consoleErrors = [];
+  const notFoundResources = [];
   const onConsole = msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); };
   const onResponse = response => { if (response.status() >= 500) failedRequests.push(response.status() + ' ' + response.url()); };
   page.on('console', onConsole);
@@ -35,7 +36,7 @@ async function checkPageHealth(page, context) {
   if (brokenImages.length) errors.push('broken images: ' + brokenImages.slice(0, 5).join(', '));
   expect(errors, context + ' page health').toEqual([]);
   expect(failedRequests, context + ' 5xx responses').toEqual([]);
-  expect(consoleErrors, context + ' console errors').toEqual([]);
+  expect(consoleErrors, context + ' console errors (404 resources: ' + notFoundResources.join(', ') + ')').toEqual([]);
   page.off('console', onConsole);
   page.off('response', onResponse);
 }
