@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
 <h3>2026-27 Legacy Fee Migration</h3>
 <p class="text-muted">Preview the complete workbook before applying it. Opening balances are imported as opening financial positions, not fabricated receipts. No batch can be applied while any row requires review.</p>
