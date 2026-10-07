@@ -3,6 +3,12 @@
 .gitignore
 node_modules
 vendor
+tests
+e2e
+docs
+android
+mobile
+desktop
 deploy/windows/letsencrypt
 deploy/windows/acme-challenge
 deploy/windows/.env.school
@@ -12,4 +18,5 @@ storage/logs
 storage/framework/cache
 storage/framework/sessions
 storage/framework/views
+storage/app/*
 bootstrap/cache
