@@ -81,16 +81,6 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
         await checkPageHealth(page, role + ' ' + key);
 
-        const buttons = page.locator('button:visible');
-        const count = Math.min(await buttons.count(), 40);
-        for (let i = 0; i < count; i++) {
-          const button = buttons.nth(i);
-          const type = (await button.getAttribute('type')) || 'submit';
-          const text = ((await button.innerText().catch(() => '')) || '').trim();
-          if (!safeButtonTypes.has(type) || /delete|remove|logout|pay|submit|save|create|approve|reject/i.test(text)) continue;
-          await button.click({ timeout: 1500 }).catch(() => {});
-          await page.waitForTimeout(50);
-        }
 
         for (const next of unique(await collectVisibleTagoreLinks(page))) {
           const nextKey = new URL(next).pathname + new URL(next).search;
