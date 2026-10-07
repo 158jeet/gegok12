@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
 <h3>Legacy Fee Reconciliation — Batch #{{ $batch->id }}</h3>
 <p class="text-muted">Compares the <strong>ALL LEDGER</strong> snapshot with the current Tagore outstanding ledger. This report never changes balances.</p>
