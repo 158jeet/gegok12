@@ -20,11 +20,11 @@ class TagoreDemoAccountsSeeder extends Seeder
         $roleIds = DB::table('tagore_roles')->pluck('id','code')->all();
         $accounts = [
             ['owner@tagore-demo.local','Tagore Demo Owner',3,'OWNER'],
-            ['principal@tagore-demo.local','Tagore Demo Principal',5,'PRINCIPAL'],
-            ['coordinator@tagore-demo.local','Tagore Demo Coordinator',3,'COORDINATOR'],
+            ['principal@tagore-demo.local','Tagore Demo Principal',4,'PRINCIPAL'],
+            ['coordinator@tagore-demo.local','Tagore Demo Coordinator',13,'COORDINATOR'],
             ['teacher@tagore-demo.local','Tagore Demo Teacher',5,'TEACHER'],
             ['accounts@tagore-demo.local','Tagore Demo Accounts',11,'ACCOUNTS'],
-            ['fees@tagore-demo.local','Tagore Demo Fee Editor',11,'FEE_EDITOR'],
+            ['fees@tagore-demo.local','Tagore Demo Fee Editor',13,'FEE_EDITOR'],
             ['parent@tagore-demo.local','Tagore Demo Parent',7,'PARENT'],
             ['student@tagore-demo.local','Tagore Demo Student',6,'STUDENT'],
         ];
