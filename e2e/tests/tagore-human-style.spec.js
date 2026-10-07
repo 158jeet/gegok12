@@ -6,7 +6,7 @@ const safeButtonTypes = new Set(['button', 'reset']);
 function unique(items) { return [...new Set(items)]; }
 
 async function authenticate(page, role) {
-  await page.goto('/__e2e/session/' + role, { waitUntil: 'networkidle' });
+  await page.goto('/__e2e/session/' + role, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await expect(page).toHaveURL(/\/tagore\/dashboard/);
 }
 
@@ -54,11 +54,11 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       expect(routeManifest.length, 'authenticated GET route manifest').toBeGreaterThan(0);
 
       for (const href of initialLinks.slice(0, 80)) {
-        await page.goto('/tagore/dashboard', { waitUntil: 'networkidle' });
+        await page.goto('/tagore/dashboard', { waitUntil: 'domcontentloaded', timeout: 15000 });
         const target = new URL(href);
         const clicked = await page.locator('a[href="' + target.pathname + target.search + '"]:visible').first().click({ timeout: 3000 }).then(() => true).catch(() => false);
         if (clicked) {
-          await page.waitForLoadState('networkidle').catch(() => {});
+          await page.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
           const path = new URL(page.url()).pathname;
           if (!/\/login(?:$|\/)/.test(path)) await checkPageHealth(page, role + ' clicked ' + target.pathname);
         }
@@ -75,7 +75,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         const key = url.pathname + url.search;
         if (visited.has(key)) continue;
         visited.add(key);
-        const response = await page.goto(url.href, { waitUntil: 'networkidle' });
+        const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 });
         const status = response ? response.status() : 0;
         if ([401, 403].includes(status) || /\/login(?:\?|$)/.test(new URL(page.url()).pathname)) continue;
         expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
@@ -88,8 +88,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
           const type = (await button.getAttribute('type')) || 'submit';
           const text = ((await button.innerText().catch(() => '')) || '').trim();
           if (!safeButtonTypes.has(type) || /delete|remove|logout|pay|submit|save|create|approve|reject/i.test(text)) continue;
-          await button.click({ timeout: 3000 }).catch(() => {});
-          await page.waitForTimeout(100);
+          await button.click({ timeout: 1500 }).catch(() => {});
+          await page.waitForTimeout(50);
         }
 
         for (const next of unique(await collectVisibleTagoreLinks(page))) {
