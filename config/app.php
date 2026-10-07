@@ -67,6 +67,8 @@ return [
 
     'timezone' => env('TIMEZONE', 'UTC'),
 
+    'e2e_enabled' => env('TAGORE_E2E_ENABLED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
