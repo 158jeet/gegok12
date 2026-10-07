@@ -11,7 +11,7 @@ Auth::routes();
 // Browser E2E authentication is deliberately available only in the disposable
 // testing environment. It creates a normal Laravel session server-side so the
 // browser never handles or submits demo passwords.
-if (app()->environment('testing')) {
+if (app()->environment('testing') && (bool) config('app.e2e_enabled')) {
     Route::get('/__e2e/session/{role}', function (string $role) {
         $emails = [
             'owner' => 'owner@tagore-demo.local',
