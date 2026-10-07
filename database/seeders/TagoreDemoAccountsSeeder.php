@@ -50,7 +50,7 @@ class TagoreDemoAccountsSeeder extends Seeder
                 $id=DB::table('users')->insertGetId($data + ['created_at'=>$now]);
             }
             $ids[$role]=$id;
-            DB::table('tagore_user_roles')->where('user_id',$id)->update(['status'=>'inactive','updated_at'=>$now]);
+            DB::table('tagore_user_roles')->where('user_id',$id)->delete();
             $roleId=$roleIds[$role] ?? null;
             if ($roleId) {
                 DB::table('tagore_user_roles')->updateOrInsert(
