@@ -1,7 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
 const roles = ['owner','principal','coordinator','teacher','parent','student','accounts','fee-editor'];
-const safeButtonTypes = new Set(['button', 'reset']);
 
 function unique(items) { return [...new Set(items)]; }
 
@@ -20,8 +19,8 @@ async function collectVisibleTagoreLinks(page) {
 async function checkPageHealth(page, context) {
   const errors = [];
   const failedRequests = [];
-  const consoleErrors = [];
   const notFoundResources = [];
+  const consoleErrors = [];
   const onConsole = msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); };
   const onResponse = response => {
     if (response.status() >= 500) failedRequests.push(response.status() + ' ' + response.url());
@@ -37,9 +36,10 @@ async function checkPageHealth(page, context) {
   if (overflow) errors.push('horizontal overflow');
   const brokenImages = await page.locator('img').evaluateAll(imgs => imgs.filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src));
   if (brokenImages.length) errors.push('broken images: ' + brokenImages.slice(0, 5).join(', '));
+  await page.waitForTimeout(100);
   expect(errors, context + ' page health').toEqual([]);
   expect(failedRequests, context + ' 5xx responses').toEqual([]);
-  expect(consoleErrors, context + ' console errors (404 resources: ' + notFoundResources.join(', ') + ')').toEqual([]);
+  expect(consoleErrors, context + ' console errors; 404 resources: ' + unique(notFoundResources).join(', ')).toEqual([]);
   page.off('console', onConsole);
   page.off('response', onResponse);
 }
@@ -57,12 +57,6 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       });
       expect(routeManifest.length, 'authenticated GET route manifest').toBeGreaterThan(0);
 
-      // Visible navigation is validated structurally here; the owner route crawl below exercises every authenticated GET screen.
-
-
-      // The complete authenticated GET route manifest is crawled once by the owner role.
-      // Other roles still render their dashboard and exercise every visible navigation target;
-      // authorization behavior is covered separately by the role-access feature matrix.
       if (role === 'owner') {
         const visited = new Set();
         const queue = unique([
@@ -80,7 +74,6 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
           if ([401, 403].includes(status) || /\/login(?:\?|$)/.test(new URL(page.url()).pathname)) continue;
           expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
           await checkPageHealth(page, role + ' ' + key);
-          // The authenticated route manifest is authoritative; visible navigation targets are exercised above.
         }
         expect(visited.size, role + ' authenticated screens visited').toBeGreaterThan(0);
       }
