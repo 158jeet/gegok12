@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
