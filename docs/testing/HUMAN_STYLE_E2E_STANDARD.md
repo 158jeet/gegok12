@@ -32,3 +32,7 @@ The browser E2E job is a release gate. A testing/release workflow must wait for 
 When a new module is added, its authenticated GET routes and visible navigation automatically enter the route-manifest crawl. Module-specific workflows should add focused assertions for forms, approvals, data mutations, permissions and business rules.
 
 This standard is intended to be reused for every future Tagore software project.
+
+## Production safety
+
+E2E authentication requires both `APP_ENV=testing` and `TAGORE_E2E_ENABLED=true`. Production must keep `TAGORE_E2E_ENABLED=false` or unset. The CI workflow is the only environment that explicitly enables it.
