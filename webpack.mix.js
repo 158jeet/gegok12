@@ -37,7 +37,8 @@ mix.webpackConfig({
 mix.js("resources/assets/js/app.js", "public/js")
     .vue({ version: 3 })
     .extract()
-    .sass("resources/assets/sass/app.scss", "public/css");
+    .sass("resources/assets/sass/app.scss", "public/css")
+    .copy("resources/assets/css/tagore-erp.css", "public/tagore-erp.css");
 
 if (mix.inProduction()) {
     mix.version();
