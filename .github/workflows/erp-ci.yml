@@ -86,6 +86,7 @@ jobs:
           rm -f database/e2e.sqlite
           touch database/e2e.sqlite
           php artisan key:generate --force --no-interaction
+          php artisan optimize:clear --no-interaction
           php artisan migrate --force --no-interaction
           php artisan db:seed --force --no-interaction
       - name: Setup Node
