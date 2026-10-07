@@ -1,6 +1,11 @@
 @extends('layouts.app')
 @section('base-content')
-<div class="container-fluid py-4">
+<style>
+.tg-fee-import{max-width:100%;overflow-x:hidden}
+.tg-fee-import .table-responsive{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tg-fee-import form.row{margin-left:0;margin-right:0}
+</style>
+<div class="container-fluid py-4 tg-fee-import">
 <h3>2026-27 Legacy Fee Migration</h3>
 <p class="text-muted">Preview the complete workbook before applying it. Opening balances are imported as opening financial positions, not fabricated receipts. No batch can be applied while any row requires review.</p>
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
