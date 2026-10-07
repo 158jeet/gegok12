@@ -37,7 +37,6 @@ if (app()->environment('testing') && (bool) config('app.e2e_enabled')) {
             ->filter(fn ($route) => in_array('GET', $route->methods, true))
             ->filter(fn ($route) => str_starts_with($route->uri(), 'tagore/'))
             ->filter(fn ($route) => !str_contains($route->uri(), '{'))
-            ->filter(fn ($route) => in_array('auth', $route->middleware(), true))
             ->map(fn ($route) => ['uri' => '/' . ltrim($route->uri(), '/'), 'name' => $route->getName()])
             ->unique('uri')
             ->values();
