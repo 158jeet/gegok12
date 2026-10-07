@@ -100,7 +100,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Start disposable Laravel server
         run: |
-          nohup php artisan serve --no-reload --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
+          nohup php -S 127.0.0.1:8000 public/index.php >/tmp/tagore-e2e-server.log 2>&1 &
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8000/login >/dev/null; then exit 0; fi
             sleep 2
