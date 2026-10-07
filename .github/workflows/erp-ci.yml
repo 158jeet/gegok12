@@ -98,6 +98,11 @@ jobs:
       - name: Install Chromium
         working-directory: e2e
         run: npx playwright install --with-deps chromium
+      - name: Prepare Laravel runtime directories
+        run: |
+          mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs
+          chmod -R ug+rwX storage bootstrap/cache
+
       - name: Start disposable Laravel server
         run: |
           nohup php -S 127.0.0.1:8000 public/index.php >/tmp/tagore-e2e-server.log 2>&1 &
