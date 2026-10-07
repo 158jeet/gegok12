@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
 <div class="tg-app">
   <div class="tg-shell">

@@ -36,3 +36,7 @@ This standard is intended to be reused for every future Tagore software project.
 ## Production safety
 
 E2E authentication requires both `APP_ENV=testing` and `TAGORE_E2E_ENABLED=true`. Production must keep `TAGORE_E2E_ENABLED=false` or unset. The CI workflow is the only environment that explicitly enables it.
+
+## Static asset build rule
+
+Any stylesheet or other static asset required by a Blade view must be part of the frontend build pipeline or otherwise explicitly preserved after asset compilation. The browser gate treats missing static resources as defects rather than suppressing their console errors.

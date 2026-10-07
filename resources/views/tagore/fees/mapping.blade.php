@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
 <h3>Legacy Student Mapping — Batch #{{ $batch->id }}</h3>
 <p class="text-muted">Every unresolved legacy student must be explicitly linked to a GegoK12 student before the batch can be applied. Numeric legacy IDs are never assumed to be GegoK12 user IDs.</p>
