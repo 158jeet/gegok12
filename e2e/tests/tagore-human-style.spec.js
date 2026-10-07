@@ -85,7 +85,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
           visited.add(key);
           const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 });
           const status = response ? response.status() : 0;
-          if ([401, 403].includes(status) || /\\/login(?:\\?|$)/.test(new URL(page.url()).pathname)) continue;
+          if ([401, 403].includes(status) || /\/login(?:\?|$)/.test(new URL(page.url()).pathname)) continue;
           expect(status, role + ' ' + key + ' HTTP status').toBeLessThan(500);
           await checkPageHealth(page, role + ' ' + key);
           for (const next of unique(await collectVisibleTagoreLinks(page))) {
