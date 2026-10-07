@@ -19,7 +19,7 @@
   <h2>Welcome back</h2><p>Sign in to continue to your Tagore ERP workspace.</p>
   @include('partials.message')
   @if($errors->any())<div class="tg-login-error">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-  @if(\Config::get('settings.login_status')==0)<div class="tg-login-error">Login is temporarily under maintenance.</div>@else
+  @if((int) \App\Models\Setting::where('key', 'login_status')->value('value') !== 1)<div class="tg-login-error">Login is temporarily under maintenance.</div>@else
   <form method="POST" action="{{ route('login') }}" aria-label="{{ __('Login') }}">@csrf
     <div class="tg-login-field"><label for="email">Email / Registration Number</label><input id="email" type="text" name="email" value="{{ old('email') }}" autocomplete="username" required autofocus placeholder="Enter your email or registration number"></div>
     <div class="tg-login-field"><label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required placeholder="Enter your password"></div>
