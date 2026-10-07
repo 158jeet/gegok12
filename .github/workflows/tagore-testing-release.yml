@@ -14,6 +14,29 @@ jobs:
       matrix:
         app: [parent, teacher]
     steps:
+      - name: Wait for ERP CI release gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..60}; do
+            run_json=$(gh run list --workflow "ERP CI" --branch main --limit 10 --json databaseId,headSha,status,conclusion)
+            current=$(echo "$run_json" | jq -r --arg sha "$GITHUB_SHA" '.[] | select(.headSha == $sha) | @base64' | head -n1 || true)
+            if [ -n "$current" ]; then
+              run=$(echo "$current" | base64 --decode)
+              status=$(echo "$run" | jq -r '.status')
+              conclusion=$(echo "$run" | jq -r '.conclusion')
+              echo "ERP CI status=$status conclusion=$conclusion"
+              if [ "$status" = "completed" ]; then
+                [ "$conclusion" = "success" ]
+                exit $?
+              fi
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for ERP CI for $GITHUB_SHA"
+          exit 1
       - uses: actions/checkout@v4
         with:
           submodules: recursive
