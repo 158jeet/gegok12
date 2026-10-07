@@ -250,7 +250,7 @@ trait Common
      * @param string $file File path
      * @return string File contents
      */
-    public function getFilePathforDownload($disk='',$file)
+    public function getFilePathforDownload($file, $disk='')
     { 
         $path = '';
         try
