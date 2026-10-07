@@ -41,6 +41,11 @@ class AuthenticationTest extends TestCase
         // Seed or create necessary base data
     }
 
+    public function test_login_page_renders_successfully(): void
+    {
+        $this->get('/login')->assertOk()->assertSee('Welcome back');
+    }
+
     /**
      * Test School Admin Can Login
      */
