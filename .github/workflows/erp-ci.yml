@@ -92,6 +92,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build application assets for Blade rendering
+        run: npm install --no-audit --no-fund && npm run production
       - name: Install browser E2E dependencies
         working-directory: e2e
         run: npm install --no-audit --no-fund
