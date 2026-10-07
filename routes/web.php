@@ -32,6 +32,8 @@ if (app()->environment('testing') && (bool) config('app.e2e_enabled')) {
         return redirect()->route('tagore.dashboard');
     })->name('e2e.session');
 
+    Route::get('/__e2e/health', fn () => response()->json(['ok' => true]))->name('e2e.health');
+
     Route::get('/__e2e/routes', function () {
         return collect(app('router')->getRoutes())
             ->filter(fn ($route) => in_array('GET', $route->methods, true))
