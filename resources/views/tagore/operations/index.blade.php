@@ -1,5 +1,7 @@
+[Reading 118 lines from start (total: 118 lines, 0 remaining)]
+
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
 <div class="tg-app">
   <div class="tg-shell">
@@ -116,3 +118,5 @@
   </div>
 </div>
 @endsection
+
+[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]

@@ -1,5 +1,7 @@
+[Reading 18 lines from start (total: 18 lines, 0 remaining)]
+
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
 <div class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Platform Services</span></div></div><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>
@@ -16,3 +18,5 @@
 <section class="tg-card"><h2>Branded creative template</h2><form class="tg-form" method="POST" action="{{ route('tagore.platform.creative') }}">@csrf<div class="tg-grid"><label class="tg-field"><span>Institution</span><select name="institution_id">@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select></label><label class="tg-field"><span>Name</span><input name="name" required></label><label class="tg-field"><span>Template type</span><input name="template_type" placeholder="certificate / ID / social"></label><label class="tg-field"><span>Template JSON</span><textarea name="template_json"></textarea></label><label class="tg-field"><span>Brand JSON</span><textarea name="brand_json" placeholder='{"logo":"...","primary":"#000000"}'></textarea></label></div><button class="tg-btn primary">Save template</button></form></section>
 </div></div>
 @endsection
+
+[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
