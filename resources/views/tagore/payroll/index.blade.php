@@ -1,6 +1,9 @@
 @extends('layouts.app')
 @section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
+<style>
+@media (max-width:760px){.tg-form{grid-template-columns:1fr!important;min-width:0!important}.tg-form>button{grid-column:1/-1!important;align-self:start!important;justify-self:start!important;width:max-content!important;height:max-content!important;min-height:0!important;max-height:none!important}.tg-form .tg-grid,.tg-form .tg-field{min-width:0!important}.tg-form input,.tg-form select,.tg-form textarea{width:100%!important;max-width:100%!important;min-width:0!important}}
+</style>
 <div class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Payroll & HR</span></div></div><a class="tg-btn" href="{{ route('tagore.operations.index',['module'=>'payroll']) }}">Operations</a></header>
 @if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
