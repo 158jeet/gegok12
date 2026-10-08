@@ -12,6 +12,16 @@
 
         <!-- <link href="{{ asset('css/app.css') }}" rel="stylesheet"> -->
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+        <style>
+          .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
+          .tg-table-wrap{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
+          .tg-table-wrap>table{min-width:720px;max-width:none}
+          @media(max-width:760px){
+            .tg-form{grid-template-columns:1fr!important}
+            .tg-form>button{grid-column:1/-1!important;align-self:start!important;justify-self:start!important;width:max-content!important;height:max-content!important;min-height:0!important;max-height:none!important}
+            .tg-form input,.tg-form select,.tg-form textarea{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+          }
+        </style>
         <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500&family=IBM+Plex+Sans:wght@500;600;700&family=Nunito+Sans:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 
          <script>
