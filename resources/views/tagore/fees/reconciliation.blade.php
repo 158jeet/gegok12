@@ -1,5 +1,7 @@
+[Reading 17 lines from start (total: 17 lines, 0 remaining)]
+
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
 <h3>Legacy Fee Reconciliation — Batch #{{ $batch->id }}</h3>
 <p class="text-muted">Compares the <strong>ALL LEDGER</strong> snapshot with the current Tagore outstanding ledger. This report never changes balances.</p>
@@ -15,3 +17,5 @@
 <a class="btn btn-secondary mt-3" href="{{ route('tagore.fees.import') }}">Back to imports</a>
 </div>
 @endsection
+
+[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]

@@ -1,5 +1,7 @@
+[Reading 16 lines from start (total: 16 lines, 0 remaining)]
+
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <div class="container-fluid py-4">
 <h3>Legacy Student Mapping — Batch #{{ $batch->id }}</h3>
 <p class="text-muted">Every unresolved legacy student must be explicitly linked to a GegoK12 student before the batch can be applied. Numeric legacy IDs are never assumed to be GegoK12 user IDs.</p>
@@ -14,3 +16,5 @@
 <a class="btn btn-secondary" href="{{ route('tagore.fees.import') }}">Back to imports</a>
 </div>
 @endsection
+
+[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
