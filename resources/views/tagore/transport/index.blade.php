@@ -1,5 +1,7 @@
+[Reading 15 lines from start (total: 15 lines, 0 remaining)]
+
 @extends('layouts.app')
-@section('content')
+@section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
 <div class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Transport Control</span></div></div><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>
@@ -13,3 +15,5 @@
 <section class="tg-card"><h2>Trips</h2><div class="tg-table-wrap"><table><thead><tr><th>Route</th><th>Vehicle</th><th>Status</th><th>Started</th><th>Live API</th></tr></thead><tbody>@foreach($trips as $t)<tr><td>{{ $t->route_name }}</td><td>{{ $t->registration_no }}</td><td>{{ $t->status }}</td><td>{{ $t->started_at }}</td><td><a class="tg-btn" href="{{ route('tagore.transport.live',$t->id) }}">JSON</a></td></tr>@endforeach</tbody></table></div></section>
 </div></div>
 @endsection
+
+[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
