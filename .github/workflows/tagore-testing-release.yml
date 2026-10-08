@@ -14,6 +14,7 @@ jobs:
       matrix:
         app: [parent, teacher]
     steps:
+      - uses: actions/checkout@v4
       - name: Wait for ERP CI release gate
         env:
           GH_TOKEN: ${{ github.token }}
