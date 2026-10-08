@@ -36,11 +36,19 @@ async function checkPageHealth(page, context) {
     const viewport = window.innerWidth;
     const offenders = [...document.querySelectorAll('body *')].map(el => {
       const r = el.getBoundingClientRect();
-      return { tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), position: getComputedStyle(el).position };
-    }).filter(x => x.width > 0 && (x.right > viewport + 2 || x.left < -2))
+      let p = el.parentElement;
+      let insideHorizontalScroller = false;
+      while (p && p !== document.body) {
+        const ox = getComputedStyle(p).overflowX;
+        if (ox === 'auto' || ox === 'scroll') { insideHorizontalScroller = true; break; }
+        p = p.parentElement;
+      }
+      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), position: getComputedStyle(el).position, insideHorizontalScroller };
+    }).filter(x => x.width > 0 && !x.insideHorizontalScroller && (x.right > viewport + 2 || x.left < -2))
       .sort((a,b) => Math.max(b.right-viewport, -b.left) - Math.max(a.right-viewport, -a.left))
-      .slice(0,5);
-    return { overflow: document.documentElement.scrollWidth > viewport + 2, offenders };
+      .slice(0,5)
+      .map(({el,...x}) => x);
+    return { overflow: offenders.length > 0, offenders };
   });
   if (overflowDetails.overflow) errors.push('horizontal overflow: ' + JSON.stringify(overflowDetails.offenders));
   const brokenImages = await page.locator('img').evaluateAll(imgs => imgs.filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src));
