@@ -21,6 +21,8 @@ jobs:
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
       MAIL_MAILER: array
+      TAGORE_OLYMPIAD_INTAKE_ENABLED: true
+      TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,6 +73,8 @@ jobs:
       APP_URL: http://127.0.0.1:8000
       APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       TAGORE_E2E_ENABLED: true
+      TAGORE_OLYMPIAD_INTAKE_ENABLED: true
+      TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

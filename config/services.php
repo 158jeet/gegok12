@@ -34,4 +34,9 @@ return [
         'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
     ],
 
+    'olympiad' => [
+        'enabled' => env('TAGORE_OLYMPIAD_INTAKE_ENABLED', false),
+        'institution_id' => env('TAGORE_OLYMPIAD_INSTITUTION_ID'),
+        'exam_url' => env('TAGORE_OLYMPIAD_EXAM_URL'),
+    ],
 ];

@@ -102,6 +102,23 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }) => {
+    await page.goto('/olympiad/register', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
+    await expect(page.getByLabel('Student name *')).toBeVisible();
+    await expect(page.getByLabel('Parent / guardian mobile *')).toBeVisible();
+    await expect(page.getByRole('checkbox')).not.toBeChecked();
+    const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+    expect(desktopOverflow, 'Olympiad registration must not overflow desktop viewport').toBeFalsy();
+    await page.screenshot({ path: 'test-results/olympiad-registration-desktop.png', fullPage: true });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
+    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+    expect(mobileOverflow, 'Olympiad registration must not overflow mobile viewport').toBeFalsy();
+    await page.screenshot({ path: 'test-results/olympiad-registration-mobile.png', fullPage: true });
+  });
   test('platform growth and quality workspace is readable and responsive', async ({ page }) => {
     const findings = [];
     await authenticate(page, 'owner');

@@ -12,7 +12,7 @@
 <div class="tg-module-grid">
 <a class="tg-module" href="#social-post"><div class="tg-module-icon">✦</div><b>Social post drafts</b><span>{{ $posts->count() }} saved internal posts. Draft and review content here; external publishing still needs approved network integrations.</span></a>
 <a class="tg-module" href="#creative-template"><div class="tg-module-icon">▧</div><b>Creative templates</b><span>{{ $creatives->count() }} reusable branded templates for school announcements and campaign assets.</span></a>
-<a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Olympiad lead follow-up</b><span>Route enquiries into the existing staff-protected admissions workflow. The exam engine remains a private pilot.</span></a>
+<a class="tg-module" href="{{ route('tagore.admissions.index', ['source' => 'olympiad']) }}"><div class="tg-module-icon">↗</div><b>Olympiad lead follow-up</b><span>Route enquiries into the existing staff-protected admissions workflow. The exam engine remains a private pilot.</span></a>
 <a class="tg-module" href="#quality-gates"><div class="tg-module-icon">✓</div><b>Testing & AI Lab</b><span>Browser checks, responsive screenshots, text-integrity checks and release gates. AI-generated triage is not enabled without a configured model provider.</span></a>
 <a class="tg-module" href="#automation-rules"><div class="tg-module-icon">⟳</div><b>Automation rules</b><span>{{ $rules->count() }} configured rules. Review triggers and actions before enabling automated publishing or outreach.</span></a>
 </div>
