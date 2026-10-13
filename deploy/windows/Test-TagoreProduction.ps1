@@ -16,8 +16,8 @@ function C([string[]]$Args) {
     & docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml @Args
     if ($LASTEXITCODE -ne 0) { throw "Compose command failed: $($Args -join ' ')" }
 }
-function A([string[]]$Args) {
-    $out = & docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan @Args 2>&1
+function A([string[]]$CommandArgs) {
+    $out = & docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan @CommandArgs 2>&1
     [pscustomobject]@{ Code=$LASTEXITCODE; Output=($out -join $NL) }
 }
 
@@ -32,12 +32,12 @@ try {
     }
 } catch { Add-Result "Docker service inspection" "FAIL" $_.Exception.Message }
 
-# Database health
+# Database health: use Docker's healthcheck result instead of mysqladmin CLI password flags.
 try {
-    $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'mysqladmin ping -h localhost -u root -p"$MYSQL_ROOT_PASSWORD" --silent' 2>&1) -join $NL
-    if ($out -match 'mysqld is alive' -or $out -match 'Using a password on the command line interface can be insecure') { Add-Result "MySQL health" "PASS" "mysqladmin ping succeeded" }
-    else { Add-Result "MySQL health" "FAIL" $out }
-} catch { Add-Result "MySQL health" "FAIL" $_.Exception.Message }
+    $out = (& docker inspect -f '{{.State.Health.Status}}' windows-db-1 2>$null) -join $NL
+    if ($LASTEXITCODE -eq 0 -and $out.Trim() -eq 'healthy') { Add-Result 'MySQL health' 'PASS' 'Docker healthcheck reports healthy' }
+    else { Add-Result 'MySQL health' 'FAIL' $out }
+} catch { Add-Result 'MySQL health' 'FAIL' $_.Exception.Message }
 
 # Laravel runtime
 foreach ($x in @(
@@ -67,12 +67,20 @@ if ((Test-Path "deploy\windows\letsencrypt\live\59.90.66.12\fullchain.pem") -and
     Add-Result "TLS certificate files" "PASS" "Certificate and key exist"
 } else { Add-Result "TLS certificate files" "FAIL" "Certificate files missing" }
 
-# Nginx
+# Check actual certificate expiry inside the web container, where the mounted PEM symlink resolves.
 try {
-    $out = (& docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t 2>&1) -join $NL
-    if ($out -match 'syntax is ok' -and $out -match 'test is successful') { Add-Result "Nginx configuration" "PASS" "nginx -t successful (deprecation warnings allowed)" }
-    else { Add-Result "Nginx configuration" "FAIL" $out }
-} catch { Add-Result "Nginx configuration" "FAIL" $_.Exception.Message }
+    docker run --rm --entrypoint sh -v ($Root + '\deploy\windows\letsencrypt:/etc/letsencrypt') certbot/certbot:latest -lc 'openssl x509 -checkend 0 -noout -in /etc/letsencrypt/live/59.90.66.12/fullchain.pem'
+    $certExit = $LASTEXITCODE
+    if ($certExit -eq 0) { Add-Result 'TLS certificate validity' 'PASS' 'Certificate is not expired' }
+    else { Add-Result 'TLS certificate validity' 'FAIL' 'Certificate expired or unreadable; public HTTP challenge routing must be fixed' }
+} catch { Add-Result 'TLS certificate validity' 'FAIL' $_.Exception.Message }
+# Nginx configuration: suppress expected diagnostic text on stderr and judge by exit code.
+try {
+    cmd.exe /d /c "docker exec windows-web-1 nginx -t 1>nul 2>nul"
+    $nginxExit = $LASTEXITCODE
+    if ($nginxExit -eq 0) { Add-Result 'Nginx configuration' 'PASS' 'nginx -t exited successfully' }
+    else { Add-Result 'Nginx configuration' 'FAIL' "nginx -t exit code $nginxExit" }
+} catch { Add-Result 'Nginx configuration' 'FAIL' $_.Exception.Message }
 
 # Worker
 try {
@@ -90,7 +98,7 @@ try {
 
 # Application DB query
 try {
-    $r=A @("tinker","--execute=DB::select('SELECT 1 AS ok');")
+    $r=A @("tinker","--execute=dump(DB::select('SELECT 1 AS ok'))")
     if ($r.Code -eq 0 -and $r.Output -match 'ok') { Add-Result "Laravel → MySQL query" "PASS" "Application successfully queried database" }
     else { Add-Result "Laravel → MySQL query" "FAIL" $r.Output }
 } catch { Add-Result "Laravel → MySQL query" "FAIL" $_.Exception.Message }
@@ -99,10 +107,10 @@ try {
 try {
     $r=A @("route:list","--path=tagore","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $cleanOutput = [regex]::Replace($r.Output, '\x1B\[[0-9;]*[A-Za-z]', '')
-    $jsonStart = $cleanOutput.IndexOf('[')
-    if ($jsonStart -lt 0) { throw "Laravel did not return JSON route data: $($cleanOutput | Select-Object -First 5)" }
-    $routes = ($cleanOutput.Substring($jsonStart)) | ConvertFrom-Json
+    $cleanOutput = [regex]::Replace($r.Output, '\x1B\[[0-9;]*[A-Za-z]', '').Trim()
+    if (-not $cleanOutput.StartsWith('[')) { throw "Laravel did not return a JSON route array. Output: $($cleanOutput.Substring(0, [Math]::Min(160, $cleanOutput.Length)))" }
+    try { $routes = $cleanOutput | ConvertFrom-Json -ErrorAction Stop }
+    catch { throw "Laravel returned invalid route JSON: $($_.Exception.Message)" }
     $registered = @($routes | ForEach-Object { $_.uri })
     $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform")
     $missing=@($required | Where-Object { $_ -notin $registered })
@@ -114,7 +122,10 @@ try {
 try {
     $r=A @("route:list","--path=api","--json")
     if ($r.Code -ne 0) { throw $r.Output }
-    $routes = $r.Output | ConvertFrom-Json
+    $cleanOutput = [regex]::Replace($r.Output, '\x1B\[[0-9;]*[A-Za-z]', '').Trim()
+    if (-not $cleanOutput.StartsWith('[')) { throw "Laravel did not return a JSON route array. Output: $($cleanOutput.Substring(0, [Math]::Min(160, $cleanOutput.Length)))" }
+    try { $routes = $cleanOutput | ConvertFrom-Json -ErrorAction Stop }
+    catch { throw "Laravel returned invalid route JSON: $($_.Exception.Message)" }
     $registered = @($routes | ForEach-Object { $_.uri })
     $required=@("api/parent/login","api/v2/tagore/sync/login","api/v2/tagore/sync/bootstrap","api/v2/tagore/sync/push")
     $missing=@($required | Where-Object { $_ -notin $registered })
@@ -129,14 +140,8 @@ try {
     else { Add-Result "Certificate renewal task" "FAIL" "State: $($task.State)" }
 } catch { Add-Result "Certificate renewal task" "FAIL" $_.Exception.Message }
 
-# Test suite: production image intentionally omits dev dependencies
-try {
-    $r=A @("test")
-    if ($r.Code -eq 0) { Add-Result "Automated PHPUnit suite" "PASS" "Tests passed" }
-    elseif ($r.Output -match 'There are no commands defined|vendor/bin/phpunit.*not found|Could not open input file') {
-        Add-Result "Automated PHPUnit suite" "INFO" "Skipped in production image because dev/test dependencies are excluded"
-    } else { Add-Result "Automated PHPUnit suite" "FAIL" (($r.Output -split $NL | Select-Object -Last 20) -join $NL) }
-} catch { Add-Result "Automated PHPUnit suite" "INFO" "Not executable in production image" }
+# PHPUnit must run in CI/staging with an isolated SQLite database, never against production config.
+Add-Result "Automated PHPUnit suite" "INFO" "Skipped in production; run in isolated CI/staging database"
 
 # Optional WAN test. Same-LAN WAN hairpin can be unreliable.
 if ($RunHttpTests) {
