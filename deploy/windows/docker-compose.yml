@@ -40,7 +40,7 @@ services:
       MYSQL_DATABASE: tagore_erp
       MYSQL_USER: tagore
       MYSQL_PASSWORD: TagoreDbPilot2026!
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env.build}
+      MYSQL_ROOT_PASSWORD: ${TAGORE_DB_ROOT_PASSWORD:?Set TAGORE_DB_ROOT_PASSWORD in .env.school}
     volumes: [db_data:/var/lib/mysql]
     healthcheck:
       # Keep health results clean and allow slow Windows/HDD crash recovery.
