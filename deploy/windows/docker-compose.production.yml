@@ -29,7 +29,10 @@ services:
     volumes:
       - ../../deploy/windows/nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
       - app_storage:/var/www/html/storage:ro
-      - G:/TagoreSecrets/nginx-certs:/etc/nginx/certs:ro
+      - type: bind
+        source: ${TAGORE_NGINX_CERTS_PATH:-G:/TagoreSecrets/nginx-certs}
+        target: /etc/nginx/certs
+        read_only: true
       - ../../deploy/windows/acme-challenge:/var/www/acme:ro
   worker:
     image: tagore-erp-app:production

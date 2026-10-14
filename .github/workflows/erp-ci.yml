@@ -151,6 +151,7 @@ jobs:
           APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           APP_DEBUG=false
           APP_URL=http://127.0.0.1
+          TAGORE_NGINX_CERTS_PATH=./letsencrypt/live
           TIMEZONE=Asia/Kolkata
           DB_CONNECTION=mysql
           DB_HOST=db
