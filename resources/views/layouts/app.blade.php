@@ -12,6 +12,9 @@
 
         <!-- <link href="{{ asset('css/app.css') }}" rel="stylesheet"> -->
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+        @if(request()->is('tagore/*'))
+        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+        @endif
         <style>
           .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
           .tg-table-wrap{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
@@ -51,7 +54,7 @@
  <livewire:styles>
 
     </head>
-    <body class="font-primary antialiased min-h-screen overflow-x-hidden">
+    <body class="font-primary antialiased min-h-screen overflow-x-hidden {{ request()->is('tagore/*') ? 'tagore-ui' : '' }}">
         <div id="app">
             @yield('base-navigation')
             <main class="flex w-full h-full min-h-screen">

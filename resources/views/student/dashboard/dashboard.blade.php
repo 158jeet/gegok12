@@ -290,7 +290,9 @@
 @push('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
     <script>
-        var ctx = document.getElementById('graph').getContext('2d');
+        var graphCanvas = document.getElementById('graph');
+        if (graphCanvas && window.Chart) {
+        var ctx = graphCanvas.getContext('2d');
     {{-- var present = {!! trans($dashboard['presentPercentage']) !!};
         var absent = {!! trans($dashboard['absentPercentage']) !!}; --}}
         var present = {!! trans($dashboard['presentDay']) !!};
@@ -329,5 +331,6 @@
                 }
             }
         });
+        }
     </script>
 @endpush

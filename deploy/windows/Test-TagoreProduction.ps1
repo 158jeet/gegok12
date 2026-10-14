@@ -62,10 +62,21 @@ try {
     else { Add-Result "All migrations applied" "PASS" "No pending migrations detected" }
 } catch { Add-Result "All migrations applied" "FAIL" $_.Exception.Message }
 
-# TLS files
-if ((Test-Path "deploy\windows\letsencrypt\live\59.90.66.12\fullchain.pem") -and (Test-Path "deploy\windows\letsencrypt\live\59.90.66.12\privkey.pem")) {
-    Add-Result "TLS certificate files" "PASS" "Certificate and key exist"
-} else { Add-Result "TLS certificate files" "FAIL" "Certificate files missing" }
+# Nginx uses concrete PEM files stored outside the repository and Docker build context.
+$exportCert = "G:\TagoreSecrets\nginx-certs\59.90.66.12\fullchain.pem"
+$exportKey = "G:\TagoreSecrets\nginx-certs\59.90.66.12\privkey.pem"
+if ((Test-Path $exportCert) -and (Test-Path $exportKey) -and (Get-Item $exportCert).Length -gt 0 -and (Get-Item $exportKey).Length -gt 0) {
+    Add-Result "TLS export files" "PASS" "Concrete Nginx certificate and key exist and are non-empty"
+} else { Add-Result "TLS export files" "FAIL" "Nginx certificate export missing or empty" }
+
+# Test a real TLS handshake and Laravel login response, not merely the existence of certificate paths.
+try {
+    $tlsOutput = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 5 --max-time 10 "https://127.0.0.1/login" 2>&1
+    $tlsExit = $LASTEXITCODE
+    $tlsCode = ($tlsOutput | Select-Object -Last 1).ToString().Trim()
+    if ($tlsExit -eq 0 -and $tlsCode -eq "200") { Add-Result "Local HTTPS handshake" "PASS" "TLS connected and /login returned HTTP 200" }
+    else { Add-Result "Local HTTPS handshake" "FAIL" "curl exit=$tlsExit, response=$tlsCode; $($tlsOutput -join ' ')" }
+} catch { Add-Result "Local HTTPS handshake" "FAIL" $_.Exception.Message }
 
 # Check actual certificate expiry inside the web container, where the mounted PEM symlink resolves.
 try {
@@ -112,11 +123,26 @@ try {
     try { $routes = $cleanOutput | ConvertFrom-Json -ErrorAction Stop }
     catch { throw "Laravel returned invalid route JSON: $($_.Exception.Message)" }
     $registered = @($routes | ForEach-Object { $_.uri })
-    $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform")
+    $required=@("tagore/dashboard","tagore/admissions","tagore/accounts/fees","tagore/payroll","tagore/inventory","tagore/transport","tagore/communication","tagore/reports","tagore/security","tagore/learning","tagore/documents","tagore/platform","tagore/performance")
     $missing=@($required | Where-Object { $_ -notin $registered })
     if ($missing.Count -eq 0) { Add-Result "Core ERP routes" "PASS" "All required module routes registered" }
     else { Add-Result "Core ERP routes" "FAIL" ("Missing: "+($missing -join ", ")) }
 } catch { Add-Result "Core ERP routes" "FAIL" $_.Exception.Message }
+
+# Public route hygiene: destructive/test-only routes must not be exposed in production.
+try {
+    $r=A @("route:list","--json")
+    if ($r.Code -ne 0) { throw $r.Output }
+    $cleanOutput = [regex]::Replace($r.Output, '\x1B\[[0-9;]*[A-Za-z]', '').Trim()
+    if (-not $cleanOutput.StartsWith('[')) { throw "Laravel did not return a JSON route array." }
+    $allRoutes = $cleanOutput | ConvertFrom-Json -ErrorAction Stop
+    $allUris = @($allRoutes | ForEach-Object { $_.uri })
+    $unsafe = @($allUris | Where-Object { $_ -in @("cache-clear","checksms") -or $_ -like "__e2e/*" })
+    if ($unsafe.Count -eq 0) { Add-Result "Public route hygiene" "PASS" "No public cache-clear, SMS-test, or E2E bypass routes" }
+    else { Add-Result "Public route hygiene" "FAIL" ("Unexpected routes: "+($unsafe -join ", ")) }
+    if ("olympiad/register" -in $allUris) { Add-Result "Olympiad intake route" "PASS" "Registration endpoint is registered; feature flag controls availability" }
+    else { Add-Result "Olympiad intake route" "FAIL" "Registration endpoint is missing" }
+} catch { Add-Result "Public route hygiene" "FAIL" $_.Exception.Message }
 
 # Parent/offline API routes
 try {
@@ -136,8 +162,10 @@ try {
 # Scheduled renewal
 try {
     $task=Get-ScheduledTask -TaskName "Tagore ERP - Renew IP TLS Certificate" -ErrorAction Stop
-    if ($task.State -eq "Ready") { Add-Result "Certificate renewal task" "PASS" "Scheduled task is Ready" }
-    else { Add-Result "Certificate renewal task" "FAIL" "State: $($task.State)" }
+    $actionText=($task.Actions | ForEach-Object { $_.Arguments }) -join " "
+    if ($task.State -eq "Ready" -and $actionText -match 'C:\\server\\gegok12-main-new\\deploy\\windows\\Renew-TagoreCertificate\.ps1') {
+        Add-Result "Certificate renewal task" "PASS" "Scheduled task is Ready and points to the current repository script"
+    } else { Add-Result "Certificate renewal task" "FAIL" "State: $($task.State); Action: $actionText" }
 } catch { Add-Result "Certificate renewal task" "FAIL" $_.Exception.Message }
 
 # PHPUnit must run in CI/staging with an isolated SQLite database, never against production config.

@@ -70,7 +70,13 @@
                     <div>
                         <h1 class="text-gray-800 font-semibold text-xl">Students</h1>
                     </div>
-                    <canvas id="graph"></canvas>
+                    @if(((int) $dashboard['maleCount'] + (int) $dashboard['femaleCount']) > 0)
+<div class="relative w-full" style="height:220px;max-height:220px;">
+    <canvas id="graph" aria-label="Student gender distribution" role="img" style="width:100%;height:220px;"></canvas>
+</div>
+@else
+<div class="flex items-center justify-center text-center text-sm text-gray-500 px-4" style="height:220px;">Gender data has not been recorded for the enrolled students.</div>
+@endif
                     <div class="flex items-center justify-between my-1">
                         <div class="border-r w-1/2 mt-4 bar-bg-blue relative student_count">
                             <a href="{{ url('/admin/students?gender=female') }}">
@@ -133,7 +139,7 @@
                                 <p class="text-sm text-gray-900 font-semibold" style="text-align: center;">No Notice Found</p>
                             </div>
                         @endif
-                    </div>   
+                    </div>
                 </div>
             </div>
         </div>
@@ -281,7 +287,7 @@
                                             </tr>
                                         @endforeach
                                     @endforeach
-                                </tbody>  
+                                </tbody>
                             @else
                                 <tbody>
                                     <tr class="border-t py-2">
@@ -289,8 +295,8 @@
                                             No Records found
                                         </td>
                                     </tr>
-                                </tbody> 
-                            @endif    
+                                </tbody>
+                            @endif
                         </table>
                     </div>
                 </div>
@@ -304,12 +310,12 @@
                 </div>
             </div>
         </div>
-   
+
 
              {{-- <livewire:timetable.dashboard-class />
               <livewire:timetable.dashboard-teacher />
               <livewire:timetable.day-time-table />--}}
-        
+
         <div>
             <div class="w-full px-1 my-2 bg-white">
                 <div class="pt-2 pb-6">
@@ -317,7 +323,7 @@
                         <h1 class="text-gray-800 font-semibold text-xl">
                             <a href="{{ url('/admin/feedbacks') }}">Parent's Feedback</a>
                         </h1>
-                    </div>  
+                    </div>
                     <div class="pt-3 overflow-x-auto">
                         <table class="table table-bordered messageTable w-full text-sm custom-table" id="messagelist">
                             <thead class="bg-grey-light">
@@ -331,18 +337,18 @@
                             </thead>
                             @if(count($dashboard['feedbacks']) != 0)
                                 @foreach($dashboard['feedbacks'] as $feedback)
-                                    <tbody> 
+                                    <tbody>
                                         <td>
                                             <a href="{{ url('/admin/parent/show/'.$feedback->parent->name) }}">{{ ucfirst($feedback->parent->FullName) }}</a>
                                         </td>
-                                        <td>{{ ucwords(str_replace('_', ' ', (str_replace('/', ' / ',$feedback->latestMessage->category)))) }}</td>          
-                                        <td> 
+                                        <td>{{ ucwords(str_replace('_', ' ', (str_replace('/', ' / ',$feedback->latestMessage->category)))) }}</td>
+                                        <td>
                                             <p> {!! str_limit($feedback->feedbackMessage->first()->message,50,'...') !!}
-                                                @if( $feedback->latestMessage->is_seen == '0' ) 
+                                                @if( $feedback->latestMessage->is_seen == '0' )
                                                     <span class="bg-red-300 rounded-full text-white inline-block px-2 my-1 mb-2"> New </span>
-                                                @endif  
+                                                @endif
                                             </p>
-                                        </td>         
+                                        </td>
                                         <td>{{ date('d-m-Y H:i:s',strtotime($feedback->created_at)) }}</td>
                                         <td>
                                             <div class="flex items-center">
@@ -374,7 +380,7 @@
                         <h1 class="text-gray-800 font-semibold text-xl">
                             <a href="{{ url('/admin/feedbacks') }}">Pending Event</a>
                         </h1>
-                    </div>  
+                    </div>
                     <div class="pt-3 overflow-x-auto">
                         <table class="table table-bordered messageTable w-full text-sm custom-table" id="messagelist">
                             <thead class="bg-grey-light">
@@ -390,26 +396,26 @@
                             </thead>
                             @if(count($dashboard['events']) != 0)
                                 @foreach($dashboard['events'] as $events)
-                                    <tbody> 
+                                    <tbody>
                                         <td>
 
                                         {{ ucfirst($events->title) }}
                                         </td>
-                                        <td>{{ ucfirst($events->description) }}</td>          
-                                        <td> 
+                                        <td>{{ ucfirst($events->description) }}</td>
+                                        <td>
                                            {{ ucfirst($events->category) }}
-                                        </td> 
-                                         <td> 
+                                        </td>
+                                         <td>
                                            {{ ucfirst($events->location) }}
-                                        </td>   
+                                        </td>
 
                                         <td>{{ date('d-m-Y H:i:s',strtotime($events->start_date)) }} - {{ date('d-m-Y H:i:s',strtotime($events->end_date)) }}</td>
                                         <td>
 
                                             {{$events->organised_by}}
-                                          
+
                                         </td>
-                                     
+
                                         <td>
 
                                         <a href="{{ url('admin/event/approve/'.$events->id) }}" title="Show" class="bg-blue-500 px-2 py-2 text-white ">Waiting for Approve
@@ -433,7 +439,7 @@
             <div class="pt-2 pb-6">
                 <div>
                     <h1 class="text-gray-800 font-semibold text-xl">Expire Documents</h1>
-                </div>  
+                </div>
                 <div class="pt-3 overflow-scroll">
                     <table class="table table-bordered messageTable w-full text-sm custom-table" id="messagelist">
                         <thead class="bg-grey-light">
@@ -448,8 +454,8 @@
                             @foreach($dashboard['expire_document'] as $key => $document)
                                 <tbody>
                                     <td>{{ ucfirst($document->document_type) }}</td>
-                                    <td>{{ $document->start_date }}</td>          
-                                    <td>{{ $document->end_date }}</td>         
+                                    <td>{{ $document->start_date }}</td>
+                                    <td>{{ $document->end_date }}</td>
                                     <td>
                                         <a href="{{ url('transport/vehicle/'.$document->vehicle_id.'/show') }}">{{ $document->vehicle->name }}</a>
                                     </td>
@@ -463,7 +469,7 @@
                     </table>
                 </div>
             </div>
-        </div> 
+        </div>
         <!-- Document Expire --> --}}
 
         <div class="flex flex-col lg:flex-row my-2">
@@ -483,7 +489,7 @@
                 <div class="bg-white custom-shadow px-4 pt-3 pb-6 border h-full">
                     <div>
                         <h1 class="text-gray-800 font-semibold text-xl">Unpaid Fees List</h1>
-                    </div>  
+                    </div>
                     <unpaid-fees url="{{ url('/') }}" mode="admin"></unpaid-fees>
                 </div>
             </div>--}}
@@ -494,7 +500,7 @@
                 <div class="bg-white custom-shadow px-4 pt-3 pb-6 border h-full">
                     <div>
                         <h1 class="text-gray-800 font-semibold text-xl">Stock Details</h1>
-                    </div>  
+                    </div>
                     <div class="pt-3">
                         <table class="table table-bordered messageTable w-full text-sm custom-table">
                             <thead class="bg-grey-light">
@@ -503,15 +509,15 @@
                                     <th>Quantity</th>
                                 </tr>
                             </thead>
-                            <tbody> 
+                            <tbody>
                                 @if(count($dashboard['products']) > 0)
                                     @foreach($dashboard['products'] as $product)
                                         <tr>
                                             <td><a href="{{ url('/admin/sales/show/') }}">{{ $product->name }}</a></td>
                                             <td>{{ $product->quantity}}</td>
-                                        </tr>      
+                                        </tr>
                                     @endforeach
-                                @else    
+                                @else
                                     <tr>
                                         <td colspan="6" style="text-align: center;"> No Records found</td>
                                     </tr>
@@ -539,9 +545,11 @@
 @push('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
     <script>
-        var ctx = document.getElementById('graph').getContext('2d');
-        var femaleCount = {!! trans($dashboard['femaleCount']) !!};
-        var maleCount = {!! trans($dashboard['maleCount']) !!};
+        var graphCanvas = document.getElementById('graph');
+        if (graphCanvas && window.Chart) {
+        var ctx = graphCanvas.getContext('2d');
+        var femaleCount = Number({!! json_encode((int) $dashboard['femaleCount']) !!}) || 0;
+        var maleCount = Number({!! json_encode((int) $dashboard['maleCount']) !!}) || 0;
         var chart = new Chart(ctx, {
             // The type of chart we want to create
             type: 'doughnut',
@@ -568,7 +576,7 @@
                         label: function (tooltipItems, data) {
                             var i, label = [], l = data.datasets.length;
                             for (i = 0; i < l; i += 1) {
-                                label[i] = data.datasets[i].label + ': ' + data.datasets[i].data[tooltipItems.index] + '%';
+                                label[i] = data.datasets[i].label + ': ' + data.datasets[i].data[tooltipItems.index];
                             }
                             return label;
                         }
@@ -576,8 +584,11 @@
                 }
             }
         });
+        }
 
-        var ctx = document.getElementById("barChart").getContext('2d');
+        var barCanvas = document.getElementById('barChart');
+        if (barCanvas && window.Chart) {
+        var ctx = barCanvas.getContext('2d');
         var barChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -593,9 +604,10 @@
                 }]
             }
         });
+        }
 
         $(document).ready(function(){
-            //  $('messageTable').messageTable();        
+            //  $('messageTable').messageTable();
         });
     </script>
 
@@ -605,7 +617,7 @@
             /*    padding: 1rem 1.5rem;*/
         }
         table.messageTable thead th, table.messageTable thead td {
-            /*padding: 1rem;*/    
+            /*padding: 1rem;*/
             border-bottom: 1px solid #1110;
         }
         table.messageTable {
@@ -631,7 +643,7 @@
             text-align: left;
         }
         }
-        @media only screen and (max-width: 760px), (min-device-width: 768px) 
+        @media only screen and (max-width: 760px), (min-device-width: 768px)
         and (max-device-width: 1024px)  {
 
     /* Force table to not be like tables anymore */
@@ -650,11 +662,11 @@
     tr {
       margin: 0 0 1rem 0;
     }
-      
+
     tr:nth-child(odd) {
       background: #ccc! important;
     }
-    
+
     td {
       /* Behave  like a "row" */
       border: none;
@@ -673,7 +685,7 @@
       width: 45%;
       padding-right: 10px;
       white-space: nowrap;
-      padding-top: 5%;   
+      padding-top: 5%;
     }
 
 
@@ -689,4 +701,4 @@
     border:none! important;
 }
 </style>
-@endpush      
+@endpush

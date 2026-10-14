@@ -36,9 +36,7 @@ let token = document.head.querySelector('meta[name="csrf-token"]');
 if (token) {
     window.axios.defaults.headers.common["X-CSRF-TOKEN"] = token.content;
 } else {
-    console.error(
-        "CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token"
-    );
+    // Legacy views may omit the meta tag; Axios still sends the XSRF-TOKEN cookie automatically.
 }
 
 /**
@@ -51,12 +49,20 @@ import Echo from "laravel-echo";
 
 window.Pusher = require("pusher-js");
 
-window.Echo = new Echo({
-    broadcaster: "pusher",
-    key: process.env.MIX_PUSHER_APP_KEY,
-    cluster: process.env.MIX_PUSHER_APP_CLUSTER,
-    forceTLS: true
-});
+// Do not initialize Pusher/Echo unless real broadcast credentials are configured.
+// The ERP remains usable without realtime notifications; this avoids a noisy
+// missing-app-key warning in deployments that have not configured Pusher.
+const pusherAppKey = process.env.MIX_PUSHER_APP_KEY;
+if (pusherAppKey) {
+    window.Echo = new Echo({
+        broadcaster: "pusher",
+        key: pusherAppKey,
+        cluster: process.env.MIX_PUSHER_APP_CLUSTER,
+        forceTLS: true
+    });
+} else {
+    window.Echo = null;
+}
 
 // window.Echo = new Echo({
 //     broadcaster: "pusher",

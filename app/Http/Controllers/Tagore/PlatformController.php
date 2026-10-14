@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class PlatformController extends Controller
@@ -84,16 +85,59 @@ class PlatformController extends Controller
     public function post(Request $request)
     {
         [$roles,$ids]=$this->context($request); $this->guard($roles,['PRINCIPAL','COORDINATOR','TEACHER']);
-        $d=$request->validate(['institution_id'=>'required|integer','group_name'=>'nullable|string|max:100','title'=>'nullable|string|max:190','body'=>'required|string|max:10000','attachment_path'=>'nullable|string|max:1000']);
+        $d=$request->validate(['institution_id'=>'required|integer','group_name'=>'nullable|string|max:100','title'=>'nullable|string|max:190','body'=>'required|string|max:10000','attachment_path'=>'nullable|string|max:1000','status'=>'nullable|in:draft,published']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
-        DB::table('tagore_social_posts')->insert($d+['author_id'=>$request->user()->id,'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
-        return back()->with('success','Internal social post published.');
+        $status=$d['status'] ?? 'draft';
+        unset($d['status']);
+        DB::table('tagore_social_posts')->insert($d+['author_id'=>$request->user()->id,'status'=>$status,'created_at'=>now(),'updated_at'=>now()]);
+        return back()->with('success',$status==='published' ? 'Internal social post published to the ERP feed.' : 'Social post draft saved. External publishing is not connected.');
+    }
+
+    public function aiTestPlan(Request $request)
+    {
+        [$roles,$ids]=$this->context($request);
+        $this->guard($roles,['PRINCIPAL','COORDINATOR']);
+        $d=$request->validate([
+            'module'=>'required|in:tasks,olympiad,admissions,fees,social,learning',
+            'role'=>'required|in:owner,principal,coordinator,teacher,parent,student,accounts,fee-editor',
+            'test_type'=>'required|in:functional,workflow,accessibility,responsive,security',
+            'scenario'=>'required|string|max:3000',
+        ]);
+
+        $url=trim((string)config('services.ollama.url'));
+        $model=trim((string)config('services.ollama.model'));
+        if ($url==='' || $model==='') {
+            return back()->with('ai_test_plan_status','AI test-plan generation is not enabled yet. Configure OLLAMA_URL to an approved private model host; this ERP server has limited RAM and will not run a model locally.');
+        }
+
+        $prompt = "Act as a senior QA engineer for a school ERP. Produce a concise, safe, executable test plan as JSON only. Schema: {\"title\":string,\"preconditions\":string[],\"test_cases\":[{\"name\":string,\"steps\":string[],\"expected\":string[],\"severity\":\"low\"|\"medium\"|\"high\"}],\"risks\":string[]}. Do not include credentials or real student data. Do not recommend destructive actions against production. Module: {$d['module']}; role: {$d['role']}; test type: {$d['test_type']}; scenario: {$d['scenario']}";
+        try {
+            $response=Http::acceptJson()->timeout(40)->post(rtrim($url,'/').'/api/generate',[
+                'model'=>$model,'prompt'=>$prompt,'stream'=>false,'format'=>'json',
+                'options'=>['temperature'=>0.2],
+            ]);
+            if (!$response->successful()) {
+                return back()->with('ai_test_plan_status','The configured AI provider returned HTTP '.$response->status().'. Check the private model service and retry.');
+            }
+            $raw=$response->json('response');
+            $plan=is_string($raw) ? json_decode($raw,true) : null;
+            if (!is_array($plan) || !isset($plan['test_cases']) || !is_array($plan['test_cases'])) {
+                return back()->with('ai_test_plan_status','The AI provider response was not valid test-plan JSON. Retry with a narrower scenario.');
+            }
+            return back()->with('ai_test_plan',$plan);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('ai_test_plan_status','The AI provider could not be reached. No test was executed and no ERP data was changed.');
+        }
     }
 
     public function comment(Request $request,int $postId)
     {
+        [$roles,$ids]=$this->context($request);
+        $this->guard($roles,['PRINCIPAL','COORDINATOR','TEACHER']);
         $d=$request->validate(['body'=>'required|string|max:4000']);
-        $post=DB::table('tagore_social_posts')->where('id',$postId)->first(); abort_unless($post,404);
+        $post=DB::table('tagore_social_posts')->where('id',$postId)->whereIn('institution_id',$ids)->first();
+        abort_unless($post,404);
         DB::table('tagore_social_comments')->insert(['post_id'=>$postId,'author_id'=>$request->user()->id,'body'=>$d['body'],'created_at'=>now(),'updated_at'=>now()]);
         return response()->json(['ok'=>true]);
     }

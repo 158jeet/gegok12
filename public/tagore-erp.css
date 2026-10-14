@@ -16,7 +16,7 @@ body{margin:0;background:var(--tg-bg)!important;color:var(--tg-ink)!important;fo
 a{color:inherit}
 .tg-app{min-height:100vh}.tg-shell{max-width:1480px;margin:auto;padding:0 28px 60px}
 .tg-topbar{height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}
-.tg-brand{display:flex;align-items:center;gap:11px}.tg-logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#173d9e,#4779f6);color:#fff;display:grid;place-items:center;font-weight:900;box-shadow:0 8px 20px rgba(36,87,230,.2)}
+.tg-brand{display:flex;align-items:center;gap:11px}.tg-logo{width:58px;height:48px;object-fit:contain;display:block;flex:0 0 auto}
 .tg-brand strong{font-size:18px;letter-spacing:-.2px}.tg-brand span{display:block;color:var(--tg-muted);font-size:11px;margin-top:2px}
 .tg-top-actions{display:flex;align-items:center;gap:9px}.tg-search{min-width:260px;background:#fff;border:1px solid var(--tg-line);border-radius:11px;padding:10px 13px;color:var(--tg-muted);font-size:13px}
 .tg-user{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--tg-line);padding:7px 11px;border-radius:12px;font-size:12px;font-weight:750}.tg-avatar{width:30px;height:30px;border-radius:9px;background:#eaf0ff;color:var(--tg-primary);display:grid;place-items:center;font-weight:850}
@@ -50,3 +50,92 @@ table.table{width:100%;background:#fff;border-collapse:separate!important;border
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
 
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
+/* Tagore ERP UI unification Ã¢â‚¬â€ 2026-10-12 */
+:root{color-scheme:dark;--tg-bg:#10151d;--tg-surface:#1a222d;--tg-surface-2:#222d3a;--tg-ink:#edf2f7;--tg-muted:#a2afbf;--tg-line:#303d4d;--tg-primary:#19b77a;--tg-primary-2:#38d996;--tg-success:#20c997;--tg-warning:#f0b44b;--tg-danger:#ff647c;--tg-purple:#a78bfa;--tg-cyan:#43c8e6;--tg-radius:16px;--tg-shadow:0 10px 28px rgba(0,0,0,.22);--tg-shadow-lg:0 20px 50px rgba(0,0,0,.32)}
+html,body,body.tg-app{background:var(--tg-bg)!important;color:var(--tg-ink)!important}
+body{min-height:100vh}
+body.tagore-ui{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important}
+body.tagore-ui h1,body.tagore-ui h2,body.tagore-ui h3,body.tagore-ui h4{color:var(--tg-ink)}
+body.tagore-ui p,body.tagore-ui small,body.tagore-ui label,body.tagore-ui .muted{color:var(--tg-muted)}
+body.tagore-ui .shell,body.tagore-ui main,body.tagore-ui .container,body.tagore-ui .container-fluid{color:var(--tg-ink)}
+body.tagore-ui .card,body.tagore-ui .panel,body.tagore-ui .well,body.tagore-ui .box,body.tagore-ui .modal-content,body.tagore-ui .dropdown-menu,body.tagore-ui .list-group-item{background:var(--tg-surface)!important;color:var(--tg-ink)!important;border:1px solid var(--tg-line)!important;border-radius:var(--tg-radius)!important;box-shadow:var(--tg-shadow)!important}
+body.tagore-ui .cards,body.tagore-ui .stats-grid{gap:14px}
+body.tagore-ui .cards>.card,body.tagore-ui .stats-grid>*{padding:18px;border-top:3px solid var(--tg-primary)!important}
+body.tagore-ui table{background:var(--tg-surface)!important;color:var(--tg-ink)!important;border-collapse:separate!important;border-spacing:0!important;border:1px solid var(--tg-line)!important;border-radius:12px;overflow:hidden}
+body.tagore-ui table th{background:#263342!important;color:#c9d5e2!important;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+body.tagore-ui table td,body.tagore-ui table th{border-color:var(--tg-line)!important}
+body.tagore-ui tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+body.tagore-ui input,body.tagore-ui select,body.tagore-ui textarea,body.tagore-ui .form-control{background:#111a24!important;color:var(--tg-ink)!important;border:1px solid #3b4b5d!important;border-radius:10px!important;min-height:40px}
+body.tagore-ui input::placeholder,body.tagore-ui textarea::placeholder{color:#8190a2}
+body.tagore-ui button,body.tagore-ui input[type=submit],body.tagore-ui .btn-primary{background:var(--tg-primary)!important;border:1px solid var(--tg-primary)!important;color:#071b13!important;border-radius:10px!important;font-weight:800!important;padding:10px 15px!important}
+body.tagore-ui .btn,body.tagore-ui a.btn{border-radius:10px!important;font-weight:750}
+body.tagore-ui a{color:#5de3ad}
+body.tagore-ui hr{border-color:var(--tg-line)}
+body.tagore-ui .shell{max-width:1480px!important;padding:28px 28px 64px!important}
+body.tagore-ui h1{font-size:clamp(25px,2.4vw,34px);font-weight:850;letter-spacing:-.7px;margin:10px 0}
+body.tagore-ui h2{font-size:21px;font-weight:800}
+body.tagore-ui h3{font-size:16px;font-weight:800}
+body.tagore-ui .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.tagore-ui .v{font-size:30px;font-weight:850;color:var(--tg-primary)}
+body.tagore-ui .tg-hero{background:linear-gradient(130deg,#153c32 0%,#17664a 55%,#16966a 100%)!important}
+body.tagore-ui .tg-btn.primary,body.tagore-ui button[type=submit]{background:var(--tg-primary)!important;color:#071b13!important}
+.tg-app .tg-card,.tg-app .card{background:var(--tg-surface)!important;border-color:var(--tg-line)!important;color:var(--tg-ink)!important}
+.tg-app .tg-sidebar,.tg-app .tg-user,.tg-app .tg-search{background:var(--tg-surface)!important;border-color:var(--tg-line)!important;color:var(--tg-ink)!important}
+.tg-app .tg-side-link{color:#c0cad7}.tg-app .tg-side-link:hover,.tg-app .tg-side-link.active{background:#153c32;color:#66e6b2}
+.tg-app .tg-side-icon,.tg-app .tg-kpi-icon,.tg-app .tg-module-icon{background:#233a34;color:#53dfa8}
+.tg-app table.table,.tg-app table{background:var(--tg-surface)!important;color:var(--tg-ink)!important;border-color:var(--tg-line)!important}
+.tg-app table.table th,.tg-app table th{background:#222d3a!important;color:#bdc9d7!important}
+.tg-app table.table td,.tg-app table.table th,.tg-app table td,.tg-app table th{border-color:var(--tg-line)!important}
+.tg-app .tg-module{background:var(--tg-surface)!important;border-color:var(--tg-line)!important;color:var(--tg-ink)!important}
+.tg-app .tg-module span,.tg-app .tg-kpi-label,.tg-app .tg-kpi-meta{color:var(--tg-muted)!important}
+.tg-app input,.tg-app select,.tg-app textarea{background:#111a24!important;color:var(--tg-ink)!important;border-color:#3b4b5d!important}
+.tg-app .tg-btn,.tg-app .btn,.tg-app button{background:#263342!important;color:#edf2f7!important;border-color:#3b4b5d!important}
+.tg-app .tg-btn.primary,.tg-app button[type=submit]{background:var(--tg-primary)!important;color:#071b13!important;border-color:var(--tg-primary)!important}
+.tg-app .tg-status.success{background:#123e31!important;color:#6ee7b7!important}.tg-app .tg-status.warning{background:#49391d!important;color:#fbd38d!important}.tg-app .tg-status.danger{background:#482630!important;color:#ff9eac!important}
+@media(max-width:800px){body.tagore-ui .shell{padding:18px 14px 45px!important}body.tagore-ui .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){body.tagore-ui .cards{grid-template-columns:1fr}}
+
+/* Tagore ERP UI fallback palette Ã¢â‚¬â€ hard-coded to avoid legacy stylesheet variable conflicts */
+html,html body,html body.tg-app,body.tg-app,body.tg-app .shell{background:#10151d!important;color:#edf2f7!important}
+body.tg-app .card,body.tg-app .tg-card,body.tg-app .panel,body.tg-app .well,body.tg-app .box{background:#1a222d!important;color:#edf2f7!important;border:1px solid #303d4d!important;border-radius:16px!important;box-shadow:0 10px 28px rgba(0,0,0,.22)!important}
+body.tg-app h1,body.tg-app h2,body.tg-app h3,body.tg-app h4,body.tg-app strong{color:#edf2f7}
+body.tg-app p,body.tg-app small,body.tg-app label,body.tg-app .muted{color:#a2afbf}
+body.tg-app table,body.tg-app table.table{background:#1a222d!important;color:#edf2f7!important;border:1px solid #303d4d!important;border-radius:12px!important}
+body.tg-app table th,body.tg-app table.table th{background:#263342!important;color:#c9d5e2!important}
+body.tg-app table td,body.tg-app table th{border-color:#303d4d!important}
+body.tg-app input,body.tg-app select,body.tg-app textarea,body.tg-app .form-control{background:#111a24!important;color:#edf2f7!important;border:1px solid #3b4b5d!important;border-radius:10px!important}
+body.tg-app input::placeholder,body.tg-app textarea::placeholder{color:#8190a2!important}
+body.tg-app button,body.tg-app button[type=submit],body.tg-app input[type=submit],body.tg-app .btn-primary,body.tg-app .tg-btn.primary{background:#19b77a!important;color:#071b13!important;border:1px solid #19b77a!important;border-radius:10px!important;font-weight:800!important}
+body.tg-app .tg-btn,body.tg-app .btn{border-radius:10px!important}
+body.tg-app a{color:#5de3ad}
+body.tg-app .tg-hero{background:linear-gradient(130deg,#153c32 0%,#17664a 55%,#16966a 100%)!important}
+body.tg-app .tg-sidebar,body.tg-app .tg-user,body.tg-app .tg-search{background:#1a222d!important;border-color:#303d4d!important;color:#edf2f7!important}
+body.tg-app .tg-side-link{color:#c0cad7}body.tg-app .tg-side-link:hover,body.tg-app .tg-side-link.active{background:#153c32!important;color:#66e6b2!important}
+body.tg-app .tg-side-icon,body.tg-app .tg-kpi-icon,body.tg-app .tg-module-icon{background:#233a34!important;color:#53dfa8!important}
+body.tg-app .tg-module{background:#1a222d!important;border-color:#303d4d!important;color:#edf2f7!important}
+body.tg-app .tg-module span,body.tg-app .tg-kpi-label,body.tg-app .tg-kpi-meta{color:#a2afbf!important}
+body.tg-app .tg-status.success{background:#123e31!important;color:#6ee7b7!important}body.tg-app .tg-status.warning{background:#49391d!important;color:#fbd38d!important}body.tg-app .tg-status.danger{background:#482630!important;color:#ff9eac!important}
+body.tg-app .cards{gap:14px}body.tg-app .cards>.card{padding:18px;border-top:3px solid #19b77a!important}
+@media(max-width:800px){body.tg-app .shell{padding:18px 14px 45px!important}body.tg-app .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){body.tg-app .cards{grid-template-columns:1fr}}
+
+/* Global fallback for legacy Blade/admin pages that do not use tg-app shell */
+html,body.tagore-ui,body.tagore-ui #app,body.tagore-ui main{background:#10151d!important;color:#edf2f7!important}
+body.tagore-ui .bg-gray-200,body.tagore-ui .bg-white,body.tagore-ui .bg-gray-100{background:#10151d!important;color:#edf2f7!important}
+body.tagore-ui .card,body.tagore-ui .panel,body.tagore-ui .well,body.tagore-ui .box,body.tagore-ui .modal-content,body.tagore-ui .dropdown-menu,body.tagore-ui .list-group-item{background:#1a222d!important;color:#edf2f7!important;border:1px solid #303d4d!important;border-radius:14px!important;box-shadow:0 10px 28px rgba(0,0,0,.22)!important}
+body.tagore-ui h1,body.tagore-ui h2,body.tagore-ui h3,body.tagore-ui h4,body.tagore-ui .text-gray-900,body.tagore-ui .text-gray-800{color:#edf2f7!important}
+body.tagore-ui p,body.tagore-ui label,body.tagore-ui .text-gray-700,body.tagore-ui .text-gray-600,body.tagore-ui .text-gray-500{color:#a2afbf}
+body.tagore-ui table{background:#1a222d!important;color:#edf2f7!important;border:1px solid #303d4d!important;border-collapse:separate!important;border-spacing:0!important;border-radius:12px!important}
+body.tagore-ui table th{background:#263342!important;color:#c9d5e2!important}body.tagore-ui table td,body.tagore-ui table th{border-color:#303d4d!important}
+body.tagore-ui input,body.tagore-ui select,body.tagore-ui textarea,body.tagore-ui .form-control{background:#111a24!important;color:#edf2f7!important;border:1px solid #3b4b5d!important;border-radius:10px!important}
+body.tagore-ui button,body.tagore-ui button[type=submit],body.tagore-ui input[type=submit],body.tagore-ui .btn-primary{background:#19b77a!important;color:#071b13!important;border:1px solid #19b77a!important;border-radius:10px!important;font-weight:800!important}
+body.tagore-ui a{color:#5de3ad}
+
+
+
+/* Visual QA fixes: prevent corrupted/long glyphs and KPI values from spilling into neighboring content */
+body.tg-app .tg-side-icon{flex:0 0 27px;min-width:27px;max-width:27px;overflow:hidden;white-space:nowrap;text-overflow:clip}
+body.tg-app .tg-side-link{min-width:0;overflow-wrap:anywhere;line-height:1.35}
+body.tg-app .tg-kpi-top{min-width:0;gap:8px}
+body.tg-app .tg-kpi-value{min-width:0;max-width:100%;font-size:clamp(1.25rem,1.9vw,1.7rem);overflow-wrap:anywhere;word-break:normal}
+body.tg-app .tg-kpi{min-width:0}

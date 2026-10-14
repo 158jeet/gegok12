@@ -29,7 +29,7 @@ Route::get('/schooladmin/{id}/impersonate', 'Auth\ImpersonateController@schoolAd
 //Email Verification for Member
 Route::get('/emailverification/{token}', 'Auth\EmailVerificationController@emailverification');
 // OTP Verification
-Route::get('/checksms', 'TestController@checksms');
+// SMS test endpoint removed: it previously sent a hard-coded SMS on every public GET.
 Route::get('/verifyotp', 'OTPController@create');
 Route::post('/verifyotp', 'OTPController@store');
 //siteadmin
@@ -38,9 +38,7 @@ Route::group(['middleware' => ['siteadmin'], 'namespace' => 'Admin'], function (
 });
 
 
-Route::get('/cache-clear', function () {
-    Artisan::call('cache:clear');
-});
+// Cache maintenance is intentionally CLI-only; never expose cache clearing as a public HTTP route.
 
 Route::get('/{slug}/standardlist','AdmissionController@list');
 Route::get( '/{slug}/admission-form', 'AdmissionController@create' );

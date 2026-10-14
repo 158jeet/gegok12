@@ -14,7 +14,9 @@ class OnlinePaymentController extends Controller
         $userId=(int)$request->user()->id;
         abort_unless(DB::table('tagore_parent_students')->where('parent_user_id',$userId)->where('student_id',$studentId)->where('status','active')->exists(),403);
         $data=$request->validate(['amount'=>['required','numeric','min:1']]);
-        abort_unless(config('services.razorpay.key')&&config('services.razorpay.secret'),503,'Online payments are not configured.');
+        if (config('tagore.payment_gateway') !== 'razorpay' || !config('services.razorpay.key') || !config('services.razorpay.secret')) {
+            return back()->with('error', 'Online payments are not configured yet. Please contact the school office to arrange payment.');
+        }
         $order=$service->createOrder($studentId,$userId,(float)$data['amount']);
         return view('tagore.payments.checkout',compact('order'));
     }

@@ -15,7 +15,6 @@ class TagoreAdmissionLead extends Model
         'institution_id','academic_year_id','lead_no','student_name','parent_name',
         'mobile','alternate_mobile','email','class_name','source','campaign','status','lost_reason','converted_at','last_contacted_at',
         'medium','school_name','city','marketing_consent','consented_at','privacy_notice_version','utm_source','utm_medium','utm_content','utm_term',
-        'medium','school_name','city','marketing_consent','consented_at','privacy_notice_version','utm_source','utm_medium','utm_content','utm_term',
         'assigned_to','next_follow_up_at','notes',
     ];
 

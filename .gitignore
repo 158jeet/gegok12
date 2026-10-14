@@ -105,7 +105,17 @@ public/uploads/reports/*
 .env.staging
 /.vapor
 .vapor/*
-composer.lock
+
 public/demo-school
 
 e2e/node_modules/
+
+.env.school
+.env.build
+deploy/windows/letsencrypt/
+e2e/test-results/
+*.bak
+*.backup-*
+*.pre-*.bak
+deploy/windows/nginx-certs/
+e2e/playwright-report/

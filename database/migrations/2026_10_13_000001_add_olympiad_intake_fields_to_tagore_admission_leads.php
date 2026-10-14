@@ -7,27 +7,34 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('tagore_admission_leads', function (Blueprint $table) {
-            $table->string('medium', 12)->nullable();
-            $table->string('school_name', 190)->nullable();
-            $table->string('city', 120)->nullable();
-            $table->boolean('marketing_consent')->default(false);
-            $table->timestamp('consented_at')->nullable();
-            $table->string('privacy_notice_version', 40)->nullable();
-            $table->string('utm_source', 100)->nullable();
-            $table->string('utm_medium', 100)->nullable();
-            $table->string('utm_content', 150)->nullable();
-            $table->string('utm_term', 150)->nullable();
+        $tableName = 'tagore_admission_leads';
+
+        Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+            // Several intake fields already exist in older school schemas; only add missing UTM fields.
+            if (!Schema::hasColumn($tableName, 'utm_medium')) {
+                $table->string('utm_medium', 100)->nullable();
+            }
+            if (!Schema::hasColumn($tableName, 'utm_content')) {
+                $table->string('utm_content', 150)->nullable();
+            }
+            if (!Schema::hasColumn($tableName, 'utm_term')) {
+                $table->string('utm_term', 150)->nullable();
+            }
         });
     }
 
     public function down(): void
     {
-        Schema::table('tagore_admission_leads', function (Blueprint $table) {
-            $table->dropColumn([
-                'medium', 'school_name', 'city', 'marketing_consent', 'consented_at',
-                'privacy_notice_version', 'utm_source', 'utm_medium', 'utm_content', 'utm_term',
-            ]);
-        });
+        $tableName = 'tagore_admission_leads';
+        $columns = array_values(array_filter(
+            ['utm_medium', 'utm_content', 'utm_term'],
+            fn (string $column): bool => Schema::hasColumn($tableName, $column)
+        ));
+
+        if ($columns !== []) {
+            Schema::table($tableName, function (Blueprint $table) use ($columns) {
+                $table->dropColumn($columns);
+            });
+        }
     }
 };

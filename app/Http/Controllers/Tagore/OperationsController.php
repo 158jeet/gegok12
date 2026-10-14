@@ -198,7 +198,12 @@ class OperationsController extends Controller
     {
         $requested = (int) $request->input('institution_id');
         if ($roles->contains('OWNER')) {
-            abort_unless($requested > 0 && in_array($requested, $institutionIds, true), 403);
+            if ($requested <= 0) {
+                abort_unless(count($institutionIds) > 0, 403);
+                return (int) $institutionIds[0];
+            }
+
+            abort_unless(in_array($requested, $institutionIds, true), 403);
             return $requested;
         }
 

@@ -47,8 +47,8 @@ class DashboardController extends Controller
             $schoolIds = DB::table('tagore_institutions')->whereIn('id',$institutionIds)->pluck('school_id');
             $erp['students'] = DB::table('users')->whereIn('school_id',$schoolIds)->where('usergroup_id',6)->whereNull('deleted_at')->count();
             $erp['staff'] = DB::table('tagore_user_roles')->whereIn('institution_id',$institutionIds)->where('status','active')->distinct('user_id')->count('user_id');
-            $erp['fee_outstanding'] = round((float) DB::table('tagore_fee_obligations')->whereIn('institution_id',$institutionIds)->whereIn('status',['pending','partial','overdue'])->sum('net_amount'),2);
-            $erp['fee_collected'] = round((float) DB::table('tagore_payments')->whereIn('institution_id',$institutionIds)->where('status','success')->sum('amount'),2);
+            $erp['fee_outstanding'] = round((float) DB::table('tagore_fee_obligations')->whereIn('institution_id',$institutionIds)->whereIn('status',['pending','partial','overdue'])->sum('outstanding_amount'),2);
+            $erp['fee_collected'] = round((float) DB::table('tagore_fee_obligations')->whereIn('institution_id',$institutionIds)->sum('paid_amount'),2);
             $erp['admission_leads'] = DB::table('tagore_admission_leads')->whereIn('institution_id',$institutionIds)->count();
             $erp['pending_leads'] = DB::table('tagore_admission_leads')->whereIn('institution_id',$institutionIds)->whereIn('status',['new','follow_up','qualified'])->count();
             $erp['active_tasks'] = DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->count();
@@ -154,7 +154,7 @@ class DashboardController extends Controller
                     if ((int) $employee->blocked > 0) $signals[] = 'Blocked work';
                     if ((int) $employee->overdue > 0) $signals[] = 'Overdue work';
                     if ((int) $employee->active >= 8) $signals[] = '8+ active tasks';
-                    $employee->follow_up = implode(' • ', $signals);
+                    $employee->follow_up = implode(' | ', $signals);
                     return $employee;
                 })->values();
 
@@ -232,7 +232,7 @@ class DashboardController extends Controller
             $stats['open_tasks'] = 0;
             $stats['overdue_tasks'] = 0;
         }
-        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'institutions', 'managerCommand', 'analyticsDays'));
+        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'erp', 'institutions', 'managerCommand', 'analyticsDays'));
     }
 
 
@@ -356,7 +356,7 @@ class DashboardController extends Controller
         ];
         if ($roles->contains('PARENT')) {
             $studentIds = $children->pluck('student_id');
-            $data['fees'] = DB::table('tagore_fee_obligations')->whereIn('student_id',$studentIds)->whereIn('status',['pending','partial','overdue'])->orderBy('due_date')->limit(50)->get(['id','student_id','due_date','net_amount','paid_amount','balance_amount','status']);
+            $data['fees'] = DB::table('tagore_fee_obligations')->whereIn('student_id',$studentIds)->whereIn('status',['pending','partial','overdue'])->orderBy('due_date')->limit(50)->get(['id','student_id','due_date','net_amount','paid_amount','outstanding_amount as balance_amount','status']);
         } elseif ($institutionIds->isNotEmpty()) {
             $data['manager'] = [
                 'active_tasks' => DB::table('tagore_tasks')->whereIn('institution_id',$institutionIds)->whereIn('status',['open','in_progress','blocked'])->count(),

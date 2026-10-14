@@ -78,23 +78,33 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       });
       expect(routeManifest.length, 'authenticated GET route manifest').toBeGreaterThan(0);
 
-      if (role === 'owner') {
+      {
         const visited = new Set();
+        const maxPages = role === 'owner' ? 1000 : 100;
         const queue = unique([
           ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
-          ...routeManifest.map(r => new URL(r.uri, page.url()).href),
+          ...(role === 'owner' ? routeManifest.map(r => new URL(r.uri, page.url()).href) : []),
         ]);
-        while (queue.length && visited.size < 1000) {
+        while (queue.length && visited.size < maxPages) {
           const href = queue.shift();
           const url = new URL(href, page.url());
+          if (url.origin !== new URL(page.url()).origin) continue;
           const key = url.pathname + url.search;
           if (visited.has(key)) continue;
           visited.add(key);
-          const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          const response = await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
           const status = response ? response.status() : 0;
           if ([401, 403].includes(status) || /\/login(?:\?|$)/.test(new URL(page.url()).pathname)) continue;
           if (status >= 500 || status === 0) findings.push(role + ' ' + key + ' HTTP status ' + status);
           findings.push(...await checkPageHealth(page, role + ' ' + key));
+          const discovered = await collectVisibleTagoreLinks(page).catch(() => []);
+          for (const link of discovered) {
+            const discoveredUrl = new URL(link, page.url());
+            const discoveredKey = discoveredUrl.pathname + discoveredUrl.search;
+            if (discoveredUrl.origin === new URL(page.url()).origin && !visited.has(discoveredKey) && !/[{}]/.test(discoveredUrl.pathname)) {
+              queue.push(discoveredUrl.href);
+            }
+          }
         }
         expect(visited.size, role + ' authenticated screens visited').toBeGreaterThan(0);
       }
@@ -119,6 +129,22 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileOverflow, 'Olympiad registration must not overflow mobile viewport').toBeFalsy();
     await page.screenshot({ path: 'test-results/olympiad-registration-mobile.png', fullPage: true });
   });
+  test('Olympiad registration saves a reference and returns a usable confirmation', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'mobile', 'The POST workflow runs once per suite; the mobile project verifies the complete form layout without consuming the shared IP rate limit.');
+    const studentName = 'Playwright Olympiad ' + Date.now();
+    await page.goto('/olympiad/register?utm_source=playwright&utm_campaign=e2e-smoke', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel('Student name *').fill(studentName);
+    await page.getByLabel('Class *').selectOption('8');
+    await page.getByLabel('Parent / guardian name *').fill('Playwright Guardian');
+    await page.getByLabel('Parent / guardian mobile *').fill('9876501234');
+    await page.getByLabel('Preferred language *').selectOption('hindi');
+    await expect(page.getByRole('checkbox')).not.toBeChecked();
+    await page.getByRole('button', { name: 'Create registration' }).click();
+    await expect(page.getByRole('heading', { name: "You're registered" })).toBeVisible();
+    const reference = (await page.getByTestId('candidate-reference').innerText()).trim();
+    expect(reference).toMatch(/^OLY-[A-Z0-9]{10}$/);
+    await expect(page.getByText(/public exam link is not enabled yet/i)).toBeVisible();
+  });
   test('platform growth and quality workspace is readable and responsive', async ({ page }) => {
     const findings = [];
     await authenticate(page, 'owner');
@@ -126,7 +152,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('heading', { name: 'Growth & quality workspace' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Social post drafts/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Creative templates/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Olympiad lead follow-up/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toHaveAttribute('href', /\/tagore\/admissions\?source=olympiad/);
     await expect(page.locator('#quality-gates')).toBeVisible();
     findings.push(...await checkPageHealth(page, 'platform growth workspace'));
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
@@ -160,6 +187,66 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileOverflow, 'task page must not overflow the mobile viewport').toBeFalsy();
     await page.screenshot({ path: 'test-results/task-workspace-mobile.png', fullPage: true });
   });
+  test('task lifecycle creates work, records progress, and completes it', async ({ page }) => {
+    await authenticate(page, 'owner');
+    const title = 'E2E task lifecycle ' + Date.now();
+    await page.goto('/tagore/tasks', { waitUntil: 'domcontentloaded' });
+    const form = page.locator('#assign-work form[action*="/tagore/tasks"]');
+    await form.locator('input[name="title"]').fill(title);
+    await form.locator('textarea[name="description"]').fill('Disposable staging acceptance workflow.');
+    await form.locator('select[name="priority"]').selectOption('high');
+    await form.getByRole('button', { name: 'Create task' }).click();
+    let taskRow = page.locator('.task-table tr').filter({ hasText: title });
+    await expect(taskRow).toBeVisible();
+
+    let updateForm = taskRow.locator('td').last().locator('form');
+    await updateForm.locator('select[name="status"]').selectOption('in_progress');
+    await updateForm.locator('input[name="progress"]').fill('35');
+    await updateForm.getByRole('button', { name: 'Save' }).click();
+    taskRow = page.locator('.task-table tr').filter({ hasText: title });
+    await expect(taskRow.locator('.task-status')).toHaveText('In progress');
+    await expect(taskRow.locator('.task-progress b')).toHaveText('35%');
+
+    updateForm = taskRow.locator('td').last().locator('form');
+    await updateForm.locator('select[name="status"]').selectOption('completed');
+    await updateForm.locator('input[name="progress"]').fill('35');
+    await updateForm.getByRole('button', { name: 'Save' }).click();
+    taskRow = page.locator('.task-table tr').filter({ hasText: title });
+    await expect(taskRow.locator('.task-status')).toHaveText('Completed');
+    await expect(taskRow.locator('.task-progress b')).toHaveText('100%');
+  });
+
+  test('social content saves as an internal draft without claiming external publishing', async ({ page }) => {
+    await authenticate(page, 'owner');
+    const title = 'E2E social draft ' + Date.now();
+    await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
+    const form = page.locator('#social-post form[action*="/tagore/platform/post"]');
+    await form.locator('input[name="title"]').fill(title);
+    await form.locator('textarea[name="body"]').fill('Disposable acceptance draft; do not publish to external networks.');
+    await form.locator('select[name="status"]').selectOption('draft');
+    await form.getByRole('button', { name: 'Save social post' }).click();
+    await expect(page.getByText('Social post draft saved.')).toBeVisible();
+    const draftRow = page.locator('#social-post tbody tr').filter({ hasText: title });
+    await expect(draftRow).toBeVisible();
+    await expect(draftRow).toContainText('Draft');
+    await expect(page.getByText(/Drafts stay inside Tagore ERP/)).toBeVisible();
+  });
+
+  test('AI test-plan studio degrades safely when no private model endpoint is configured', async ({ page }) => {
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'AI test-plan studio' })).toBeVisible();
+    await expect(page.getByText('Model not configured')).toBeVisible();
+    const form = page.locator('form[action*="/tagore/platform/ai-test-plan"]');
+    await form.locator('select[name="module"]').selectOption('tasks');
+    await form.locator('select[name="role"]').selectOption('teacher');
+    await form.locator('select[name="test_type"]').selectOption('workflow');
+    await form.locator('textarea[name="scenario"]').fill('A teacher creates a task and cannot open owner-only administration.');
+    await form.getByRole('button', { name: 'Generate test plan' }).click();
+    await expect(page.getByRole('status')).toContainText('AI test-plan generation is not enabled yet');
+    await expect(page.getByRole('heading', { name: 'AI test-plan studio' })).toBeVisible();
+  });
+
   test('forbidden owner administration is blocked for every non-owner role', async ({ page }) => {
     for (const role of roles.filter(r => r !== 'owner')) {
       await authenticate(page, role);
