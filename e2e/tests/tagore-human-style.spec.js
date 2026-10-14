@@ -112,7 +112,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
-  test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }) => {
+  test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }, testInfo) => {
     await page.goto('/olympiad/register', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
     await expect(page.getByLabel('Student name *')).toBeVisible();
@@ -120,9 +120,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('checkbox')).not.toBeChecked();
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'Olympiad registration must not overflow desktop viewport').toBeFalsy();
-    await page.screenshot({ path: 'test-results/olympiad-registration-desktop.png', fullPage: true });
+    if (testInfo.project.name === 'desktop') await page.screenshot({ path: 'test-results/olympiad-registration-desktop.png', fullPage: true });
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    if (testInfo.project.name === 'desktop') await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
@@ -145,7 +145,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(reference).toMatch(/^OLY-[A-Z0-9]{10}$/);
     await expect(page.getByText(/public exam link is not enabled yet/i)).toBeVisible();
   });
-  test('platform growth and quality workspace is readable and responsive', async ({ page }) => {
+  test('platform growth and quality workspace is readable and responsive', async ({ page }, testInfo) => {
     const findings = [];
     await authenticate(page, 'owner');
     await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
@@ -162,9 +162,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.locator('#cctv-health-result')).toContainText(/CCTV analytics is not configured/i);
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'platform page must not overflow desktop viewport').toBeFalsy();
-    await page.screenshot({ path: 'test-results/platform-growth-desktop.png', fullPage: true });
+    if (testInfo.project.name === 'desktop') await page.screenshot({ path: 'test-results/platform-growth-desktop.png', fullPage: true });
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    if (testInfo.project.name === 'desktop') await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Growth & quality workspace' })).toBeVisible();
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
@@ -172,7 +172,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await page.screenshot({ path: 'test-results/platform-growth-mobile.png', fullPage: true });
     expect(findings, 'platform page integrity findings').toEqual([]);
   });
-  test('task workspace is readable and responsive on desktop and mobile', async ({ page }) => {
+  test('task workspace is readable and responsive on desktop and mobile', async ({ page }, testInfo) => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/tasks', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Team tasks' })).toBeVisible();
@@ -182,9 +182,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('button', { name: /apply filters/i })).toBeVisible();
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'task page must not overflow the desktop viewport').toBeFalsy();
-    await page.screenshot({ path: 'test-results/task-workspace-desktop.png', fullPage: true });
+    if (testInfo.project.name === 'desktop') await page.screenshot({ path: 'test-results/task-workspace-desktop.png', fullPage: true });
 
-    await page.setViewportSize({ width: 390, height: 844 });
+    if (testInfo.project.name === 'desktop') await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Team tasks' })).toBeVisible();
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
@@ -254,7 +254,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
   test('CCTV connector is restricted to owner/principal and safely reports unconfigured status', async ({ page }) => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('CCTV & AI safety')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CCTV & AI analytics health' })).toBeVisible();
+    await page.getByRole('button', { name: 'Check connection' }).click();
+    await expect(page.getByRole('status')).toContainText('CCTV analytics is not configured');
     const ownerResponse = await page.goto('/tagore/platform/cctv/status', { waitUntil: 'domcontentloaded' });
     expect(ownerResponse.status()).toBe(503);
     await expect(page.locator('body')).toContainText('CCTV analytics is not configured');

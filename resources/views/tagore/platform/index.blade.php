@@ -14,7 +14,7 @@
 <a class="tg-module" href="#creative-template"><div class="tg-module-icon">▧</div><b>Creative templates</b><span>{{ $creatives->count() }} reusable branded templates for school announcements and campaign assets.</span></a>
 <div class="tg-module"><div class="tg-module-icon">↗</div><b>Olympiad lead follow-up</b><span>Route enquiries into the existing staff-protected admissions workflow. The exam engine remains a private pilot.</span><a class="tg-inline-link" href="{{ route('tagore.admissions.index', ['source' => 'olympiad']) }}">Open Olympiad leads</a>@if(config('services.olympiad.enabled'))<a class="tg-inline-link" href="{{ route('olympiad.register') }}">Preview registration form</a>@endif</div>
 <a class="tg-module" href="#quality-gates"><div class="tg-module-icon">✓</div><b>Testing & AI Lab</b><span>Browser checks, responsive screenshots, text-integrity checks and release gates. AI-generated triage is not enabled without a configured model provider.</span></a>
-@if($roles->contains('OWNER') || $roles->contains('PRINCIPAL'))<div class="tg-module"><div class="tg-module-icon">◉</div><b>CCTV & AI safety</b><span>Private Frigate NVR connector status. Live camera access and AI detections remain disabled until the private NVR endpoint and camera streams are configured.</span><a class="tg-inline-link" href="{{ route('tagore.platform.cctv.status') }}">Check CCTV connector status</a></div>@endif
+
 <a class="tg-module" href="#automation-rules"><div class="tg-module-icon">⟳</div><b>Automation rules</b><span>{{ $rules->count() }} configured rules. Review triggers and actions before enabling automated publishing or outreach.</span></a>
 </div>
 </section>

@@ -5,26 +5,26 @@
 body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f4f7fb;color:#172033}.shell{max-width:1200px;width:100%;box-sizing:border-box;margin:auto;padding:24px 16px 60px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px}.v{font-size:28px;font-weight:800}form{display:flex;gap:8px;flex-wrap:wrap}input,select,textarea,button{box-sizing:border-box;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit}textarea{min-height:80px;width:100%}.new{margin-top:16px}.new .row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}.new .wide{grid-column:1/-1}table{width:100%;background:#fff;border-collapse:collapse;margin-top:16px;max-width:100%;display:block;overflow-x:auto}table tbody,table thead{white-space:nowrap}.new > table{display:block;overflow-x:auto;white-space:nowrap}th,td{padding:10px;border-bottom:1px solid #edf2f7;text-align:left;font-size:14px}a{text-decoration:none;color:#2563eb}.muted{color:#64748b}@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.new .row{grid-template-columns:1fr 1fr}}@media(max-width:500px){.cards{grid-template-columns:1fr}.new .row{grid-template-columns:1fr}}
 /* Task workspace redesign: compact, readable, responsive and action-oriented */
 body.tg-app .shell{max-width:1500px!important;padding:26px clamp(14px,2.4vw,34px) 76px!important}
-body.tg-app .shell>p:first-child{margin:0 0 12px;font-size:12px}
+body.tg-app .shell>p:first-child{margin:0 0 12px;font-size:13px}
 body.tg-app .shell>h1{margin:6px 0;font-size:clamp(26px,3vw,36px);letter-spacing:-1px}
-body.tg-app .shell>h1+p{font-size:13px;max-width:760px;line-height:1.6}
+body.tg-app .shell>h1+p{font-size:15px;max-width:760px;line-height:1.6}
 body.tg-app .cards{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;margin:18px 0}
 body.tg-app .cards>.card{position:relative;overflow:hidden;min-width:0;padding:17px 19px!important;border-top:2px solid #19b77a!important}
-body.tg-app .cards>.card small{font-size:11px;font-weight:750;letter-spacing:.02em}
+body.tg-app .cards>.card small{font-size:13px;font-weight:750;letter-spacing:.02em}
 body.tg-app .cards>.card .v{font-size:clamp(25px,2.4vw,34px);line-height:1.15;margin-top:9px}
 body.tg-app .shell>.card{padding:21px!important;margin-top:14px!important}
 body.tg-app .shell>.card h3{font-size:18px;margin-bottom:6px}
 body.tg-app .shell>.card>p.muted{font-size:12px;line-height:1.55}
 body.tg-app .shell form{gap:9px;align-items:center}
-body.tg-app .shell input,body.tg-app .shell select,body.tg-app .shell textarea{font-size:12px;min-height:40px}
+body.tg-app .shell input,body.tg-app .shell select,body.tg-app .shell textarea{font-size:14px;min-height:42px}
 body.tg-app .shell textarea{min-height:76px}
 body.tg-app .shell button{min-height:39px}
 body.tg-app .shell form[method=get]{padding:12px;background:#171f29;border:1px solid #303d4d;border-radius:13px}
 body.tg-app .shell table{display:table!important;width:100%;border-collapse:separate!important;border-spacing:0!important;border:1px solid #303d4d!important;border-radius:13px!important;margin:12px 0!important}
-body.tg-app .shell table th{padding:13px 14px!important;font-size:10px;letter-spacing:.08em;white-space:nowrap}
-body.tg-app .shell table td{padding:13px 14px!important;vertical-align:middle;font-size:12px}
-body.tg-app .shell table td b{font-size:12px;line-height:1.45}
-body.tg-app .shell table td .muted{font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+body.tg-app .shell table th{padding:13px 14px!important;font-size:12px;letter-spacing:.06em;white-space:nowrap}
+body.tg-app .shell table td{padding:13px 14px!important;vertical-align:middle;font-size:14px}
+body.tg-app .shell table td b{font-size:14px;line-height:1.45}
+body.tg-app .shell table td .muted{font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 body.tg-app .shell table tbody tr:hover td{background:rgba(25,183,122,.045)!important}
 body.tg-app .shell table td form{display:grid;grid-template-columns:minmax(110px,1fr) minmax(120px,1fr);gap:7px;min-width:235px}
 body.tg-app .shell table td form button{grid-column:1/-1}
