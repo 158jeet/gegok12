@@ -98,7 +98,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
           const response = await page.request.get(url.href, { timeout: 10000 }).catch(() => null);
           const status = response ? response.status() : 0;
           if ([401, 403].includes(status)) continue;
-          if (status >= 500 || status === 0 || status === 404) findings.push(role + ' ' + key + ' HTTP status ' + status);
+          const expectedUnconfiguredCctv = url.pathname === '/tagore/platform/cctv/status' && status === 503;
+          if (!expectedUnconfiguredCctv && (status >= 500 || status === 0 || status === 404)) findings.push(role + ' ' + key + ' HTTP status ' + status);
           const contentType = response?.headers()['content-type'] || '';
           if (response && status < 400 && contentType.includes('text/html') && visuallyChecked.size < 15) {
             await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
@@ -256,7 +257,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'CCTV & AI analytics health' })).toBeVisible();
     await page.getByRole('button', { name: 'Check connection' }).click();
-    await expect(page.getByRole('status')).toContainText('CCTV analytics is not configured');
+    await expect(page.locator('#cctv-health-result')).toContainText('CCTV analytics is not configured');
     const ownerResponse = await page.goto('/tagore/platform/cctv/status', { waitUntil: 'domcontentloaded' });
     expect(ownerResponse.status()).toBe(503);
     await expect(page.locator('body')).toContainText('CCTV analytics is not configured');

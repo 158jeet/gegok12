@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('base-content')
 <style>
-.tg-fee-import{max-width:100%;overflow-x:hidden}
-.tg-fee-import .table-responsive{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tg-fee-import{width:100%;max-width:100vw;min-width:0;box-sizing:border-box;overflow-x:clip}
+.tg-fee-import .card,.tg-fee-import .card-body{max-width:100%;min-width:0;box-sizing:border-box}
+.tg-fee-import .table-responsive{display:block;width:100%;min-width:0;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tg-fee-import form.row{margin-left:0;margin-right:0}
 </style>
 <div class="container-fluid py-4 tg-fee-import">
