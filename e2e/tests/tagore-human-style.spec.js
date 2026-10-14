@@ -158,6 +158,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.locator('#cctv-health')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Check connection' })).toBeVisible();
     findings.push(...await checkPageHealth(page, 'platform growth workspace'));
+    await page.getByRole('button', { name: 'Check connection' }).click();
+    await expect(page.locator('#cctv-health-result')).toContainText(/CCTV analytics is not configured/i);
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'platform page must not overflow desktop viewport').toBeFalsy();
     await page.screenshot({ path: 'test-results/platform-growth-desktop.png', fullPage: true });
