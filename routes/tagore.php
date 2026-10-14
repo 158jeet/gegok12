@@ -104,6 +104,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
+    Route::get('/platform/cctv/status', [PlatformController::class, 'cctvStatus'])->middleware('throttle:30,1')->name('tagore.platform.cctv.status');
     Route::get('/documents', [DocumentController::class, 'index'])->name('tagore.documents.index');
     Route::get('/accounts/fees/wallet', [FeeWalletController::class, 'index'])->name('tagore.fees.wallet');
     Route::post('/accounts/fees/wallet/credit', [FeeWalletController::class, 'credit'])->name('tagore.fees.wallet.credit');

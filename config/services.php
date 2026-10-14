@@ -39,6 +39,11 @@ return [
         'institution_id' => env('TAGORE_OLYMPIAD_INSTITUTION_ID'),
         'exam_url' => env('TAGORE_OLYMPIAD_EXAM_URL'),
     ],
+    // Private Frigate NVR endpoint; never expose this service directly to the public internet.
+    'frigate' => [
+        'url' => env('FRIGATE_URL'),
+        'token' => env('FRIGATE_API_TOKEN'),
+    ],
     'ollama' => [
         'url' => env('OLLAMA_URL'),
         'model' => env('OLLAMA_MODEL', 'qwen2.5:1.5b'),

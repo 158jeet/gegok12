@@ -23,7 +23,7 @@ class PlatformController extends Controller
         $rules=DB::table('tagore_automation_rules')->whereIn('institution_id',$ids)->orderBy('name')->get();
         $integrations=DB::table('tagore_integration_configs')->whereIn('institution_id',$ids)->orderBy('name')->get();
         $creatives=DB::table('tagore_creative_templates')->whereIn('institution_id',$ids)->orderBy('name')->get();
-        return view('tagore.platform.index',compact('institutions','alumni','events','plans','pages','posts','rules','integrations','creatives'));
+        return view('tagore.platform.index',compact('institutions','alumni','events','plans','pages','posts','rules','integrations','creatives','roles'));
     }
 
     public function alumni(Request $request)
@@ -128,6 +128,59 @@ class PlatformController extends Controller
         } catch (\Throwable $e) {
             report($e);
             return back()->with('ai_test_plan_status','The AI provider could not be reached. No test was executed and no ERP data was changed.');
+        }
+    }
+
+    /**
+     * Read-only status check for a private Frigate NVR. This endpoint never proxies live streams or exposes API tokens.
+     */
+    public function cctvStatus(Request $request)
+    {
+        [$roles, $ids] = $this->context($request);
+        $this->guard($roles, ['PRINCIPAL']);
+
+        $baseUrl = rtrim(trim((string) config('services.frigate.url')), '/');
+        $token = trim((string) config('services.frigate.token'));
+        if ($baseUrl === '' || !filter_var($baseUrl, FILTER_VALIDATE_URL) || !in_array(strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME)), ['http', 'https'], true)) {
+            return response()->json([
+                'configured' => false,
+                'reachable' => false,
+                'message' => 'CCTV analytics is not configured. Set FRIGATE_URL to the private Frigate service URL.',
+            ], 503);
+        }
+
+        try {
+            $client = Http::acceptJson()->timeout(5)->connectTimeout(3);
+            if ($token !== '') {
+                $client = $client->withToken($token);
+            }
+            $response = $client->get($baseUrl . '/api/stats');
+            if (!$response->successful() || !is_array($response->json())) {
+                return response()->json([
+                    'configured' => true,
+                    'reachable' => false,
+                    'message' => 'Frigate did not return a valid stats response. Check its private URL, token and service health.',
+                ], 502);
+            }
+
+            $stats = $response->json();
+            $cameras = is_array($stats['cameras'] ?? null) ? $stats['cameras'] : [];
+            $detectors = is_array($stats['detectors'] ?? null) ? $stats['detectors'] : [];
+            return response()->json([
+                'configured' => true,
+                'reachable' => true,
+                'camera_count' => count($cameras),
+                'detector_count' => count($detectors),
+                'camera_names' => array_slice(array_values(array_filter(array_map('strval', array_keys($cameras)))), 0, 100),
+                'message' => 'Private Frigate service is reachable. This check does not verify each camera stream or AI detection accuracy.',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'configured' => true,
+                'reachable' => false,
+                'message' => 'Frigate could not be reached from the ERP app. Check the private network, firewall and service status.',
+            ], 502);
         }
     }
 

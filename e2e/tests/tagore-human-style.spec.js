@@ -247,6 +247,19 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('heading', { name: 'AI test-plan studio' })).toBeVisible();
   });
 
+  test('CCTV connector is restricted to owner/principal and safely reports unconfigured status', async ({ page }) => {
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('CCTV & AI safety')).toBeVisible();
+    const ownerResponse = await page.goto('/tagore/platform/cctv/status', { waitUntil: 'domcontentloaded' });
+    expect(ownerResponse.status()).toBe(503);
+    await expect(page.locator('body')).toContainText('CCTV analytics is not configured');
+
+    await authenticate(page, 'teacher');
+    const teacherResponse = await page.goto('/tagore/platform/cctv/status', { waitUntil: 'domcontentloaded' });
+    expect(teacherResponse.status()).toBe(403);
+  });
+
   test('forbidden owner administration is blocked for every non-owner role', async ({ page }) => {
     for (const role of roles.filter(r => r !== 'owner')) {
       await authenticate(page, role);
