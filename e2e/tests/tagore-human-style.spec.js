@@ -89,22 +89,29 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
           ...concreteRoutes.slice(0, maxPages).map(r => new URL(r.uri, page.url()).href),
         ]);
         while (queue.length && visited.size < maxPages) {
-          const href = queue.shift();
-          const url = new URL(href, page.url());
-          if (url.origin !== new URL(page.url()).origin || /[{}]/.test(url.pathname)) continue;
-          const key = url.pathname + url.search;
-          if (visited.has(key)) continue;
-          visited.add(key);
-          const response = await page.request.get(url.href, { timeout: 10000 }).catch(() => null);
-          const status = response ? response.status() : 0;
-          if ([401, 403].includes(status)) continue;
-          const expectedUnconfiguredCctv = url.pathname === '/tagore/platform/cctv/status' && status === 503;
-          if (!expectedUnconfiguredCctv && (status >= 500 || status === 0 || status === 404)) findings.push(role + ' ' + key + ' HTTP status ' + status);
-          const contentType = response?.headers()['content-type'] || '';
-          if (response && status < 400 && contentType.includes('text/html') && visuallyChecked.size < 15) {
-            await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
-            findings.push(...await checkPageHealth(page, role + ' ' + key));
-            visuallyChecked.add(key);
+          const batch = [];
+          while (queue.length && batch.length < 20 && visited.size + batch.length < maxPages) {
+            const href = queue.shift();
+            const url = new URL(href, page.url());
+            if (url.origin !== new URL(page.url()).origin || /[{}]/.test(url.pathname)) continue;
+            const key = url.pathname + url.search;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            batch.push({ url, key });
+          }
+          const results = await Promise.all(batch.map(async item => {
+            const response = await page.request.get(item.url.href, { timeout: 10000 }).catch(() => null);
+            return { ...item, response, status: response ? response.status() : 0, contentType: response?.headers()['content-type'] || '' };
+          }));
+          for (const item of results) {
+            if ([401, 403].includes(item.status)) continue;
+            const expectedUnconfiguredCctv = item.url.pathname === '/tagore/platform/cctv/status' && item.status === 503;
+            if (!expectedUnconfiguredCctv && (item.status >= 500 || item.status === 0 || item.status === 404)) findings.push(role + ' ' + item.key + ' HTTP status ' + item.status);
+            if (item.response && item.status < 400 && item.contentType.includes('text/html') && visuallyChecked.size < 15) {
+              await page.goto(item.url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
+              findings.push(...await checkPageHealth(page, role + ' ' + item.key));
+              visuallyChecked.add(item.key);
+            }
           }
         }
         expect(visited.size, role + ' authenticated routes checked').toBeGreaterThan(0);
