@@ -20,12 +20,9 @@
 </section>
 @if($roles->contains('OWNER') || $roles->contains('PRINCIPAL'))
 <section class="tg-card" id="cctv-health" aria-labelledby="cctv-health-title">
-  <div class="tg-section-head"><div><span class="tg-eyebrow">Campus safety</span><h2 id="cctv-health-title">CCTV & AI analytics health</h2><p>Secure status check for the private Frigate NVR. Camera streams and recordings remain inside the trusted network.</p></div><button class="tg-btn primary" type="button" id="cctv-check-button">Check connection</button></div>
-  <div id="cctv-health-result" class="tg-alert warning" role="status" aria-live="polite">Not checked yet. Select “Check connection” to test the configured private service.</div>
-  <div id="cctv-camera-list" class="tg-module-grid" hidden></div>
-  <p class="muted" style="font-size:12px">Privacy: this page does not embed camera video, expose stream URLs, or return authentication tokens. A reachable NVR does not by itself confirm that each camera is recording or that detections are accurate.</p>
+  <div class="tg-section-head"><div><span class="tg-eyebrow">Campus safety</span><h2 id="cctv-health-title">CCTV & AI analytics health</h2><p>Secure status check for the private Frigate NVR. Camera streams and recordings remain inside the trusted network.</p></div><a class="tg-btn primary" href="{{ route('tagore.platform.cctv.status', [], false) }}">Check connection</a></div>
+  <p class="muted" style="font-size:12px">The status page checks whether the private NVR is reachable. It does not embed camera video, expose stream URLs, or return authentication tokens. A reachable NVR does not by itself confirm that each camera is recording or that detections are accurate.</p>
 </section>
-<script src="/js/tagore-platform-cctv.js?v=20261014-cctv1"></script>
 @endif
 <section class="tg-card" id="quality-gates">
 <div class="tg-section-head"><div><h2>Quality gates before release</h2><p>Run these in staging and keep the evidence with the release.</p></div><span class="tg-status warning">Acceptance in progress</span></div>

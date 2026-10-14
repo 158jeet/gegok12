@@ -164,10 +164,13 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toHaveAttribute('href', /\/tagore\/admissions\?source=olympiad/);
     await expect(page.locator('#quality-gates')).toBeVisible();
     await expect(page.locator('#cctv-health')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Check connection' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Check connection' })).toBeVisible();
     findings.push(...await checkPageHealth(page, 'platform growth workspace'));
-    await page.getByRole('button', { name: 'Check connection' }).click();
-    await expect(page.locator('#cctv-health-result')).toContainText(/CCTV analytics is not configured/i);
+    await page.getByRole('link', { name: 'Check connection' }).click();
+    await expect(page.getByRole('heading', { name: 'CCTV connector status' })).toBeVisible();
+    await expect(page.locator('body')).toContainText(/CCTV analytics is not configured/i);
+    await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Growth & quality workspace' })).toBeVisible();
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'platform page must not overflow desktop viewport').toBeFalsy();
     if (testInfo.project.name === 'desktop') await page.screenshot({ path: 'test-results/platform-growth-desktop.png', fullPage: true });
@@ -263,8 +266,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/platform', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'CCTV & AI analytics health' })).toBeVisible();
-    await page.getByRole('button', { name: 'Check connection' }).click();
-    await expect(page.locator('#cctv-health-result')).toContainText('CCTV analytics is not configured');
+    await page.getByRole('link', { name: 'Check connection' }).click();
+    await expect(page.getByRole('heading', { name: 'CCTV connector status' })).toBeVisible();
+    await expect(page.locator('body')).toContainText('CCTV analytics is not configured');
     const ownerResponse = await page.goto('/tagore/platform/cctv/status', { waitUntil: 'domcontentloaded' });
     expect(ownerResponse.status()).toBe(503);
     await expect(page.locator('body')).toContainText('CCTV analytics is not configured');

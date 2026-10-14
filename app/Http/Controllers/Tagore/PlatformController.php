@@ -138,11 +138,16 @@ class PlatformController extends Controller
     {
         [$roles, $ids] = $this->context($request);
         $this->guard($roles, ['PRINCIPAL']);
+        $respond = function (array $payload, int $httpStatus = 200) use ($request) {
+            return $request->expectsJson()
+                ? response()->json($payload, $httpStatus)
+                : response()->view('tagore.platform.cctv-status', ['status' => $payload], $httpStatus);
+        };
 
         $baseUrl = rtrim(trim((string) config('services.frigate.url')), '/');
         $token = trim((string) config('services.frigate.token'));
         if ($baseUrl === '' || !filter_var($baseUrl, FILTER_VALIDATE_URL) || !in_array(strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME)), ['http', 'https'], true)) {
-            return response()->json([
+            return $respond([
                 'configured' => false,
                 'reachable' => false,
                 'message' => 'CCTV analytics is not configured. Set FRIGATE_URL to the private Frigate service URL.',
@@ -156,7 +161,7 @@ class PlatformController extends Controller
             }
             $response = $client->get($baseUrl . '/api/stats');
             if (!$response->successful() || !is_array($response->json())) {
-                return response()->json([
+                return $respond([
                     'configured' => true,
                     'reachable' => false,
                     'message' => 'Frigate did not return a valid stats response. Check its private URL, token and service health.',
@@ -166,7 +171,7 @@ class PlatformController extends Controller
             $stats = $response->json();
             $cameras = is_array($stats['cameras'] ?? null) ? $stats['cameras'] : [];
             $detectors = is_array($stats['detectors'] ?? null) ? $stats['detectors'] : [];
-            return response()->json([
+            return $respond([
                 'configured' => true,
                 'reachable' => true,
                 'camera_count' => count($cameras),
@@ -176,7 +181,7 @@ class PlatformController extends Controller
             ]);
         } catch (\Throwable $e) {
             report($e);
-            return response()->json([
+            return $respond([
                 'configured' => true,
                 'reachable' => false,
                 'message' => 'Frigate could not be reached from the ERP app. Check the private network, firewall and service status.',
