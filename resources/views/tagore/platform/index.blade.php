@@ -18,6 +18,38 @@
 <a class="tg-module" href="#automation-rules"><div class="tg-module-icon">⟳</div><b>Automation rules</b><span>{{ $rules->count() }} configured rules. Review triggers and actions before enabling automated publishing or outreach.</span></a>
 </div>
 </section>
+@if($roles->contains('OWNER') || $roles->contains('PRINCIPAL'))
+<section class="tg-card" id="cctv-health" aria-labelledby="cctv-health-title">
+  <div class="tg-section-head"><div><span class="tg-eyebrow">Campus safety</span><h2 id="cctv-health-title">CCTV & AI analytics health</h2><p>Secure status check for the private Frigate NVR. Camera streams and recordings remain inside the trusted network.</p></div><button class="tg-btn primary" type="button" id="cctv-check-button">Check connection</button></div>
+  <div id="cctv-health-result" class="tg-alert warning" role="status" aria-live="polite">Not checked yet. Select “Check connection” to test the configured private service.</div>
+  <div id="cctv-camera-list" class="tg-module-grid" hidden></div>
+  <p class="muted" style="font-size:12px">Privacy: this page does not embed camera video, expose stream URLs, or return authentication tokens. A reachable NVR does not by itself confirm that each camera is recording or that detections are accurate.</p>
+</section>
+<script>
+(function(){
+ const button=document.getElementById('cctv-check-button');
+ const result=document.getElementById('cctv-health-result');
+ const cameras=document.getElementById('cctv-camera-list');
+ if(!button||!result)return;
+ button.addEventListener('click',async function(){
+  button.disabled=true;button.textContent='Checking…';result.className='tg-alert warning';result.textContent='Checking the private CCTV service…';cameras.hidden=true;cameras.replaceChildren();
+  try{
+   const response=await fetch(@json(route('tagore.platform.cctv.status')),{headers:{'Accept':'application/json'},credentials:'same-origin'});
+   const data=await response.json();
+   result.className='tg-alert '+(data.reachable?'success':'warning');
+   result.textContent=data.message||'No status message returned.';
+   if(data.reachable){
+    result.textContent+=' Cameras reported: '+Number(data.camera_count||0)+'. Detectors reported: '+Number(data.detector_count||0)+'.';
+    const names=Array.isArray(data.camera_names)?data.camera_names:[];
+    for(const name of names){const card=document.createElement('div');card.className='tg-module';const heading=document.createElement('b');heading.textContent=name;const detail=document.createElement('span');detail.textContent='Camera is registered with Frigate; stream health is not verified by this check.';card.append(heading,detail);cameras.append(card);}
+    cameras.hidden=names.length===0;
+   }
+  }catch(e){result.className='tg-alert warning';result.textContent='Could not read CCTV status. Check your login, ERP connection and private NVR configuration.';}
+  finally{button.disabled=false;button.textContent='Check connection';}
+ });
+})();
+</script>
+@endif
 <section class="tg-card" id="quality-gates">
 <div class="tg-section-head"><div><h2>Quality gates before release</h2><p>Run these in staging and keep the evidence with the release.</p></div><span class="tg-status warning">Acceptance in progress</span></div>
 <div class="tg-three">

@@ -155,6 +155,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toHaveAttribute('href', /\/tagore\/admissions\?source=olympiad/);
     await expect(page.locator('#quality-gates')).toBeVisible();
+    await expect(page.locator('#cctv-health')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Check connection' })).toBeVisible();
     findings.push(...await checkPageHealth(page, 'platform growth workspace'));
     const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(desktopOverflow, 'platform page must not overflow desktop viewport').toBeFalsy();
