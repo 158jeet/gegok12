@@ -3,7 +3,7 @@
 <style>
 .tg-fee-import{width:100%;max-width:100vw;min-width:0;box-sizing:border-box;overflow-x:clip}
 .tg-fee-import .card,.tg-fee-import .card-body{max-width:100%;min-width:0;box-sizing:border-box}
-.tg-fee-import .table-responsive{display:block;width:calc(100vw - 32px);min-width:0;max-width:calc(100vw - 32px);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tg-fee-import .table-responsive{display:block;width:100%;min-width:0;max-width:100%;overflow-x:auto!important;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}.tg-fee-import .table-responsive>table{min-width:720px;width:max-content;max-width:none}
 .tg-fee-import form.row{margin-left:0;margin-right:0}
 </style>
 <div class="container-fluid py-4 tg-fee-import">
