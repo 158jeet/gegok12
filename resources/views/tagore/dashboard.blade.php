@@ -14,7 +14,7 @@
 <div class="tg-shell">
 <header class="tg-topbar">
   <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none">
-    <img class="tg-logo" src="/uploads/tgi-logo.webp" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Tagore Group of Institutions</span></div>
+    <img class="tg-logo" src="/uploads/demologo.png" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Tagore Group of Institutions</span></div>
   </a>
   <div class="tg-top-actions">
     <div class="tg-search">⌕&nbsp;&nbsp;Search students, staff, fees, tasks…</div>
