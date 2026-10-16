@@ -111,6 +111,12 @@ jobs:
           mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs
           chmod -R ug+rwX storage bootstrap/cache
 
+      - name: Verify tracked dashboard logo survives frontend build
+        run: |
+          mkdir -p public/uploads
+          git show HEAD:public/uploads/tgi-logo.webp > public/uploads/tgi-logo.webp
+          test -s public/uploads/tgi-logo.webp
+
       - name: Start disposable Laravel server
         run: |
           nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
