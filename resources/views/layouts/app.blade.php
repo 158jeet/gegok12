@@ -17,6 +17,8 @@
         @endif
         <style>
           .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
+          .tagore-ui .tagore-content{width:100%!important;max-width:100%;min-width:0;box-sizing:border-box}
+          @media(min-width:761px){.tagore-ui .tagore-content{width:calc(100vw - 195px)!important}}
           .tg-table-wrap{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
           .tg-table-wrap>table{min-width:720px;max-width:none}
           @media(max-width:760px){
@@ -61,7 +63,7 @@
                 <div class="sidebar min-h-full">
                     @yield('base-sidebar')
                 </div>
-                <div class="bg-gray-200 grow w-full px-4" style="width: calc(100vw - 195px);">
+                <div class="bg-gray-200 grow w-full px-4 tagore-content">
                     @yield('base-content')
                 </div>
             </main>
