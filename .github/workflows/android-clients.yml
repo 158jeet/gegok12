@@ -1,5 +1,4 @@
 name: TagoreK12 Android Clients
-# CI validates both pinned Android clients. Package cleanup is performed before Gradle.
 
 on:
   push:
@@ -15,9 +14,13 @@ on:
       - '.github/workflows/android-clients.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build-android:
+  build-and-emulator-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -45,15 +48,45 @@ jobs:
           TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
         run: bash scripts/mobile/prepare-tagore-android.sh
 
-      - name: Build and test Android client
+      - name: Build and run unit tests
         run: |
           cd mobile/${{ matrix.app }}
           gradle testDebugUnitTest assembleDebug --stacktrace
 
-      - name: Upload debug APK
+      - name: Run Android emulator instrumentation and launch smoke test
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            cd mobile/${{ matrix.app }}
+            gradle connectedDebugAndroidTest --stacktrace
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            if [ "${{ matrix.app }}" = "parent" ]; then
+              PACKAGE="com.tagoregroup.parent"
+            else
+              PACKAGE="com.tagoregroup.teacher"
+            fi
+            adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
+            sleep 8
+            if ! adb shell pidof "$PACKAGE" >/dev/null; then
+              echo "App process did not remain running: $PACKAGE"
+              adb logcat -d -t 2500 > "../../android-${{ matrix.app }}-logcat.txt" || true
+              exit 1
+            fi
+            echo "Emulator launch smoke test passed: $PACKAGE"
+
+      - name: Upload APK and diagnostic logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tagorek12-${{ matrix.app }}-debug
-          path: mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 90
+          name: tagorek12-${{ matrix.app }}-android-ci
+          path: |
+            mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
+            android-${{ matrix.app }}-logcat.txt
+          if-no-files-found: warn
+          retention-days: 30
