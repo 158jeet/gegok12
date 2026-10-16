@@ -50,8 +50,11 @@ jobs:
 
       - name: Build and run unit tests
         run: |
-          cd mobile/${{ matrix.app }}
-          gradle testDebugUnitTest assembleDebug --stacktrace
+          cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
+          test -f settings.gradle
+          test -f gradlew
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Run Android emulator instrumentation and launch smoke test
         uses: ReactiveCircus/android-emulator-runner@v2
@@ -63,8 +66,17 @@ jobs:
           disable-animations: true
           script: |
             set -eu
-            cd mobile/${{ matrix.app }}
-            gradle connectedDebugAndroidTest --stacktrace
+            cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
+            test -f settings.gradle
+            test -f app/build/outputs/apk/debug/app-debug.apk
+            adb wait-for-device
+            for i in $(seq 1 60); do
+              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              if [ "$BOOTED" = "1" ]; then break; fi
+              sleep 2
+            done
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+            ./gradlew connectedDebugAndroidTest --stacktrace
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             if [ "${{ matrix.app }}" = "parent" ]; then
               PACKAGE="com.tagoregroup.parent"
