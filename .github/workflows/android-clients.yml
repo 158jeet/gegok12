@@ -20,7 +20,7 @@ permissions:
 jobs:
   build-and-emulator-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -52,9 +52,10 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
           test -f settings.gradle
-          test -f gradlew
-          chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug --stacktrace
+          test -f app/build.gradle
+          # These upstream app repos do not commit the Gradle wrapper script.
+          gradle --version
+          gradle testDebugUnitTest assembleDebug --stacktrace --no-daemon
 
       - name: Run Android emulator instrumentation and launch smoke test
         uses: ReactiveCircus/android-emulator-runner@v2
@@ -64,19 +65,19 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
           script: |
             set -eu
             cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
-            test -f settings.gradle
             test -f app/build/outputs/apk/debug/app-debug.apk
             adb wait-for-device
-            for i in $(seq 1 60); do
+            for i in $(seq 1 90); do
               BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
               if [ "$BOOTED" = "1" ]; then break; fi
               sleep 2
             done
             test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
-            ./gradlew connectedDebugAndroidTest --stacktrace
+            gradle connectedDebugAndroidTest --stacktrace --no-daemon
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             if [ "${{ matrix.app }}" = "parent" ]; then
               PACKAGE="com.tagoregroup.parent"
@@ -87,7 +88,7 @@ jobs:
             sleep 8
             if ! adb shell pidof "$PACKAGE" >/dev/null; then
               echo "App process did not remain running: $PACKAGE"
-              adb logcat -d -t 2500 > "../../android-${{ matrix.app }}-logcat.txt" || true
+              adb logcat -d -t 2500 > "$GITHUB_WORKSPACE/android-${{ matrix.app }}-logcat.txt" || true
               exit 1
             fi
             echo "Emulator launch smoke test passed: $PACKAGE"
