@@ -147,8 +147,18 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await page.getByLabel('Parent / guardian mobile *').fill('9876501234');
     await page.getByLabel('Preferred language *').selectOption('hindi');
     await expect(page.getByRole('checkbox')).not.toBeChecked();
+    const registrationResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST' && new URL(response.url()).pathname === '/olympiad/register'
+    );
     await page.getByRole('button', { name: 'Create registration' }).click();
-    await expect(page.getByRole('heading', { name: "You're registered" })).toBeVisible();
+    const posted = await registrationResponse;
+    const successHeading = page.getByRole('heading', { name: "You're registered" });
+    try {
+      await expect(successHeading).toBeVisible({ timeout: 15000 });
+    } catch (error) {
+      const body = (await page.locator('body').innerText().catch(() => '')).slice(0, 1800);
+      throw new Error(`Olympiad registration did not reach confirmation (POST ${posted.status()}, URL ${page.url()}). Page text: ${body}. Original: ${error.message}`);
+    }
     const reference = (await page.getByTestId('candidate-reference').innerText()).trim();
     expect(reference).toMatch(/^OLY-[A-Z0-9]{10}$/);
     await expect(page.getByText(/public exam link is not enabled yet/i)).toBeVisible();
