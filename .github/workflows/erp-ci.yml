@@ -117,19 +117,37 @@ jobs:
           git show HEAD:public/uploads/tgi-logo.webp > public/uploads/tgi-logo.webp
           test -s public/uploads/tgi-logo.webp
 
-      - name: Start disposable Laravel server
+      - name: Start disposable Laravel server and verify logo asset
         run: |
           nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
-          for i in {1..30}; do
+          ready=0
+          for i in {1..60}; do
             if curl -fsS http://127.0.0.1:8000/__e2e/health >/dev/null; then
-              curl -fsS http://127.0.0.1:8000/uploads/tgi-logo.webp -o /tmp/tagore-logo.webp
-              test -s /tmp/tagore-logo.webp
-              exit 0
+              ready=1
+              break
             fi
-            sleep 2
+            sleep 1
           done
+          if [ "$ready" -ne 1 ]; then
+            echo "Laravel E2E server did not become ready"
+            cat /tmp/tagore-e2e-server.log
+            exit 1
+          fi
+          logo_ready=0
+          for i in {1..15}; do
+            if curl -fsS http://127.0.0.1:8000/uploads/tgi-logo.webp -o /tmp/tagore-logo.webp; then
+              logo_ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$logo_ready" -ne 1 ] || [ ! -s /tmp/tagore-logo.webp ]; then
+            echo "Dashboard logo is not being served by Laravel"
+            cat /tmp/tagore-e2e-server.log
+            exit 1
+          fi
+          file /tmp/tagore-logo.webp
           cat /tmp/tagore-e2e-server.log
-          exit 1
       - name: Run human-style authenticated E2E
         working-directory: e2e
         env:
