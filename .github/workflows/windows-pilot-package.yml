@@ -30,7 +30,7 @@ jobs:
       - name: Prepare pilot env
         run: cp deploy/windows/.env.school.example .env.school
       - name: Validate compose
-        run: docker compose -f deploy/windows/docker-compose.yml config
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.yml config --quiet
       - name: Build pilot images
         run: docker compose --env-file .env.school -f deploy/windows/docker-compose.yml build
       - name: Verify pilot web image contains Laravel public files

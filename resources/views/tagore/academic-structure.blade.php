@@ -46,13 +46,13 @@
             <div class="col-lg-7">
                 <div class="card p-3 mb-4">
                     <h5>Streams</h5>
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Institution</th><th>Stream</th><th>Code</th></tr></thead><tbody>
+                    <div class="table-responsive" style="display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="table table-sm"><thead><tr><th>Institution</th><th>Stream</th><th>Code</th></tr></thead><tbody>
                         @forelse($streams as $s)<tr><td>{{ $institutions->firstWhere('id',$s->institution_id)?->display_name }}</td><td>{{ $s->name }}</td><td>{{ $s->code }}</td></tr>@empty<tr><td colspan="3">No streams configured.</td></tr>@endforelse
                     </tbody></table></div>
                 </div>
                 <div class="card p-3">
                     <h5>Class Sections</h5>
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Institution</th><th>Academic Year</th><th>Class</th><th>Section</th><th>Stream</th></tr></thead><tbody>
+                    <div class="table-responsive" style="display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="table table-sm"><thead><tr><th>Institution</th><th>Academic Year</th><th>Class</th><th>Section</th><th>Stream</th></tr></thead><tbody>
                         @forelse($sections as $s)<tr><td>{{ $s->institution }}</td><td>{{ $s->academic_year }}</td><td>{{ $s->standard_link_id }}</td><td>{{ $s->name }}</td><td>{{ $s->stream ?: '—' }}</td></tr>@empty<tr><td colspan="5">No sections configured.</td></tr>@endforelse
                     </tbody></table></div>
                 </div>

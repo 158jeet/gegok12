@@ -114,6 +114,10 @@
 
             listenForNotifications() 
             {
+                // Realtime notifications are optional when Pusher credentials are absent.
+                if (!window.Echo || typeof window.Echo.channel !== 'function') {
+                    return;
+                }
                 window.Echo.channel('notification').listen('AfterNotification', (data) => {                      
                     this.getNotifications();           
                 });

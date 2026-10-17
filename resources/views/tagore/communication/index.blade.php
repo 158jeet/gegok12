@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Communication | TagoreK12</title>
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') }}">
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
 <style>.tg-communication{max-width:1480px;margin:auto;padding:0 28px 60px}.tg-table-scroll{width:100%;overflow-x:auto}.tg-table-scroll table{width:100%;min-width:720px;border-collapse:collapse;background:#fff}.tg-table-scroll th,.tg-table-scroll td{padding:10px;border-bottom:1px solid #edf2f7;text-align:left;font-size:13px;white-space:nowrap}@media(max-width:700px){.tg-communication{padding:0 14px 40px}.tg-form{grid-template-columns:1fr!important}}</style></head>
 <body class="tg-app"><div class="tg-communication">
 <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Communication Centre</span></div></div><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>

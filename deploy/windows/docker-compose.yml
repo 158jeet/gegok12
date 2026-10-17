@@ -40,13 +40,15 @@ services:
       MYSQL_DATABASE: tagore_erp
       MYSQL_USER: tagore
       MYSQL_PASSWORD: TagoreDbPilot2026!
-      MYSQL_ROOT_PASSWORD: TagoreRootPilot2026!
+      MYSQL_ROOT_PASSWORD: ${TAGORE_DB_ROOT_PASSWORD:?Set TAGORE_DB_ROOT_PASSWORD in .env.school}
     volumes: [db_data:/var/lib/mysql]
     healthcheck:
-      test: ['CMD-SHELL','mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent']
-      interval: 5s
+      # Keep health results clean and allow slow Windows/HDD crash recovery.
+      test: ['CMD-SHELL','MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping --protocol=tcp -h 127.0.0.1 -u root --silent']
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 12
+      start_period: 5m
   redis:
     image: redis:7-alpine
 volumes:

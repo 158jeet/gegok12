@@ -26,10 +26,10 @@ class ImpersonateController extends Controller
         try
         {
             $user = User::find($id);
-              
+
             $is_admin = $this->is_admin($user->id);
             if($is_admin == false)
-            { 
+            {
                 Auth::user()->setImpersonating($user->id);
             }
             else
@@ -51,10 +51,10 @@ class ImpersonateController extends Controller
         try
         {
             $user = User::find($id);
-              
+
             $is_admin = $this->is_admin($user->id);
             if($is_admin == false)
-            { 
+            {
                 Auth::user()->setImpersonating($user->id);
             }
             else
@@ -76,10 +76,10 @@ class ImpersonateController extends Controller
         try
         {
             $user = User::find($id);
-              
+
             $is_admin = $this->is_admin($user->id);
             if($is_admin == false)
-            { 
+            {
                 Auth::user()->setImpersonating($user->id);
             }
             else
@@ -101,7 +101,7 @@ class ImpersonateController extends Controller
         try
         {
             $user = User::find($id);
-              
+
             $is_admin = $this->is_admin($user->id);
             if($is_admin == true)
             { //dd('if');
@@ -127,31 +127,34 @@ class ImpersonateController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function stopImpersonate()
-    {  
+    {
+        if (!Auth::check()) {
+            return redirect()->guest(route('login'));
+        }
         try
-        {      
+        {
             $user = User::where('id', Auth::user()->id)->first();
             Auth::user()->stopImpersonating();
            // dd($user->usergroup_id);
             if ($user->usergroup_id == 5)
             {
                 return redirect('/teacher/dashboard');
-            } 
+            }
             elseif ($user->usergroup_id == 3)
             {
                 return redirect('/superadmin/dashboard');
 
                 //return redirect('/admin/dashboard');
             }
-            elseif ($user->usergroup_id == 6)   
+            elseif ($user->usergroup_id == 6)
             {
                 return redirect('/student/dashboard');
-            } 
-            elseif ($user->usergroup_id == 8)   
+            }
+            elseif ($user->usergroup_id == 8)
             {
                 return redirect('/library/dashboard');
-            } 
-            /*elseif ($user->usergroup_id == 1)   
+            }
+            /*elseif ($user->usergroup_id == 1)
             {
                 return redirect('/superadmin/dashboard');
             } */
@@ -160,6 +163,6 @@ class ImpersonateController extends Controller
         {
             Log::info($e->getMessage());
             //dd($e->getMessage());
-        } 
+        }
     }
 }

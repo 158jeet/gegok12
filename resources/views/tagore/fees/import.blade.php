@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('base-content')
 <style>
-.tg-fee-import{max-width:100%;overflow-x:hidden}
-.tg-fee-import .table-responsive{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tg-fee-import{width:100%;max-width:100vw;min-width:0;box-sizing:border-box;overflow-x:clip}
+.tg-fee-import .card,.tg-fee-import .card-body{max-width:100%;min-width:0;box-sizing:border-box}
+.tg-fee-import .table-responsive{display:block;width:calc(100% - 2px);min-width:0;max-width:calc(100% - 2px);overflow-x:auto!important;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}.tg-fee-import .table-responsive>table{width:100%;min-width:0;max-width:100%;table-layout:fixed}.tg-fee-import .table-responsive th,.tg-fee-import .table-responsive td{overflow-wrap:anywhere;word-break:normal}.tg-fee-import .table-responsive td:last-child{min-width:0}.tg-fee-import .table-responsive td:last-child .btn{white-space:normal;max-width:100%;margin-bottom:4px}
 .tg-fee-import form.row{margin-left:0;margin-right:0}
 </style>
 <div class="container-fluid py-4 tg-fee-import">

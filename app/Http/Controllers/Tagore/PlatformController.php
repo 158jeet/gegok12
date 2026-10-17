@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class PlatformController extends Controller
@@ -22,7 +23,7 @@ class PlatformController extends Controller
         $rules=DB::table('tagore_automation_rules')->whereIn('institution_id',$ids)->orderBy('name')->get();
         $integrations=DB::table('tagore_integration_configs')->whereIn('institution_id',$ids)->orderBy('name')->get();
         $creatives=DB::table('tagore_creative_templates')->whereIn('institution_id',$ids)->orderBy('name')->get();
-        return view('tagore.platform.index',compact('institutions','alumni','events','plans','pages','posts','rules','integrations','creatives'));
+        return view('tagore.platform.index',compact('institutions','alumni','events','plans','pages','posts','rules','integrations','creatives','roles'));
     }
 
     public function alumni(Request $request)
@@ -84,16 +85,117 @@ class PlatformController extends Controller
     public function post(Request $request)
     {
         [$roles,$ids]=$this->context($request); $this->guard($roles,['PRINCIPAL','COORDINATOR','TEACHER']);
-        $d=$request->validate(['institution_id'=>'required|integer','group_name'=>'nullable|string|max:100','title'=>'nullable|string|max:190','body'=>'required|string|max:10000','attachment_path'=>'nullable|string|max:1000']);
+        $d=$request->validate(['institution_id'=>'required|integer','group_name'=>'nullable|string|max:100','title'=>'nullable|string|max:190','body'=>'required|string|max:10000','attachment_path'=>'nullable|string|max:1000','status'=>'nullable|in:draft,published']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
-        DB::table('tagore_social_posts')->insert($d+['author_id'=>$request->user()->id,'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
-        return back()->with('success','Internal social post published.');
+        $status=$d['status'] ?? 'draft';
+        unset($d['status']);
+        DB::table('tagore_social_posts')->insert($d+['author_id'=>$request->user()->id,'status'=>$status,'created_at'=>now(),'updated_at'=>now()]);
+        return back()->with('success',$status==='published' ? 'Internal social post published to the ERP feed.' : 'Social post draft saved. External publishing is not connected.');
+    }
+
+    public function aiTestPlan(Request $request)
+    {
+        [$roles,$ids]=$this->context($request);
+        $this->guard($roles,['PRINCIPAL','COORDINATOR']);
+        $d=$request->validate([
+            'module'=>'required|in:tasks,olympiad,admissions,fees,social,learning',
+            'role'=>'required|in:owner,principal,coordinator,teacher,parent,student,accounts,fee-editor',
+            'test_type'=>'required|in:functional,workflow,accessibility,responsive,security',
+            'scenario'=>'required|string|max:3000',
+        ]);
+
+        $url=trim((string)config('services.ollama.url'));
+        $model=trim((string)config('services.ollama.model'));
+        if ($url==='' || $model==='') {
+            return back()->with('ai_test_plan_status','AI test-plan generation is not enabled yet. Configure OLLAMA_URL to an approved private model host; this ERP server has limited RAM and will not run a model locally.');
+        }
+
+        $prompt = "Act as a senior QA engineer for a school ERP. Produce a concise, safe, executable test plan as JSON only. Schema: {\"title\":string,\"preconditions\":string[],\"test_cases\":[{\"name\":string,\"steps\":string[],\"expected\":string[],\"severity\":\"low\"|\"medium\"|\"high\"}],\"risks\":string[]}. Do not include credentials or real student data. Do not recommend destructive actions against production. Module: {$d['module']}; role: {$d['role']}; test type: {$d['test_type']}; scenario: {$d['scenario']}";
+        try {
+            $response=Http::acceptJson()->timeout(40)->post(rtrim($url,'/').'/api/generate',[
+                'model'=>$model,'prompt'=>$prompt,'stream'=>false,'format'=>'json',
+                'options'=>['temperature'=>0.2],
+            ]);
+            if (!$response->successful()) {
+                return back()->with('ai_test_plan_status','The configured AI provider returned HTTP '.$response->status().'. Check the private model service and retry.');
+            }
+            $raw=$response->json('response');
+            $plan=is_string($raw) ? json_decode($raw,true) : null;
+            if (!is_array($plan) || !isset($plan['test_cases']) || !is_array($plan['test_cases'])) {
+                return back()->with('ai_test_plan_status','The AI provider response was not valid test-plan JSON. Retry with a narrower scenario.');
+            }
+            return back()->with('ai_test_plan',$plan);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('ai_test_plan_status','The AI provider could not be reached. No test was executed and no ERP data was changed.');
+        }
+    }
+
+    /**
+     * Read-only status check for a private Frigate NVR. This endpoint never proxies live streams or exposes API tokens.
+     */
+    public function cctvStatus(Request $request)
+    {
+        [$roles, $ids] = $this->context($request);
+        $this->guard($roles, ['PRINCIPAL']);
+        $respond = function (array $payload, int $httpStatus = 200) use ($request) {
+            return $request->expectsJson()
+                ? response()->json($payload, $httpStatus)
+                : response()->view('tagore.platform.cctv-status', ['status' => $payload], $httpStatus);
+        };
+
+        $baseUrl = rtrim(trim((string) config('services.frigate.url')), '/');
+        $token = trim((string) config('services.frigate.token'));
+        if ($baseUrl === '' || !filter_var($baseUrl, FILTER_VALIDATE_URL) || !in_array(strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME)), ['http', 'https'], true)) {
+            return $respond([
+                'configured' => false,
+                'reachable' => false,
+                'message' => 'CCTV analytics is not configured. Set FRIGATE_URL to the private Frigate service URL.',
+            ], 503);
+        }
+
+        try {
+            $client = Http::acceptJson()->timeout(5)->connectTimeout(3);
+            if ($token !== '') {
+                $client = $client->withToken($token);
+            }
+            $response = $client->get($baseUrl . '/api/stats');
+            if (!$response->successful() || !is_array($response->json())) {
+                return $respond([
+                    'configured' => true,
+                    'reachable' => false,
+                    'message' => 'Frigate did not return a valid stats response. Check its private URL, token and service health.',
+                ], 502);
+            }
+
+            $stats = $response->json();
+            $cameras = is_array($stats['cameras'] ?? null) ? $stats['cameras'] : [];
+            $detectors = is_array($stats['detectors'] ?? null) ? $stats['detectors'] : [];
+            return $respond([
+                'configured' => true,
+                'reachable' => true,
+                'camera_count' => count($cameras),
+                'detector_count' => count($detectors),
+                'camera_names' => array_slice(array_values(array_filter(array_map('strval', array_keys($cameras)))), 0, 100),
+                'message' => 'Private Frigate service is reachable. This check does not verify each camera stream or AI detection accuracy.',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return $respond([
+                'configured' => true,
+                'reachable' => false,
+                'message' => 'Frigate could not be reached from the ERP app. Check the private network, firewall and service status.',
+            ], 502);
+        }
     }
 
     public function comment(Request $request,int $postId)
     {
+        [$roles,$ids]=$this->context($request);
+        $this->guard($roles,['PRINCIPAL','COORDINATOR','TEACHER']);
         $d=$request->validate(['body'=>'required|string|max:4000']);
-        $post=DB::table('tagore_social_posts')->where('id',$postId)->first(); abort_unless($post,404);
+        $post=DB::table('tagore_social_posts')->where('id',$postId)->whereIn('institution_id',$ids)->first();
+        abort_unless($post,404);
         DB::table('tagore_social_comments')->insert(['post_id'=>$postId,'author_id'=>$request->user()->id,'body'=>$d['body'],'created_at'=>now(),'updated_at'=>now()]);
         return response()->json(['ok'=>true]);
     }

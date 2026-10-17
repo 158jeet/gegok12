@@ -6615,3 +6615,26 @@ input:focus-visible+.\[input\:focus-visible\+\&\]\:ring-gray-950\/10{
   }
 }
 
+
+/* Tagore ERP visual polish pass — legacy module surfaces */
+:root{--tgi-ink:#182b49;--tgi-muted:#64748b;--tgi-blue:#1e40af;--tgi-blue-2:#2563eb;--tgi-line:#e1e8f2;--tgi-panel:#ffffff;--tgi-canvas:#f3f6fc;--tgi-shadow:0 8px 24px rgba(28,52,92,.07)}
+body:has(.admin-sidebar){background:radial-gradient(ellipse at 95% 0%,rgba(219,234,254,.55),transparent 35%),linear-gradient(180deg,#f7f9fd 0%,#eef3fa 100%);color:var(--tgi-ink)}
+body:has(.admin-sidebar) #res_sidebar,body:has(.admin-sidebar) .admin-sidebar{box-shadow:4px 0 20px rgba(15,40,90,.08)}
+body:has(.admin-sidebar) main,body:has(.admin-sidebar) #main-content,body:has(.admin-sidebar) .content-wrapper{background:transparent}
+body:has(.admin-sidebar) .bg-white,body:has(.admin-sidebar) .card,body:has(.admin-sidebar) .panel,body:has(.admin-sidebar) .shadow,.body:has(.admin-sidebar) .bg-gray-100{border:1px solid rgba(218,228,241,.9);border-radius:14px;box-shadow:var(--tgi-shadow)}
+body:has(.admin-sidebar) .container{max-width:100%;}
+body:has(.admin-sidebar) h1,body:has(.admin-sidebar) h2,body:has(.admin-sidebar) h3,body:has(.admin-sidebar) h4{color:var(--tgi-ink);letter-spacing:-.018em}
+body:has(.admin-sidebar) h1{font-weight:750}body:has(.admin-sidebar) h2{font-weight:700}body:has(.admin-sidebar) h3{font-weight:650}
+body:has(.admin-sidebar) table{border-collapse:separate;border-spacing:0;border:1px solid var(--tgi-line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 4px 16px rgba(28,52,92,.04)}
+body:has(.admin-sidebar) table thead th{background:#eaf1fb!important;color:#263e63!important;font-weight:700;border-bottom:1px solid #d5e1f1;padding:12px 14px}
+body:has(.admin-sidebar) table tbody tr:nth-child(even){background:#f8faff}body:has(.admin-sidebar) table tbody tr:hover{background:#edf5ff;transition:background .16s ease}
+body:has(.admin-sidebar) table td{border-color:#e8edf5;padding:10px 14px;vertical-align:middle}
+body:has(.admin-sidebar) input:not([type=checkbox]):not([type=radio]):not([type=hidden]),body:has(.admin-sidebar) select,body:has(.admin-sidebar) textarea{border:1px solid #d6e0ee;border-radius:9px;background:#fff;color:var(--tgi-ink);min-height:40px;transition:border-color .16s ease,box-shadow .16s ease}
+body:has(.admin-sidebar) textarea{min-height:92px}body:has(.admin-sidebar) input:focus,body:has(.admin-sidebar) select:focus,body:has(.admin-sidebar) textarea:focus{outline:none;border-color:#6797ef;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+body:has(.admin-sidebar) button,body:has(.admin-sidebar) input[type=submit],body:has(.admin-sidebar) a.btn{border-radius:9px;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+body:has(.admin-sidebar) button:hover,body:has(.admin-sidebar) input[type=submit]:hover,body:has(.admin-sidebar) a.btn:hover{filter:brightness(1.025);box-shadow:0 5px 14px rgba(37,99,235,.12)}
+body:has(.admin-sidebar) .breadcrumb{background:rgba(255,255,255,.7);border:1px solid var(--tgi-line);border-radius:10px;padding:10px 14px}
+body:has(.admin-sidebar) .pagination .page-link{border-color:#dbe5f2;color:#234b8d}body:has(.admin-sidebar) .pagination .active .page-link{background:#2457e6;border-color:#2457e6;color:#fff}
+body:has(.admin-sidebar) .alert{border-radius:12px;border:1px solid var(--tgi-line);box-shadow:0 3px 12px rgba(28,52,92,.04)}
+body:has(.admin-sidebar) hr{border-color:#e2e9f3}
+@media(max-width:767px){body:has(.admin-sidebar) table{display:block;max-width:100%;overflow-x:auto}body:has(.admin-sidebar) .container{padding-left:12px;padding-right:12px}body:has(.admin-sidebar) .bg-white,body:has(.admin-sidebar) .card{border-radius:11px}}

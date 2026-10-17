@@ -24,6 +24,7 @@ use App\Http\Controllers\Tagore\LearningController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
+use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -31,6 +32,7 @@ Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
+    Route::get('/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
@@ -102,6 +104,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
+    Route::get('/platform/cctv/status', [PlatformController::class, 'cctvStatus'])->middleware('throttle:30,1')->name('tagore.platform.cctv.status');
     Route::get('/documents', [DocumentController::class, 'index'])->name('tagore.documents.index');
     Route::get('/accounts/fees/wallet', [FeeWalletController::class, 'index'])->name('tagore.fees.wallet');
     Route::post('/accounts/fees/wallet/credit', [FeeWalletController::class, 'credit'])->name('tagore.fees.wallet.credit');
@@ -115,6 +118,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/platform/finance/apply', [PlatformController::class, 'applyFinance'])->name('tagore.platform.finance.apply');
     Route::post('/platform/page', [PlatformController::class, 'page'])->name('tagore.platform.page');
     Route::post('/platform/post', [PlatformController::class, 'post'])->name('tagore.platform.post');
+    Route::post('/platform/ai-test-plan', [PlatformController::class, 'aiTestPlan'])->middleware('throttle:10,1')->name('tagore.platform.ai-test-plan');
     Route::post('/platform/post/{postId}/comment', [PlatformController::class, 'comment'])->whereNumber('postId')->name('tagore.platform.comment');
     Route::post('/platform/automation', [PlatformController::class, 'automation'])->name('tagore.platform.automation');
     Route::post('/platform/integration', [PlatformController::class, 'integration'])->name('tagore.platform.integration');

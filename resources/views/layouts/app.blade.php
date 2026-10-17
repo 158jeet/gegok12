@@ -12,10 +12,20 @@
 
         <!-- <link href="{{ asset('css/app.css') }}" rel="stylesheet"> -->
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+        @if(request()->is('tagore/*'))
+        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+        @endif
         <style>
           .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
+          .tagore-ui .tagore-content{width:100%!important;max-width:100%;min-width:0;box-sizing:border-box}
+          @media(min-width:761px){.tagore-ui .tagore-content{width:calc(100vw - 195px)!important}}
           .tg-table-wrap{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
           .tg-table-wrap>table{min-width:720px;max-width:none}
+          @media(max-width:760px){
+            .tagore-ui table.table{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch}
+            .tagore-ui table.table thead,.tagore-ui table.table tbody{width:max-content;min-width:100%}
+            .tagore-ui table.table th,.tagore-ui table.table td{white-space:nowrap}
+          }
           @media(max-width:760px){
             .tg-form{grid-template-columns:1fr!important}
             .tg-form>button{grid-column:1/-1!important;align-self:start!important;justify-self:start!important;width:max-content!important;height:max-content!important;min-height:0!important;max-height:none!important}
@@ -51,14 +61,14 @@
  <livewire:styles>
 
     </head>
-    <body class="font-primary antialiased min-h-screen overflow-x-hidden">
+    <body class="font-primary antialiased min-h-screen overflow-x-hidden {{ request()->is('tagore/*') ? 'tagore-ui' : '' }}">
         <div id="app">
             @yield('base-navigation')
             <main class="flex w-full h-full min-h-screen">
                 <div class="sidebar min-h-full">
                     @yield('base-sidebar')
                 </div>
-                <div class="bg-gray-200 grow w-full px-4" style="width: calc(100vw - 195px);">
+                <div class="bg-gray-200 grow w-full px-4 tagore-content">
                     @yield('base-content')
                 </div>
             </main>

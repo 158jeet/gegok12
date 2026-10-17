@@ -393,7 +393,7 @@ app.use(VueCookies)
 
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
-app.use(Toast)
+app.use(Toast, { container: document.body || document.documentElement })
 
 
 // // Plugins used by leave and noticeboard components (registered globally for Vue 3)
