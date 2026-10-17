@@ -60,12 +60,15 @@ jobs:
       - name: Run Android emulator instrumentation and launch smoke test
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 30
           target: google_apis
+          emulator-boot-timeout: 900
+          cores: 2
+          ram-size: 2048M
           arch: x86_64
           profile: pixel_2
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none
           script: |
             set -eu
             cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
