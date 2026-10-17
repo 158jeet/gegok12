@@ -1,5 +1,4 @@
 name: TagoreK12 Android Clients
-# CI validates both pinned Android clients. Package cleanup is performed before Gradle.
 
 on:
   push:
@@ -15,9 +14,13 @@ on:
       - '.github/workflows/android-clients.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build-android:
+  build-and-emulator-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -45,15 +48,36 @@ jobs:
           TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
         run: bash scripts/mobile/prepare-tagore-android.sh
 
-      - name: Build and test Android client
+      - name: Build and run unit tests
         run: |
-          cd mobile/${{ matrix.app }}
-          gradle testDebugUnitTest assembleDebug --stacktrace
+          cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
+          test -f settings.gradle
+          test -f app/build.gradle
+          # These upstream app repos do not commit the Gradle wrapper script.
+          gradle --version
+          gradle testDebugUnitTest assembleDebug --stacktrace --no-daemon
 
-      - name: Upload debug APK
+      - name: Run Android emulator instrumentation and launch smoke test
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          emulator-boot-timeout: 900
+          cores: 2
+          ram-size: 2048M
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none
+          script: bash "$GITHUB_WORKSPACE/scripts/mobile/android-emulator-smoke.sh" "${{ matrix.app }}"
+
+      - name: Upload APK and diagnostic logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tagorek12-${{ matrix.app }}-debug
-          path: mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 90
+          name: tagorek12-${{ matrix.app }}-android-ci
+          path: |
+            mobile/${{ matrix.app }}/**/*.apk
+            android-${{ matrix.app }}-logcat.txt
+          if-no-files-found: warn
+          retention-days: 30
