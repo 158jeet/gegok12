@@ -72,10 +72,10 @@ jobs:
           script: |
             set -eu
             cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
-            APK="$(find app/build/outputs/apk -type f -name '*.apk' ! -name '*androidTest*' | head -n 1)"
+            APK="$(find "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}" -type f -name '*.apk' ! -name '*androidTest*' | head -n 1)"
             if [ -z "$APK" ]; then
-              echo "No installable debug APK found under app/build/outputs/apk"
-              find app/build/outputs/apk -maxdepth 5 -type f -print || true
+              echo "No installable APK found in the prepared mobile project"
+              find "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}" -maxdepth 8 -type f \( -name '*.apk' -o -name 'build.gradle' -o -name 'settings.gradle' \) -print || true
               exit 1
             fi
             echo "Using APK: $APK"
@@ -108,7 +108,7 @@ jobs:
         with:
           name: tagorek12-${{ matrix.app }}-android-ci
           path: |
-            mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
+            mobile/${{ matrix.app }}/**/*.apk
             android-${{ matrix.app }}-logcat.txt
           if-no-files-found: warn
           retention-days: 30
