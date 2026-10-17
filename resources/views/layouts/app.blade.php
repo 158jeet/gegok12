@@ -22,6 +22,11 @@
           .tg-table-wrap{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}
           .tg-table-wrap>table{min-width:720px;max-width:none}
           @media(max-width:760px){
+            .tagore-ui table.table{display:block!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch}
+            .tagore-ui table.table thead,.tagore-ui table.table tbody{width:max-content;min-width:100%}
+            .tagore-ui table.table th,.tagore-ui table.table td{white-space:nowrap}
+          }
+          @media(max-width:760px){
             .tg-form{grid-template-columns:1fr!important}
             .tg-form>button{grid-column:1/-1!important;align-self:start!important;justify-self:start!important;width:max-content!important;height:max-content!important;min-height:0!important;max-height:none!important}
             .tg-form input,.tg-form select,.tg-form textarea{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
