@@ -56,18 +56,12 @@ Route::post( '/{slug}/admission-form/validationPersonalDetail', 'AdmissionContro
 
 require base_path('routes/tagore.php');
 
-// Keep real public-intake rate limits in every non-testing environment. Browser E2E
-// crawls many routes from one shared IP, so disable only these route throttles in
-// the isolated testing environment; this avoids false 429s without weakening production.
-$olympiadGetThrottle = app()->environment('testing') ? [] : ['throttle:30,1'];
-$olympiadPostThrottle = app()->environment('testing') ? [] : ['throttle:5,1'];
-
 \Illuminate\Support\Facades\Route::get('/olympiad/register', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'create'])
-    ->middleware($olympiadGetThrottle)->name('olympiad.register');
+    ->middleware('throttle:olympiad-register-get')->name('olympiad.register');
 \Illuminate\Support\Facades\Route::post('/olympiad/register', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'store'])
-    ->middleware($olympiadPostThrottle)->name('olympiad.register.store');
+    ->middleware('throttle:olympiad-register-post')->name('olympiad.register.store');
 \Illuminate\Support\Facades\Route::get('/olympiad/registered', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'registered'])
-    ->middleware($olympiadGetThrottle)->name('olympiad.registered');
+    ->middleware('throttle:olympiad-register-get')->name('olympiad.registered');
 // Test-only browser acceptance endpoints. These routes are not registered in production.
 if (app()->environment('testing') && filter_var(env('TAGORE_E2E_ENABLED', false), FILTER_VALIDATE_BOOLEAN)) {
     \Illuminate\Support\Facades\Route::get('/__e2e/health', function () {
