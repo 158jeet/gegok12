@@ -315,6 +315,6 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(email).toHaveValue('runner-test@example.invalid');
     await expect(password).toHaveValue('not-a-real-password');
     await expect(remember).toBeChecked();
-    await expect(page).toHaveURL(/\\/login(?:\\?.*)?$/);
+    expect(new URL(page.url()).pathname).toBe('/login');
   });
 });
