@@ -295,4 +295,26 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       expect([401, 403]).toContain(response.status());
     }
   });
+
+  test('login form supports keyboard input and remember-me interaction without submitting', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    const email = page.locator('input[name="email"]');
+    const password = page.locator('input[name="password"]');
+    const remember = page.locator('input[name="remember"]');
+    const submit = page.getByRole('button', { name: /sign in to tagore erp/i });
+
+    await expect(email).toBeVisible();
+    await expect(password).toBeVisible();
+    await expect(remember).toBeVisible();
+    await expect(submit).toBeVisible();
+
+    await email.fill('runner-test@example.invalid');
+    await password.fill('not-a-real-password');
+    await remember.check();
+
+    await expect(email).toHaveValue('runner-test@example.invalid');
+    await expect(password).toHaveValue('not-a-real-password');
+    await expect(remember).toBeChecked();
+    await expect(page).toHaveURL(/\\/login(?:\\?.*)?$/);
+  });
 });
