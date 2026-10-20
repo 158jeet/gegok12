@@ -32,8 +32,39 @@ async function checkPageHealth(page, context) {
   const bodyText = await page.locator('body').innerText().catch(() => '');
   if (!bodyText.trim()) errors.push('empty body; final URL=' + page.url());
   if (/server error|exception|whoops/i.test(bodyText)) errors.push('server error text detected');
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
-  if (overflow) errors.push('horizontal overflow');
+  const overflow = await page.evaluate(() => {
+    const viewport = window.innerWidth;
+    const offenders = [...document.querySelectorAll('body *')].map(el => {
+      const r = el.getBoundingClientRect();
+      let parent = el.parentElement;
+      let inScroller = false;
+      while (parent && parent !== document.body) {
+        const overflowX = getComputedStyle(parent).overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') { inScroller = true; break; }
+        parent = parent.parentElement;
+      }
+      return {
+        tag: el.tagName.toLowerCase(),
+        id: el.id || '',
+        className: typeof el.className === 'string' ? el.className.slice(0, 100) : '',
+        left: Math.round(r.left),
+        right: Math.round(r.right),
+        width: Math.round(r.width),
+        inScroller
+      };
+    }).filter(x => x.width > 0 && !x.inScroller && (x.right > viewport + 2 || x.left < -2))
+      .sort((a,b) => Math.max(b.right - viewport, -b.left) - Math.max(a.right - viewport, -a.left))
+      .slice(0, 8);
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      viewport,
+      offenders
+    };
+  });
+  if (overflow.documentWidth > overflow.viewport + 2 && overflow.offenders.length) {
+    errors.push('horizontal overflow: ' + JSON.stringify(overflow));
+  }
   const brokenImages = await page.locator('img').evaluateAll(imgs => imgs.filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src));
   if (brokenImages.length) errors.push('broken images: ' + brokenImages.slice(0, 5).join(', '));
   await page.waitForTimeout(100);
