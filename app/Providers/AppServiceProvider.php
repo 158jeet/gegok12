@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use App\Observers\TeacherProfileObserver;
 use App\Observers\AcademicYearObserver;
 use App\Observers\StandardLinkObserver;
@@ -49,6 +52,16 @@ class AppServiceProvider extends ServiceProvider {
     */
 
     public function boot() {
+
+        // Keep the public Olympiad form and submission limits in separate buckets.
+        // Laravel's legacy throttle:N,1 middleware keys by client IP alone, so
+        // GET page refreshes could otherwise consume the POST submission allowance.
+        RateLimiter::for('olympiad-register-get', function (Request $request) {
+            return Limit::perMinute(30)->by('olympiad-register-get:'.$request->ip());
+        });
+        RateLimiter::for('olympiad-register-post', function (Request $request) {
+            return Limit::perMinute(5)->by('olympiad-register-post:'.$request->ip());
+        });
 
         if (app()->environment('production') && !app()->runningInConsole()) {
             $host = request()->getHost();

@@ -55,12 +55,13 @@ Route::post( '/{slug}/admission-form/validationParentDetail', 'AdmissionControll
 Route::post( '/{slug}/admission-form/validationPersonalDetail', 'AdmissionController@validationPersonalDetail' );
 
 require base_path('routes/tagore.php');
+
 \Illuminate\Support\Facades\Route::get('/olympiad/register', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'create'])
-    ->middleware('throttle:30,1')->name('olympiad.register');
+    ->middleware('throttle:olympiad-register-get')->name('olympiad.register');
 \Illuminate\Support\Facades\Route::post('/olympiad/register', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'store'])
-    ->middleware('throttle:5,1')->name('olympiad.register.store');
+    ->middleware('throttle:olympiad-register-post')->name('olympiad.register.store');
 \Illuminate\Support\Facades\Route::get('/olympiad/registered', [\App\Http\Controllers\Tagore\OlympiadRegistrationController::class, 'registered'])
-    ->middleware('throttle:30,1')->name('olympiad.registered');
+    ->middleware('throttle:olympiad-register-get')->name('olympiad.registered');
 // Test-only browser acceptance endpoints. These routes are not registered in production.
 if (app()->environment('testing') && filter_var(env('TAGORE_E2E_ENABLED', false), FILTER_VALIDATE_BOOLEAN)) {
     \Illuminate\Support\Facades\Route::get('/__e2e/health', function () {
