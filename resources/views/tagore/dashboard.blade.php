@@ -8,13 +8,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232457e6'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-size='34' font-weight='700' fill='white'%3ET%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
 </head>
 <body class="tg-app">
 <div class="tg-shell">
 <header class="tg-topbar">
   <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none">
-    <img class="tg-logo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='18' fill='%2319b77a'/%3E%3Ctext x='48' y='63' text-anchor='middle' font-family='Arial,sans-serif' font-size='56' font-weight='700' fill='%230d1720'%3ET%3C/text%3E%3C/svg%3E" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Tagore Group of Institutions</span></div>
+    <img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Tagore Group of Institutions</span></div>
   </a>
   <div class="tg-top-actions">
     <div class="tg-search">⌕&nbsp;&nbsp;Search students, staff, fees, tasks…</div>
