@@ -10,6 +10,12 @@ class TagoreDemoAccountsSeeder extends Seeder
 {
     public function run(): void
     {
+        // Demo identities must never be created or modified on a production installation.
+        if (app()->environment('production')) {
+            $this->command?->warn('Skipping Tagore demo accounts in production.');
+            return;
+        }
+
         $now = now();
         $school = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first(['id','name']);
         if (!$school) return;
@@ -31,39 +37,38 @@ class TagoreDemoAccountsSeeder extends Seeder
 
         $ids = [];
         foreach ($accounts as [$email,$name,$group,$role]) {
-            $existing = DB::table('users')->whereNull('deleted_at')->where(function ($q) use ($email, $name) { $q->where('email',$email)->orWhere('name',$name); })->first(['id']);
-            $data = [
-                'name'=>$name,
-                'email'=>$email,
-                'password'=>Hash::make('Tagore@2026!'),
-                'school_id'=>$school->id,
-                'usergroup_id'=>$group,
-                'status'=>'active',
-                'email_verified'=>true,
-                'email_verified_at'=>$now,
-                'updated_at'=>$now,
-            ];
+            // Preserve existing accounts and credentials; only create missing local demo fixtures.
+            $existing = DB::table('users')->whereNull('deleted_at')->where('email', $email)->first(['id']);
             if ($existing) {
-                DB::table('users')->where('id',$existing->id)->update($data);
-                $id=$existing->id;
+                $id = $existing->id;
             } else {
-                $id=DB::table('users')->insertGetId($data + ['created_at'=>$now]);
+                $id = DB::table('users')->insertGetId([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => Hash::make('Tagore@2026!'),
+                    'school_id' => $school->id,
+                    'usergroup_id' => $group,
+                    'status' => 'active',
+                    'email_verified' => true,
+                    'email_verified_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
             }
-            $ids[$role]=$id;
-            DB::table('tagore_user_roles')->where('user_id',$id)->delete();
-            $roleId=$roleIds[$role] ?? null;
+            $ids[$role] = $id;
+            $roleId = $roleIds[$role] ?? null;
             if ($roleId) {
                 DB::table('tagore_user_roles')->updateOrInsert(
-                    ['user_id'=>$id,'role_id'=>$roleId,'institution_id'=>$institutionId],
-                    ['status'=>'active','updated_at'=>$now,'created_at'=>$now]
+                    ['user_id' => $id, 'role_id' => $roleId, 'institution_id' => $institutionId],
+                    ['status' => 'active', 'updated_at' => $now, 'created_at' => $now]
                 );
             }
         }
 
-        if (isset($ids['PARENT'],$ids['STUDENT'])) {
+        if (isset($ids['PARENT'], $ids['STUDENT'])) {
             DB::table('tagore_parent_students')->updateOrInsert(
-                ['parent_user_id'=>$ids['PARENT'],'student_id'=>$ids['STUDENT']],
-                ['relationship'=>'Guardian','is_primary'=>true,'is_guardian'=>true,'status'=>'active','updated_at'=>$now,'created_at'=>$now]
+                ['parent_user_id' => $ids['PARENT'], 'student_id' => $ids['STUDENT']],
+                ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
             );
         }
     }
