@@ -23,6 +23,9 @@ jobs:
     timeout-minutes: 40
     strategy:
       fail-fast: false
+      # Two API-30 emulators plus Gradle exceeded the hosted runner's service stability.
+      # Serialize emulator jobs to prevent Android package/settings service crashes.
+      max-parallel: 1
       matrix:
         app: [parent, teacher]
 
