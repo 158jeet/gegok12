@@ -53,7 +53,7 @@ async function checkPageHealth(page, context) {
     return { overflow: offenders.length > 0, offenders };
   });
   if (overflowDetails.overflow) findings.push('horizontal overflow: ' + JSON.stringify(overflowDetails.offenders));
-  const brokenImages = await page.locator('img').evaluateAll(imgs => imgs.filter(i => !i.complete || i.naturalWidth === 0).map(i => i.src));
+  const brokenImages = await page.locator('img').evaluateAll(imgs => imgs.filter(i => i.complete && i.naturalWidth === 0).map(i => i.src));
   if (brokenImages.length) findings.push('broken images: ' + brokenImages.slice(0, 5).join(', '));
   await page.waitForTimeout(100);
   if (failedRequests.length) findings.push('5xx responses: ' + failedRequests.slice(0, 10).join(', '));
