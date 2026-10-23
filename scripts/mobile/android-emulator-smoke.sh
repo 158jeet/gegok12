@@ -18,9 +18,28 @@ for i in $(seq 1 90); do
   sleep 2
 done
 test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+# Some hosted API-30 images report boot complete before PackageManager and
+# Settings are available. Do not start instrumentation until both services respond.
+SERVICES_READY=0
+for i in $(seq 1 150); do
+  PACKAGE_READY="$(adb shell service check package 2>/dev/null || true)"
+  SETTINGS_READY="$(adb shell service check settings 2>/dev/null || true)"
+  if [[ "$PACKAGE_READY" == *"found"* && "$SETTINGS_READY" == *"found"* ]]; then
+    SERVICES_READY=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$SERVICES_READY" != "1" ]]; then
+  echo "Android package/settings services did not become ready within 5 minutes."
+  adb shell getprop sys.boot_completed || true
+  adb shell service check package || true
+  adb shell service check settings || true
+  adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
+  exit 1
+fi
 gradle -p "$PROJECT" connectedDebugAndroidTest --stacktrace --no-daemon
-# Emulator system services can restart briefly after instrumentation. Wait for
-# Android to be fully booted and the package manager to answer before install.
+# Instrumentation can restart Android system services. Recheck readiness before install.
 for i in $(seq 1 30); do
   BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
   PACKAGE_READY="$(adb shell service check package 2>/dev/null || true)"
