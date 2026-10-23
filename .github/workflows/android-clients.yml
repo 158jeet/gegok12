@@ -56,6 +56,17 @@ jobs:
           TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
         run: bash scripts/mobile/prepare-tagore-android.sh
 
+      - name: Verify production API is reachable before packaging
+        env:
+          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
+        run: |
+          BASE_URL="${TAGORE_API_BASE_URL:-https://59.90.66.12/api/}"
+          BASE_URL="${BASE_URL%/}/"
+          STATUS="$(curl -sS --max-time 15 -o /tmp/tagore-api-check.json -w '%{http_code}' "${BASE_URL}schools/list")"
+          echo "Tagore API reachability: HTTP $STATUS"
+          test "$STATUS" = "200"
+          python3 -c "import json; json.load(open('/tmp/tagore-api-check.json', encoding='utf-8'))"
+
       - name: Build and run unit tests
         run: |
           cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
