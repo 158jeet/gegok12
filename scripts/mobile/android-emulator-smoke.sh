@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP="\${1:?Usage: android-emulator-smoke.sh parent|teacher}"
+APP="${1:?Usage: android-emulator-smoke.sh parent|teacher}"
 case "$APP" in parent|teacher) ;; *) echo "Invalid app: $APP" >&2; exit 2 ;; esac
 ROOT="$GITHUB_WORKSPACE"
 PROJECT="$ROOT/mobile/$APP"
