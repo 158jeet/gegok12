@@ -64,10 +64,10 @@ jobs:
           target: google_apis
           emulator-boot-timeout: 900
           cores: 2
-          ram-size: 2048M
+          ram-size: 3072M
           arch: x86_64
           profile: pixel_2
-          disable-animations: false
+          disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none
           script: bash "$GITHUB_WORKSPACE/scripts/mobile/android-emulator-smoke.sh" "${{ matrix.app }}"
 
