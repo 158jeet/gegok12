@@ -19,7 +19,23 @@ for i in $(seq 1 90); do
 done
 test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
 gradle -p "$PROJECT" connectedDebugAndroidTest --stacktrace --no-daemon
-adb install -r "$APK"
+# Emulator system services can restart briefly after instrumentation. Wait for
+# Android to be fully booted and the package manager to answer before install.
+for i in $(seq 1 30); do
+  BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  PACKAGE_READY="$(adb shell service check package 2>/dev/null || true)"
+  if [[ "$BOOTED" == "1" && "$PACKAGE_READY" == *"found"* ]]; then break; fi
+  sleep 2
+done
+if ! adb install -r "$APK"; then
+  echo "Initial APK install failed; collecting diagnostics and retrying once after package service settles."
+  adb shell getprop sys.boot_completed || true
+  adb shell service check package || true
+  adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
+  sleep 10
+  adb wait-for-device
+  adb install -r "$APK"
+fi
 PACKAGE="com.tagoregroup.$APP"
 adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
 sleep 8
