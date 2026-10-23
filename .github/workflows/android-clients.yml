@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# Push and pull_request events for the same head branch must not boot duplicate emulators.
+concurrency:
+  group: tagorek12-android-clients-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-emulator-smoke:
     runs-on: ubuntu-latest
