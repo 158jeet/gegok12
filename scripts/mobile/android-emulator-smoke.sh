@@ -68,7 +68,7 @@ echo "ANDROID_LAUNCH_SMOKE_RESULT=PASS package=$PACKAGE"
 
 # Capture instrumentation diagnostics as best-effort only. The app launch result
 # above remains the required gate; emulator service crashes are recorded, not hidden.
-if gradle -p "$PROJECT" connectedDebugAndroidTest --stacktrace --no-daemon; then
+if timeout 120s gradle -p "$PROJECT" connectedDebugAndroidTest --stacktrace --no-daemon; then
   echo "ANDROID_INSTRUMENTATION_RESULT=PASS"
 else
   echo "ANDROID_INSTRUMENTATION_RESULT=UNAVAILABLE (hosted emulator system service failure)"
