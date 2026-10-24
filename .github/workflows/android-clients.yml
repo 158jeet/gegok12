@@ -29,6 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       # Keep one emulator alive at a time; API 34 avoids the broken API-30 system-service image.
+      # Instrumentation has a bounded timeout; install/launch remains the runtime smoke gate.
       max-parallel: 1
       matrix:
         app: [parent, teacher]
