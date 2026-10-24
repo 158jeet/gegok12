@@ -12,7 +12,7 @@ if [[ -z "$APK" ]]; then
 fi
 echo "Using APK: $APK"
 
-adb wait-for-device
+timeout 60 adb wait-for-device
 BOOTED=0
 for i in $(seq 1 120); do
   BOOT_STATE="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
@@ -21,14 +21,14 @@ for i in $(seq 1 120); do
 done
 if [[ "$BOOTED" != "1" ]]; then
   echo "Android emulator did not report boot complete within 4 minutes."
-  adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
+  timeout 15 adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
   exit 1
 fi
 
 # The hosted API-30 emulator can report boot-complete before system services are ready.
 SERVICES_READY=0
 for i in $(seq 1 90); do
-  PACKAGE_READY="$(adb shell service check package 2>/dev/null || true)"
+  PACKAGE_READY="$(timeout 15 adb shell service check package 2>/dev/null || true)"
   SETTINGS_READY="$(adb shell service check settings 2>/dev/null || true)"
   if [[ "$PACKAGE_READY" == *"found"* && "$SETTINGS_READY" == *"found"* ]]; then
     SERVICES_READY=1
@@ -38,7 +38,7 @@ for i in $(seq 1 90); do
 done
 if [[ "$SERVICES_READY" != "1" ]]; then
   echo "Android package/settings services did not become ready within 3 minutes."
-  adb shell service check package || true
+  timeout 15 adb shell service check package || true
   adb shell service check settings || true
   adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
   exit 1
@@ -47,19 +47,19 @@ fi
 # Runtime installation and launch are the required emulator acceptance gate.
 # The upstream example instrumentation runner is flaky on hosted emulators and
 # previously made adb report Unknown API Level before the app could be launched.
-if ! adb install -r "$APK"; then
+if ! timeout 90 adb install -r "$APK"; then
   echo "Initial APK install failed; waiting briefly for PackageManager and retrying once."
   adb shell service check package || true
   adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
   sleep 5
-  adb wait-for-device
-  adb install -r "$APK"
+  timeout 60 adb wait-for-device
+  timeout 90 adb install -r "$APK"
 fi
 
 PACKAGE="com.tagoregroup.$APP"
-adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
+timeout 60 adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1
 sleep 8
-if ! adb shell pidof "$PACKAGE" >/dev/null; then
+if ! timeout 20 adb shell pidof "$PACKAGE" >/dev/null; then
   echo "App process did not remain running: $PACKAGE"
   adb logcat -d -t 2500 > "$ROOT/android-$APP-logcat.txt" || true
   exit 1
