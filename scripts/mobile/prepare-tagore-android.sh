@@ -2,7 +2,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_URL="${TAGORE_API_BASE_URL:-https://example.invalid/api/}"
+BASE_URL="${TAGORE_API_BASE_URL:-https://59.90.66.12/}"
+# Retrofit endpoints already begin with api/, so normalize the base to the site root.
+BASE_URL="${BASE_URL%/}"
+if [[ "$BASE_URL" == */api ]]; then BASE_URL="${BASE_URL%/api}"; fi
+BASE_URL="$BASE_URL/"
+if [[ "$BASE_URL" == *example.invalid* ]]; then
+  echo "Refusing to build an Android client with a placeholder API URL." >&2
+  exit 1
+fi
 
 for APP in parent teacher; do
   DIR="$ROOT/mobile/$APP"
