@@ -1,5 +1,4 @@
 name: TagoreK12 Android Clients
-# CI validates both pinned Android clients. Package cleanup is performed before Gradle.
 
 on:
   push:
@@ -15,11 +14,24 @@ on:
       - '.github/workflows/android-clients.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Push and pull_request events for the same head branch must not boot duplicate emulators.
+concurrency:
+  group: tagorek12-android-clients-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-android:
+  build-and-emulator-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       fail-fast: false
+      # Keep one emulator alive at a time; API 34 avoids the broken API-30 system-service image.
+      # Instrumentation and adb install/launch commands are bounded to prevent hung emulator jobs.
+      # Install/launch remains the runtime smoke gate after the unit-test suite.
+      max-parallel: 1
       matrix:
         app: [parent, teacher]
 
@@ -42,18 +54,53 @@ jobs:
 
       - name: Prepare Tagore Android client
         env:
-          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
+          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL || 'https://59.90.66.12/api/' }}
         run: bash scripts/mobile/prepare-tagore-android.sh
 
-      - name: Build and test Android client
+      - name: Verify production API is reachable before packaging
+        env:
+          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
         run: |
-          cd mobile/${{ matrix.app }}
-          gradle testDebugUnitTest assembleDebug --stacktrace
+          BASE_URL="${TAGORE_API_BASE_URL:-https://59.90.66.12/api/}"
+          BASE_URL="${BASE_URL%/}/"
+          STATUS="$(curl -sS --max-time 15 -o /tmp/tagore-api-check.json -w '%{http_code}' "${BASE_URL}schools/list")"
+          echo "Tagore API reachability: HTTP $STATUS"
+          test "$STATUS" = "200"
+          python3 -c "import json; json.load(open('/tmp/tagore-api-check.json', encoding='utf-8'))"
 
-      - name: Upload debug APK
+      - name: Build and run unit tests
+        run: |
+          cd "$GITHUB_WORKSPACE/mobile/${{ matrix.app }}"
+          test -f settings.gradle
+          test -f app/build.gradle
+          # These upstream app repos do not commit the Gradle wrapper script.
+          gradle --version
+          gradle testDebugUnitTest assembleDebug --stacktrace --no-daemon
+
+      - name: Run Android emulator instrumentation and launch smoke test
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          emulator-boot-timeout: 1200
+          cores: 2
+          ram-size: 4096M
+          arch: x86_64
+          profile: pixel_2
+          force-avd-creation: true
+          # This emulator image can boot while Android settings service is still unavailable;
+          # let the instrumentation script wait for services rather than failing during setup.
+          disable-animations: false
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu off -no-snapshot -camera-back none
+          script: bash "$GITHUB_WORKSPACE/scripts/mobile/android-emulator-smoke.sh" "${{ matrix.app }}"
+
+      - name: Upload APK and diagnostic logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tagorek12-${{ matrix.app }}-debug
-          path: mobile/${{ matrix.app }}/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 90
+          name: tagorek12-${{ matrix.app }}-android-ci
+          path: |
+            mobile/${{ matrix.app }}/**/*.apk
+            android-${{ matrix.app }}-logcat.txt
+          if-no-files-found: warn
+          retention-days: 30

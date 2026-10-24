@@ -2,7 +2,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BASE_URL="${TAGORE_API_BASE_URL:-https://example.invalid/api/}"
+BASE_URL="${TAGORE_API_BASE_URL:-https://59.90.66.12/api/}"
+if [[ "$BASE_URL" != https://* || "$BASE_URL" == *example.invalid* || "$BASE_URL" == *localhost* || "$BASE_URL" == *127.0.0.1* ]]; then
+  echo "Refusing to package Tagore mobile clients with a non-production API base URL." >&2
+  exit 1
+fi
 
 for APP in parent teacher; do
   DIR="$ROOT/mobile/$APP"
