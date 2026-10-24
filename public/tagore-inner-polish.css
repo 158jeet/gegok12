@@ -209,3 +209,23 @@ body.tagore-ui.tagore-inner .tg-app .tg-three>div{
   body.tagore-ui.tagore-inner .tg-app .tg-three{grid-template-columns:1fr!important}
   body.tagore-ui.tagore-inner .tg-app .tg-card{padding:14px!important}
 }
+
+
+/* Ensure the dark inner-page canvas continues behind every module, including the footer area. */
+html:has(body.tagore-ui.tagore-inner),
+body.tagore-ui.tagore-inner,
+body.tagore-ui.tagore-inner #app,
+body.tagore-ui.tagore-inner main,
+body.tagore-ui.tagore-inner .min-h-screen,
+body.tagore-ui.tagore-inner .tg-app,
+body.tagore-ui.tagore-inner .tg-shell{
+  background:#10151d!important;color:#edf2f7!important;
+}
+body.tagore-ui.tagore-inner .tg-app{min-height:100vh!important;width:100%}
+body.tagore-ui.tagore-inner .tg-shell{min-height:100vh!important}
+body.tagore-ui.tagore-inner .bg-white,
+body.tagore-ui.tagore-inner .bg-gray-50,
+body.tagore-ui.tagore-inner .bg-gray-100,
+body.tagore-ui.tagore-inner .bg-gray-200{
+  background:#10151d!important;color:#edf2f7!important;
+}
