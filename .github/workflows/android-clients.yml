@@ -54,7 +54,7 @@ jobs:
 
       - name: Prepare Tagore Android client
         env:
-          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL }}
+          TAGORE_API_BASE_URL: ${{ vars.TAGORE_API_BASE_URL || 'https://59.90.66.12/api/' }}
         run: bash scripts/mobile/prepare-tagore-android.sh
 
       - name: Verify production API is reachable before packaging
