@@ -11,8 +11,9 @@ async function authenticate(page, role) {
 
 async function collectVisibleTagoreLinks(page) {
   return await page.locator('a[href]').evaluateAll(anchors => anchors
-    .map(a => ({ href: a.href, text: (a.textContent || '').trim() }))
-    .filter(x => x.href && new URL(x.href).pathname.startsWith('/tagore/'))
+    .filter(a => a.getClientRects().length > 0)
+    .map(a => ({ href: a.getAttribute('href'), text: (a.textContent || '').trim() }))
+    .filter(x => x.href && new URL(x.href, location.href).pathname.startsWith('/tagore/'))
     .map(x => x.href));
 }
 
@@ -43,11 +44,10 @@ async function checkPageHealth(page, context) {
         if (ox === 'auto' || ox === 'scroll') { insideHorizontalScroller = true; break; }
         p = p.parentElement;
       }
-      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), position: getComputedStyle(el).position, insideHorizontalScroller };
+      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), insideHorizontalScroller };
     }).filter(x => x.width > 0 && !x.insideHorizontalScroller && (x.right > viewport + 2 || x.left < -2))
       .sort((a,b) => Math.max(b.right-viewport, -b.left) - Math.max(a.right-viewport, -a.left))
-      .slice(0,5)
-      .map(({el,...x}) => x);
+      .slice(0,5).map(({el,...x}) => x);
     return { overflow: offenders.length > 0, offenders };
   });
   if (overflowDetails.overflow) errors.push('horizontal overflow: ' + JSON.stringify(overflowDetails.offenders));
@@ -63,21 +63,48 @@ async function checkPageHealth(page, context) {
 
 test.describe('Tagore ERP human-style authenticated UI', () => {
   for (const role of roles) {
-    test(role + ' — dashboard, visible navigation and reachable authenticated screens', async ({ page }) => {
+    test(role + ' — click visible navigation and check desktop/mobile layout', async ({ page }) => {
       await authenticate(page, role);
-      await checkPageHealth(page, role + ' dashboard');
-      const initialLinks = unique(await collectVisibleTagoreLinks(page));
-      expect(initialLinks.length, role + ' visible Tagore navigation links').toBeGreaterThan(0);
+      await checkPageHealth(page, role + ' desktop dashboard');
+
+      const links = unique(await collectVisibleTagoreLinks(page));
+      expect(links.length, role + ' visible Tagore navigation links').toBeGreaterThan(0);
+
+      // Exercise real visible navigation links for every role, not just the owner.
+      for (const href of links.slice(0, 20)) {
+        await authenticate(page, role);
+        const clicked = await page.locator('a[href]').evaluateAll((anchors, target) => {
+          const a = anchors.find(node => node.getAttribute('href') === target && node.getClientRects().length > 0);
+          if (!a) return false;
+          a.click();
+          return true;
+        }, href);
+        expect(clicked, role + ' visible navigation link ' + href).toBeTruthy();
+        await page.waitForLoadState('domcontentloaded').catch(() => {});
+        await expect(page.locator('body')).toBeVisible();
+        const path = new URL(page.url()).pathname;
+        expect(path.startsWith('/tagore/'), role + ' navigation destination ' + href).toBeTruthy();
+        await checkPageHealth(page, role + ' navigation ' + href);
+      }
+
+      // Check responsive layout at a phone-sized viewport for each role.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await authenticate(page, role);
+      await checkPageHealth(page, role + ' mobile dashboard');
+      const dims = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+      expect(dims.content, role + ' mobile horizontal overflow').toBeLessThanOrEqual(dims.viewport + 2);
+
+      // The route manifest is a second read-only coverage signal; only owner crawls
+      // every parameter-free route because other roles intentionally lack access.
       const routeManifest = await page.request.get('/__e2e/routes').then(async response => {
         expect(response.ok()).toBeTruthy();
         return response.json();
       });
       expect(routeManifest.length, 'authenticated GET route manifest').toBeGreaterThan(0);
-
       if (role === 'owner') {
         const visited = new Set();
         const queue = unique([
-          ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
+          ...links.map(h => new URL(h, page.url()).href),
           ...routeManifest.map(r => new URL(r.uri, page.url()).href),
         ]);
         while (queue.length && visited.size < 1000) {
