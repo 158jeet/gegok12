@@ -29,7 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       # Keep one emulator alive at a time; API 34 avoids the broken API-30 system-service image.
-      # Instrumentation has a bounded timeout; install/launch remains the runtime smoke gate.
+      # Instrumentation and adb install/launch commands are bounded to prevent hung emulator jobs.
+      # Install/launch remains the runtime smoke gate after the unit-test suite.
       max-parallel: 1
       matrix:
         app: [parent, teacher]
