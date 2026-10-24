@@ -91,7 +91,7 @@ jobs:
           # This emulator image can boot while Android settings service is still unavailable;
           # let the instrumentation script wait for services rather than failing during setup.
           disable-animations: false
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu off -no-snapshot -camera-back none
           script: bash "$GITHUB_WORKSPACE/scripts/mobile/android-emulator-smoke.sh" "${{ matrix.app }}"
 
       - name: Upload APK and diagnostic logs
