@@ -298,3 +298,21 @@ body.tg-app .shell .task-alert-error{background:#4a1d22!important;color:#fecaca!
   body:not(.tagore-ui) .shell .head,body:not(.tagore-ui) .wrap .head,
   body:not(.tagore-ui) .shell .new .row,body:not(.tagore-ui) .wrap .new .row{grid-template-columns:1fr!important}
 }
+
+/* Responsive table containers used by legacy standalone ERP pages. */
+body:not(.tagore-ui) .shell .table-responsive,
+body:not(.tagore-ui) .wrap .table-responsive,
+body:not(.tagore-ui) .container .table-responsive,
+body:not(.tagore-ui) .page .table-responsive,
+body:not(.tagore-ui) .content .table-responsive{
+  width:100%;max-width:100%;min-width:0;overflow-x:auto!important;
+  overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  border-radius:12px;margin:12px 0;
+}
+body:not(.tagore-ui) .shell .table-responsive>table,
+body:not(.tagore-ui) .wrap .table-responsive>table,
+body:not(.tagore-ui) .container .table-responsive>table,
+body:not(.tagore-ui) .page .table-responsive>table,
+body:not(.tagore-ui) .content .table-responsive>table{
+  min-width:680px;margin:0!important;
+}

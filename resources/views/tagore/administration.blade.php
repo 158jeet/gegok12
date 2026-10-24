@@ -44,9 +44,9 @@
 
         <section class="card wide">
             <h2>Institutions</h2>
-            <table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>GegoK12 school</th><th>Status</th></tr></thead><tbody>
+            <div class="table-responsive"><table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>GegoK12 school</th><th>Status</th></tr></thead><tbody>
             @forelse($institutions as $i)<tr><td>{{ $i->code }}</td><td>{{ $i->display_name }}</td><td>{{ $i->type }}</td><td>{{ $i->school_name }}</td><td>{{ $i->status }}</td></tr>@empty<tr><td colspan="5">No institutions configured.</td></tr>@endforelse
-            </tbody></table>
+            </tbody></table></div>
         </section>
 
         <section class="card">
@@ -99,23 +99,23 @@
 
         <section class="card wide">
             <h2>Departments</h2>
-            <table><thead><tr><th>Institution</th><th>Name</th><th>Code</th><th>Status</th></tr></thead><tbody>
+            <div class="table-responsive"><table><thead><tr><th>Institution</th><th>Name</th><th>Code</th><th>Status</th></tr></thead><tbody>
             @forelse($departments as $d)<tr><td>{{ $d->institution }}</td><td>{{ $d->name }}</td><td>{{ $d->code }}</td><td>Active</td></tr>@empty<tr><td colspan="4">No departments configured.</td></tr>@endforelse
-            </tbody></table>
+            </tbody></table></div>
         </section>
 
         <section class="card wide">
             <h2>Academic Years</h2>
-            <table><thead><tr><th>Name</th><th>Institution</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody>
+            <div class="table-responsive"><table><thead><tr><th>Name</th><th>Institution</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody>
             @forelse($years as $y)<tr><td>{{ $y->name }}</td><td>{{ $y->institution ?? '—' }}</td><td>{{ $y->start_date }}</td><td>{{ $y->end_date }}</td><td>{{ $y->status }}</td></tr>@empty<tr><td colspan="5">No academic years configured.</td></tr>@endforelse
-            </tbody></table>
+            </tbody></table></div>
         </section>
 
         <section class="card wide">
             <h2>Active Role Assignments</h2>
-            <table><thead><tr><th>User</th><th>User ID</th><th>Role</th><th>Institution</th></tr></thead><tbody>
+            <div class="table-responsive"><table><thead><tr><th>User</th><th>User ID</th><th>Role</th><th>Institution</th></tr></thead><tbody>
             @forelse($assignments as $a)<tr><td>{{ $a->name }}</td><td>{{ $a->user_id }}</td><td>{{ $a->role_name }}</td><td>{{ $a->institution ?? 'Group-wide' }}</td></tr>@empty<tr><td colspan="4">No role assignments.</td></tr>@endforelse
-            </tbody></table>
+            </tbody></table></div>
         </section>
     </div>
 </div>
