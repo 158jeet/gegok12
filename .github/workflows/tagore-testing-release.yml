@@ -50,7 +50,9 @@ jobs:
           gradle-version: '8.9'
       - name: Prepare Android client
         env:
-          TAGORE_API_BASE_URL: ''
+          # The Android API interface declares paths beginning with api/, so use the site root.
+          # Do not ship a test APK pointed at example.invalid or duplicate /api/api paths.
+          TAGORE_API_BASE_URL: 'https://59.90.66.12/'
         run: bash scripts/mobile/prepare-tagore-android.sh
       - name: Build APK
         working-directory: mobile/${{ matrix.app }}
