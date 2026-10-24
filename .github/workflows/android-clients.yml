@@ -28,8 +28,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       fail-fast: false
-      # Two API-30 emulators plus Gradle exceeded the hosted runner's service stability.
-      # Serialize emulator jobs to prevent Android package/settings service crashes.
+      # Keep one emulator alive at a time; API 34 avoids the broken API-30 system-service image.
       max-parallel: 1
       matrix:
         app: [parent, teacher]
@@ -79,13 +78,14 @@ jobs:
       - name: Run Android emulator instrumentation and launch smoke test
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 34
           target: google_apis
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 1200
           cores: 2
-          ram-size: 3072M
+          ram-size: 4096M
           arch: x86_64
           profile: pixel_2
+          force-avd-creation: true
           # This emulator image can boot while Android settings service is still unavailable;
           # let the instrumentation script wait for services rather than failing during setup.
           disable-animations: false
