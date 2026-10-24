@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('base-content')
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
 <div class="tg-app"><div class="tg-shell">
   <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Campus safety</span></div></div><a class="tg-btn" href="{{ route('tagore.platform.index') }}">Back to platform</a></header>
   <section class="tg-hero"><div><span class="tg-eyebrow">CCTV & AI analytics</span><h1>CCTV connector status</h1><p>Read-only check of the private Frigate NVR connection. This page does not display or proxy live video.</p></div></section>

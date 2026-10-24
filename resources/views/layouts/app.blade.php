@@ -16,7 +16,7 @@
         <link rel="stylesheet" href="{{ asset('css/olympiad-registration.css') . '?v=20261024-1' }}">
         @endif
         @if(request()->is('tagore/*'))
-        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
         <link rel="stylesheet" href="{{ asset('tagore-inner-polish.css') . '?v=20261024-1' }}">
         @endif
         <style>

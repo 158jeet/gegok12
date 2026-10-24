@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fee Editor · TagoreK12</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fee Editor · TagoreK12</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}"></head>
 <body><main class="tg-shell">
 <header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Fee administration</span></div></div><div class="tg-user">Controlled Editor</div></header>
 <nav class="tg-nav"><a href="{{ route('tagore.dashboard') }}">ERP Home</a><a href="{{ route('tagore.fees.accounts') }}">Accounts</a><a href="{{ route('tagore.fees.manage') }}">Fee Management</a><a href="{{ route('tagore.fees.editor') }}">Fee Editor</a></nav>

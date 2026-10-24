@@ -2,7 +2,7 @@
 
 @extends('layouts.app')
 @section('base-content')
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
 <div class="tg-app">
   <div class="tg-shell">
     <header class="tg-topbar">

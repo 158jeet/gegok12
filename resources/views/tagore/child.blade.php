@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ $student->name }} · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ $student->name }} · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}"></head>
 <body class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="/uploads/tgi-logo.webp" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Student profile</span></div></a><div class="tg-actions"><a class="tg-btn" href="{{ route('tagore.dashboard') }}">← Dashboard</a></div></header>
 <main class="tg-main">

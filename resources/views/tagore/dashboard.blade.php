@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261012-ui5' }}">
+<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
 </head>
 <body class="tg-app">
 <div class="tg-shell">
