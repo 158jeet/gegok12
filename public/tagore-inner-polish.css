@@ -134,3 +134,78 @@ body.tagore-ui.tagore-inner hr{border-color:var(--tg-inner-border)!important}
 @media(prefers-reduced-motion:reduce){
   body.tagore-ui.tagore-inner *{transition:none!important;scroll-behavior:auto!important}
 }
+
+
+/* Second-pass visual QA: the legacy global stylesheet wins on nested tg-app components.
+   Keep the dashboard untouched; make inner-module cards and form actions deliberate. */
+body.tagore-ui.tagore-inner .tg-app .tg-card,
+body.tagore-ui.tagore-inner .tg-app section.tg-card,
+body.tagore-ui.tagore-inner .tg-app .tg-module{
+  background:#19232e!important;color:#edf2f7!important;
+  border:1px solid #344253!important;border-radius:16px!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.18)!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-card h2,
+body.tagore-ui.tagore-inner .tg-app .tg-card h3,
+body.tagore-ui.tagore-inner .tg-app .tg-module b{
+  color:#edf2f7!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-card p,
+body.tagore-ui.tagore-inner .tg-app .tg-module span,
+body.tagore-ui.tagore-inner .tg-app .tg-section-head p,
+body.tagore-ui.tagore-inner .tg-app .tg-muted{
+  color:#aab7c6!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-field,
+body.tagore-ui.tagore-inner .tg-app label.tg-field{min-width:0}
+body.tagore-ui.tagore-inner .tg-app .tg-field>span,
+body.tagore-ui.tagore-inner .tg-app .tg-field>label{
+  display:block;color:#d5deea!important;font-size:.82rem!important;font-weight:700!important;
+  line-height:1.4;margin:0 0 6px;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-form{
+  display:block!important;min-width:0!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important;align-items:start!important;margin:0 0 14px!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid>.tg-field,
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid>label{
+  min-width:0!important;width:100%!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid input,
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid select,
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid textarea{
+  width:100%!important;max-width:100%!important;min-width:0!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-form>button,
+body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-btn,
+body.tagore-ui.tagore-inner .tg-app .tg-form>input[type=submit]{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:auto!important;max-width:100%!important;height:auto!important;max-height:48px!important;
+  min-height:40px!important;grid-column:1/-1!important;justify-self:start!important;
+  align-self:start!important;padding:10px 16px!important;margin:2px 0 0!important;
+  border-radius:10px!important;white-space:normal!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-btn.primary,
+body.tagore-ui.tagore-inner .tg-app button[type=submit]{
+  background:#19b77a!important;border-color:#19b77a!important;color:#071b13!important;
+}
+body.tagore-ui.tagore-inner .tg-app .tg-module:hover{
+  background:#202c39!important;border-color:#3f6c5a!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24)!important;transform:translateY(-1px);
+}
+body.tagore-ui.tagore-inner .tg-app .tg-section{margin-top:22px}
+body.tagore-ui.tagore-inner .tg-app .tg-section-head{margin-bottom:14px}
+body.tagore-ui.tagore-inner .tg-app .tg-three>div{
+  min-width:0;padding:12px;border:1px solid #344253;border-radius:12px;background:#151e28;
+}
+@media(max-width:900px){
+  body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:560px){
+  body.tagore-ui.tagore-inner .tg-app .tg-form>.tg-grid{grid-template-columns:1fr!important;gap:12px!important}
+  body.tagore-ui.tagore-inner .tg-app .tg-three{grid-template-columns:1fr!important}
+  body.tagore-ui.tagore-inner .tg-app .tg-card{padding:14px!important}
+}
