@@ -17,7 +17,7 @@
         @endif
         @if(request()->is('tagore/*'))
         <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
-        <link rel="stylesheet" href="{{ asset('tagore-inner-polish.css') . '?v=20261024-1' }}">
+        <link rel="stylesheet" href="{{ asset('tagore-inner-polish.css') . '?v=20261026-2' }}">
         @endif
         <style>
           .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
