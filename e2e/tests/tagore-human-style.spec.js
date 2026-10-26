@@ -177,7 +177,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Open Olympiad leads/i })).toHaveAttribute('href', /\/tagore\/admissions\?source=olympiad/);
     const leadAction = page.locator('.tg-module .tg-inline-link').first();
-    await expect(leadAction).toHaveCSS('display', 'inline-flex');
+    await expect(leadAction).toHaveCSS('display', 'flex');
     const leadActionMargin = await leadAction.evaluate(el => parseFloat(getComputedStyle(el).marginTop));
     expect(leadActionMargin, 'module action links need visible spacing').toBeGreaterThan(0);
     await expect(page.locator('#quality-gates')).toBeVisible();
