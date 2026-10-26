@@ -13,7 +13,7 @@
         <!-- <link href="{{ asset('css/app.css') }}" rel="stylesheet"> -->
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
         @if(request()->is('olympiad/*'))
-        <link rel="stylesheet" href="{{ asset('css/olympiad-registration.css') . '?v=20261024-1' }}">
+        <link rel="stylesheet" href="{{ asset('css/olympiad-registration.css') . '?v=20261026-2' }}">
         @endif
         @if(request()->is('tagore/*'))
         <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261026-ui7' }}">
@@ -35,6 +35,7 @@
             .tg-form>button{grid-column:1/-1!important;align-self:start!important;justify-self:start!important;width:max-content!important;height:max-content!important;min-height:0!important;max-height:none!important}
             .tg-form input,.tg-form select,.tg-form textarea{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
           }
+            .olympiad-consent input[type="checkbox"]{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;max-width:18px!important;flex:0 0 18px!important;padding:0!important;margin:2px 0 0!important;box-shadow:none!important}
         </style>
         <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500&family=IBM+Plex+Sans:wght@500;600;700&family=Nunito+Sans:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 
