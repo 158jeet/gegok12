@@ -383,3 +383,33 @@ body.tagore-ui.tagore-inner :focus-visible{
   body.tagore-ui.tagore-inner *::before,
   body.tagore-ui.tagore-inner *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
+
+/* Real module-level visual redesign: shared standalone Tagore pages and inner modules. */
+body.tg-app{background:#0b1118!important;color:#e9f1f8!important;font-family:Inter,"Nunito Sans",system-ui,sans-serif!important}
+body.tg-app .shell{max-width:1480px!important;margin:0 auto!important;padding:clamp(18px,3vw,38px)!important}
+body.tg-app .shell>p:first-child{margin:0 0 18px!important}
+body.tg-app .shell>p:first-child a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #344657;border-radius:10px;background:#17232e;color:#9fe8c9!important;font-weight:750}
+body.tg-app .shell>h1{margin:0!important;font-size:clamp(28px,3vw,38px)!important;line-height:1.12!important;letter-spacing:-.045em!important;font-weight:850!important;color:#f3f7fb!important}
+body.tg-app .shell>h1+p{margin:10px 0 24px!important;color:#a9bac9!important;font-size:15px!important;line-height:1.65}
+body.tg-app .shell .cards{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;margin:18px 0 22px}
+body.tg-app .shell .card{position:relative;min-width:0;padding:18px!important;background:linear-gradient(145deg,#172431,#121b25)!important;border:1px solid #2e4050!important;border-radius:16px!important;color:#eaf2f8!important;box-shadow:0 10px 30px rgba(0,0,0,.18)!important}
+body.tg-app .shell .card small{display:block;color:#9eb0c0!important;font-size:12px!important;font-weight:750;letter-spacing:.025em}
+body.tg-app .shell .card .v{margin-top:9px;color:#f4f8fb!important;font-size:clamp(24px,2.2vw,32px)!important;font-weight:850!important;letter-spacing:-.04em;line-height:1.1}
+body.tg-app .shell form{align-items:center;padding:16px!important;background:#131e29!important;border:1px solid #2e4050!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+body.tg-app .shell input:not([type=checkbox]),body.tg-app .shell select{min-height:42px!important;max-width:100%;background:#0e1721!important;color:#e8f0f7!important;border:1px solid #35485a!important;border-radius:10px!important;padding:10px 12px!important}
+body.tg-app .shell input::placeholder{color:#8295a7!important}
+body.tg-app .shell button,body.tg-app .shell form button{min-height:42px!important;padding:10px 16px!important;border-radius:10px!important;background:#27c58b!important;border:1px solid #27c58b!important;color:#071a12!important;font-weight:850!important}
+body.tg-app .shell form>a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:1px solid #2f735b;border-radius:10px;background:#14382d;color:#a5f1d0!important;font-weight:800}
+body.tg-app .shell .table-responsive{width:100%;max-width:100%;margin:16px 0 20px!important;overflow:auto!important;border:1px solid #2e4050;border-radius:15px;background:#121c26;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+body.tg-app .shell table{min-width:900px;margin:0!important;background:#121c26!important;color:#e5edf5!important;border-collapse:separate!important;border-spacing:0!important}
+body.tg-app .shell table th{position:sticky;top:0;z-index:1;padding:13px 14px!important;background:#223342!important;color:#b9cbd9!important;border-bottom:1px solid #3a4d5e!important;text-transform:uppercase;font-size:11px!important;font-weight:850!important;letter-spacing:.06em;white-space:nowrap}
+body.tg-app .shell table td{padding:13px 14px!important;border-bottom:1px solid #263643!important;color:#dce6ef!important;font-size:13px!important;vertical-align:middle}
+body.tg-app .shell table tbody tr:hover td{background:#192c36!important}
+body.tg-app .shell table a{color:#78e4b6!important;font-weight:800}
+body.tg-app .shell>div[style*="grid-template-columns"]{gap:14px!important}
+body.tg-app .shell .card b{display:block;margin-bottom:12px;color:#dfeaf3;font-size:15px}
+body.tg-app .shell .card>div:not(.v){padding:8px 0;border-bottom:1px solid #2a3946;color:#c5d3df}
+body.tg-app .shell .card>div:last-child{border-bottom:0}
+body.tg-app .shell a:focus-visible,body.tg-app .shell button:focus-visible,body.tg-app .shell input:focus-visible,body.tg-app .shell select:focus-visible{outline:2px solid #52e5ac!important;outline-offset:3px}
+@media(max-width:900px){body.tg-app .shell .cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){body.tg-app .shell{padding:18px 12px 80px!important}body.tg-app .shell .cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}body.tg-app .shell .card{padding:13px!important;border-radius:13px!important}body.tg-app .shell form{padding:12px!important}body.tg-app .shell form>*{flex:1 1 100%;width:100%}body.tg-app .shell .card .v{font-size:25px!important}body.tg-app .shell>div[style*="grid-template-columns"]{grid-template-columns:1fr!important}}
