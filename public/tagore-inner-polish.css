@@ -322,10 +322,13 @@ body.tagore-ui.tagore-inner textarea:disabled{
   cursor:not-allowed;
   background:#202a35!important;
 }
-body.tagore-ui.tagore-inner .btn-group,
-body.tagore-ui.tagore-inner .input-group{
+body.tagore-ui.tagore-inner .btn-group{
   max-width:100%;
   flex-wrap:wrap;
+}
+body.tagore-ui.tagore-inner .input-group{
+  max-width:100%;
+  min-width:0;
 }
 body.tagore-ui.tagore-inner .dropdown-menu{
   max-width:min(94vw,420px);
