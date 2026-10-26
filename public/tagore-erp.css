@@ -358,6 +358,8 @@ body.tg-app textarea:focus-visible{
     gap:10px;
   }
   body.tg-app .tg-section-head>.tg-btn{
+    flex:0 0 100%;
+    width:max-content;
     align-self:flex-start;
   }
   body.tg-app .tg-module .tg-inline-link{
