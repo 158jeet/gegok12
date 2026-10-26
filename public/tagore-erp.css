@@ -294,12 +294,12 @@ body.tg-app .shell .task-alert-error{background:#4a1d22!important;color:#fecaca!
 }
 
 /* Tagore ERP shared UI refinement — 2026-10-26 */
-body.tg-app .tg-module>span{
+.tg-app .tg-module>span{
   display:block;
   margin-top:6px;
   line-height:1.55;
 }
-body.tg-app .tg-module .tg-inline-link{
+.tg-app .tg-module .tg-inline-link{
   display:flex;
   width:fit-content;
   max-width:100%;
@@ -313,58 +313,58 @@ body.tg-app .tg-module .tg-inline-link{
   overflow-wrap:anywhere;
   text-underline-offset:3px;
 }
-body.tg-app .tg-module .tg-inline-link:hover{
+.tg-app .tg-module .tg-inline-link:hover{
   text-decoration:underline;
 }
-body.tg-app .tg-section-head{
+.tg-app .tg-section-head{
   align-items:flex-start;
 }
-body.tg-app .tg-section-head>.tg-btn{
+.tg-app .tg-section-head>.tg-btn{
   flex:0 0 auto;
   align-self:center;
 }
-body.tg-app .tg-section-head h2,
-body.tg-app .tg-section-head h3{
+.tg-app .tg-section-head h2,
+.tg-app .tg-section-head h3{
   line-height:1.3;
 }
-body.tg-app .tg-card,
-body.tg-app .card{
+.tg-app .tg-card,
+.tg-app .card{
   overflow-wrap:anywhere;
 }
-body.tg-app .tg-card :is(input,select,textarea),
-body.tg-app .card :is(input,select,textarea){
+.tg-app .tg-card :is(input,select,textarea),
+.tg-app .card :is(input,select,textarea){
   max-width:100%;
   min-width:0;
 }
-body.tg-app .tg-table-wrap{
+.tg-app .tg-table-wrap{
   width:100%;
   max-width:100%;
   overflow-x:auto;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
 }
-body.tg-app .tg-table-wrap table{
+.tg-app .tg-table-wrap table{
   margin:0!important;
 }
-body.tg-app a:focus-visible,
-body.tg-app button:focus-visible,
-body.tg-app input:focus-visible,
-body.tg-app select:focus-visible,
-body.tg-app textarea:focus-visible{
+.tg-app a:focus-visible,
+.tg-app button:focus-visible,
+.tg-app input:focus-visible,
+.tg-app select:focus-visible,
+.tg-app textarea:focus-visible{
   outline:2px solid #43d9a0;
   outline-offset:2px;
 }
 @media(max-width:760px){
-  body.tg-app .tg-section-head{
+  .tg-app .tg-section-head{
     flex-wrap:wrap;
     gap:10px;
   }
-  body.tg-app .tg-section-head>.tg-btn{
+  .tg-app .tg-section-head>.tg-btn{
     flex:0 0 100%;
     width:max-content;
     align-self:flex-start;
   }
-  body.tg-app .tg-module .tg-inline-link{
+  .tg-app .tg-module .tg-inline-link{
     margin-top:9px;
     margin-right:8px;
   }
