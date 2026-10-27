@@ -37,7 +37,35 @@ class FeeController extends Controller
             'outstanding' => round((float) $fees->sum('outstanding_amount'), 2),
         ];
 
-        return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles'));
+        // Show family-wide balances alongside an individual statement. Parents see only
+        // their own linked family; authorised school finance/admin users can see each linked guardian.
+        $familyQuery = DB::table('tagore_parent_students as focus')
+            ->join('users as parent', 'parent.id', '=', 'focus.parent_user_id')
+            ->join('tagore_parent_students as sibling_link', function ($join) {
+                $join->on('sibling_link.parent_user_id', '=', 'focus.parent_user_id')
+                    ->where('sibling_link.status', '=', 'active');
+            })
+            ->join('users as sibling', 'sibling.id', '=', 'sibling_link.student_id')
+            ->leftJoin('tagore_institutions as sibling_institution', 'sibling_institution.school_id', '=', 'sibling.school_id')
+            ->leftJoin('tagore_fee_obligations as sibling_fee', function ($join) {
+                $join->on('sibling_fee.student_id', '=', 'sibling.id')
+                    ->on('sibling_fee.institution_id', '=', 'sibling_institution.id');
+            })
+            ->where('focus.student_id', $studentId)
+            ->where('focus.status', 'active')
+            ->where('sibling_link.status', 'active')
+            ->whereNull('parent.deleted_at')
+            ->whereNull('sibling.deleted_at');
+        if ($roles->contains('PARENT')) {
+            $familyQuery->where('focus.parent_user_id', $userId);
+        }
+        $familyBalances = $familyQuery
+            ->groupBy('focus.parent_user_id', 'parent.name')
+            ->selectRaw('focus.parent_user_id, parent.name as parent_name, COUNT(DISTINCT sibling_link.student_id) as children_count, COALESCE(SUM(sibling_fee.net_amount),0) as payable, COALESCE(SUM(sibling_fee.paid_amount),0) as paid, COALESCE(SUM(sibling_fee.outstanding_amount),0) as outstanding')
+            ->orderBy('parent.name')
+            ->get();
+
+        return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles', 'familyBalances'));
     }
 
     public function accounts(Request $request): View
