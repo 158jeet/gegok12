@@ -287,3 +287,36 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Build frontend
         run: npm run build
+
+  acceptance-gate:
+    name: Acceptance gate (release blocking)
+    if: always()
+    needs: [backend, browser-e2e, production-docker-smoke, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish commit-specific acceptance decision
+        env:
+          BACKEND: ${{ needs.backend.result }}
+          BROWSER_E2E: ${{ needs.browser-e2e.result }}
+          PRODUCTION_SMOKE: ${{ needs.production-docker-smoke.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Tagore ERP acceptance decision"
+            echo
+            echo "- Candidate commit: \`$CANDIDATE_SHA\`"
+            echo "- Backend and Laravel tests: **$BACKEND**"
+            echo "- Authenticated browser acceptance: **$BROWSER_E2E**"
+            echo "- Production Docker/HTTPS smoke: **$PRODUCTION_SMOKE**"
+            echo "- Frontend build: **$FRONTEND**"
+            echo
+            echo "A release is accepted only when every required result is success for this exact commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$BACKEND" != "success" || "$BROWSER_E2E" != "success" || "$PRODUCTION_SMOKE" != "success" || "$FRONTEND" != "success" ]]; then
+            echo "::error::Acceptance blocked for $CANDIDATE_SHA. A failed, skipped, cancelled, or pending required job is not a pass."
+            exit 1
+          fi
+
+          echo "Acceptance gate passed for $CANDIDATE_SHA."
