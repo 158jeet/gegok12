@@ -12,19 +12,20 @@ A change is accepted only when all applicable gates have a recorded result for t
 4. **Responsive and visual gate** — desktop and narrow mobile viewports; capture screenshots and Playwright traces for failures; review every changed page and representative role views.
 5. **Production packaging gate** — Docker build, migrations, Laravel caches, Nginx configuration, HTTPS health response, and Windows deployment script syntax.
 6. **Client gate** — Android build and emulator launch for parent and teacher apps; Windows client package and startup/sync smoke test when client code changes.
-7. **Release gate** — no merge/deploy while any required check is queued, pending, skipped unexpectedly, failed, or missing evidence.
+7. **Release gate** — the `Acceptance gate (release blocking)` job depends on backend tests, authenticated browser acceptance, production Docker/HTTPS smoke, and frontend build. It fails if any dependency is failed, skipped, cancelled, or otherwise not `success`; its job summary records the exact candidate SHA and every dependency result. Configure this named check as required in repository branch protection before treating it as a hard merge block.
 
 ## Mandatory business workflow scenarios
 
 - **Admission/family linking:** link an existing student to the correct parent; reject a parent from another institution, invalid student, unauthorized role, and nonexistent parent account; link siblings to one parent; verify idempotent repeat submission and audit history.
 - **Family fees:** compare the consolidated family payable/paid/outstanding against the sum of individual student statements; include a child with no fee obligation; verify institution boundaries and parent visibility.
-- **Daily diary:** parent saves study hours and parent feedback; school saves homework and school feedback for the same date; each side sees the other's saved values; parent cannot alter school-owned fields; school cannot alter parent-owned fields; unrelated parent and out-of-scope staff are denied; future dates and invalid hours are rejected.
+- **Daily diary:** automated Laravel feature tests verify parent/school field ownership, persistence across updates, same-day uniqueness, role-visible diary page, future-date rejection, and invalid study hours. Playwright desktop acceptance submits as parent, updates as school staff, then verifies both sides' saved content; the mobile project checks the narrow layout. Continue adding explicit unrelated-parent and out-of-scope-staff negative tests as fixture coverage is extended.
 - **Fees/payments:** record an allowed offline payment, verify balance and receipt, prevent unauthorized payment/reconciliation, and verify reconciliation mismatch handling without mutating production data.
 - **Core operations:** admissions, tasks, leave, accounts, fee management, communication, reports, academic setup, administration, and operations. Test create/read/update/validation/authorization for the actions each role is allowed to perform.
 
 ## How to run it repeatedly
 
-- Every pull request runs the ERP CI workflow and prototype workflow automatically.
+- Every pull request runs the ERP CI workflow and prototype workflow automatically. The ERP CI workflow also emits one aggregate `Acceptance gate (release blocking)` check after its four required jobs complete.
+- In GitHub repository Settings → Rules → Rulesets (or Branches → Branch protection rules), create a rule for `main` that requires pull requests and the status check `Acceptance gate (release blocking)`. Also block force pushes/deletion and require branches to be up to date if your team policy permits. The GitHub connection used during this task can create code changes but does not have repository administration permission to enforce that settings change; do not assume this rule is already active.
 - Use the ERP CI workflow's **Run workflow** action for a deliberate re-run against a candidate branch or main SHA.
 - Read the run for the exact commit SHA, then inspect job summaries and download the `tagore-human-style-e2e-report` artifact. A green check is not accepted if the artifact or required workflow is missing.
 - For a failed test, retain the failing URL, role, expected/actual result, console/network error, screenshot/trace, and test data identifiers. Fix the cause, commit the fix, and rerun the full gate.
