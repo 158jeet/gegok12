@@ -100,10 +100,12 @@ class FeeController extends Controller
         $familyBalances = DB::table('tagore_parent_students as ps')
             ->join('users as parent', 'parent.id', '=', 'ps.parent_user_id')
             ->join('users as child', 'child.id', '=', 'ps.student_id')
+            ->join('tagore_institutions as child_institution', 'child_institution.school_id', '=', 'child.school_id')
             ->leftJoin('tagore_fee_obligations as o', function ($join) use ($ids) {
                 $join->on('o.student_id', '=', 'ps.student_id')->whereIn('o.institution_id', $ids);
             })
             ->where('ps.status', 'active')
+            ->whereIn('child_institution.id', $ids)
             ->whereNull('parent.deleted_at')
             ->whereNull('child.deleted_at')
             ->groupBy('ps.parent_user_id', 'parent.name', 'parent.mobile_no')
