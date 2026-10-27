@@ -117,6 +117,57 @@ class AdmissionsController extends Controller
         return view('tagore.admissions.show',compact('lead','staff'));
     }
 
+    public function linkFamily(Request $request, int $leadId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+        $lead = TagoreAdmissionLead::findOrFail($leadId);
+        abort_unless(in_array((int) $lead->institution_id, $this->institutionIds($userId, $roles), true), 403);
+
+        $data = $request->validate([
+            'student_id' => ['required', 'integer'],
+            'parent_mobile' => ['required', 'string', 'max:30'],
+            'relationship' => ['required', 'in:Mother,Father,Guardian,Other'],
+        ]);
+
+        $institution = DB::table('tagore_institutions')->where('id', $lead->institution_id)->first();
+        abort_unless($institution, 422, 'Institution not found.');
+        $student = DB::table('users')->where('id', (int) $data['student_id'])
+            ->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->first();
+        abort_unless($student, 422, 'Select a student account belonging to this institution.');
+
+        $mobile = preg_replace('/[^0-9+]/', '', $data['parent_mobile']);
+        $parent = DB::table('users')->where('usergroup_id', 7)->where('school_id', $institution->school_id)
+            ->where('mobile_no', $mobile)->whereNull('deleted_at')->first();
+        abort_unless($parent, 422, 'No parent account matches this mobile number at this school. Create/verify the parent account first.');
+
+        DB::transaction(function () use ($parent, $student, $data, $institution, $userId) {
+            DB::table('tagore_parent_students')->updateOrInsert(
+                ['parent_user_id' => $parent->id, 'student_id' => $student->id],
+                ['relationship' => $data['relationship'], 'is_primary' => true, 'is_guardian' => true,
+                 'status' => 'active', 'updated_at' => now(), 'created_at' => now()]
+            );
+            if (DB::getSchemaBuilder()->hasTable('student_parent_links')) {
+                DB::table('student_parent_links')->updateOrInsert(
+                    ['parent_id' => $parent->id, 'student_id' => $student->id],
+                    ['school_id' => $institution->school_id, 'status' => 1, 'updated_at' => now(), 'created_at' => now()]
+                );
+            }
+            if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+                DB::table('tagore_audit_events')->insert([
+                    'user_id' => $userId, 'action' => 'admissions.family_link',
+                    'entity_type' => 'Student', 'entity_id' => $student->id,
+                    'old_values_json' => null,
+                    'new_values_json' => json_encode(['parent_user_id' => $parent->id, 'student_id' => $student->id, 'relationship' => $data['relationship'], 'institution_id' => $institution->id]),
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Verified parent-child link saved. All siblings linked to this same parent account will appear together in the family fee summary.');
+    }
+
     public function activity(Request $request,int $leadId)
     {
         $userId=(int)$request->user()->id; $roles=$this->roles($userId);
