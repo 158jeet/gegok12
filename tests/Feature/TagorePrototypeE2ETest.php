@@ -198,4 +198,31 @@ class TagorePrototypeE2ETest extends TestCase
         $this->assertDatabaseHas('tagore_payment_orders', ['id'=>$orderId,'status'=>'payment_initiated']);
     }
 
+
+    public function test_parent_family_fee_totals_match_only_active_linked_children(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $studentIds = DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)->where('status', 'active')->pluck('student_id');
+
+        $this->assertNotEmpty($studentIds, 'The demo parent must have at least one linked child.');
+
+        $expected = DB::table('tagore_fee_obligations')->whereIn('student_id', $studentIds)
+            ->selectRaw('COALESCE(SUM(net_amount),0) payable, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(outstanding_amount),0) outstanding')
+            ->first();
+
+        $response = $this->actingAs($parent)->get(route('tagore.parent.dashboard'))->assertOk()
+            ->assertSee('Family fee overview')->assertSee('All children, one total');
+
+        foreach (['payable', 'paid', 'outstanding'] as $field) {
+            $formatted = number_format((float) $expected->{$field}, 2);
+            $response->assertSee('₹' . $formatted, false);
+        }
+
+        $this->assertSame(
+            $studentIds->count(),
+            DB::table('tagore_parent_students')->where('parent_user_id', $parent->id)->where('status', 'active')->distinct()->count('student_id')
+        );
+    }
+
 }
