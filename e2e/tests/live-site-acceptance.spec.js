@@ -15,7 +15,7 @@ function getAccounts() {
 function assertHealthyBody(body, context) {
   expect(body, context + ': page body should not be empty').toBeTruthy();
   expect(body, context + ': visible server exception').not.toMatch(/server error|whoops|internal server error/i);
-  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\\u00BD|\uFFFD)/);
+  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\u00BD|\uFFFD)/);
 }
 
 test.describe('Tagore live-site acceptance', () => {
