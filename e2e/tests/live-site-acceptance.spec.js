@@ -15,7 +15,7 @@ function getAccounts() {
 function assertHealthyBody(body, context) {
   expect(body, context + ': page body should not be empty').toBeTruthy();
   expect(body, context + ': visible server exception').not.toMatch(/server error|whoops|internal server error/i);
-  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\\u00C3|\\u00C2|\\u00E2\\u20AC|\\u00EF\\u00BF\\u00BD|\\uFFFD)/);
+  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\\u00BD|\uFFFD)/);
 }
 
 test.describe('Tagore live-site acceptance', () => {
@@ -65,7 +65,7 @@ test.describe('Tagore live-site acceptance', () => {
         await page.locator('#email').fill(accounts[role].email);
         await page.locator('#password').fill(accounts[role].password);
         await page.getByRole('button', { name: 'Sign in to Tagore ERP' }).click();
-        await expect(page).toHaveURL(/\\/tagore\\/dashboard(?:[/?#]|$)/, { timeout: 30000 });
+        await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/, { timeout: 30000 });
         await expect(page.locator('body')).not.toContainText(/server error|whoops|internal server error/i);
         assertHealthyBody(await page.locator('body').innerText(), role + ' dashboard');
 
