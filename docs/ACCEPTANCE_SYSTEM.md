@@ -12,7 +12,30 @@ A change is accepted only when all applicable gates have a recorded result for t
 4. **Responsive and visual gate** — desktop and narrow mobile viewports; capture screenshots and Playwright traces for failures; review every changed page and representative role views.
 5. **Production packaging gate** — Docker build, migrations, Laravel caches, Nginx configuration, HTTPS health response, and Windows deployment script syntax.
 6. **Client gate** — Android build and emulator launch for parent and teacher apps; Windows client package and startup/sync smoke test when client code changes.
-7. **Release gate** — the `Acceptance gate (release blocking)` job depends on backend tests, authenticated browser acceptance, production Docker/HTTPS smoke, and frontend build. It fails if any dependency is failed, skipped, cancelled, or otherwise not `success`; its job summary records the exact candidate SHA and every dependency result. Configure this named check as required in repository branch protection before treating it as a hard merge block.
+7. **CI release gate** — the `Acceptance gate (release blocking)` job depends on backend tests, authenticated browser acceptance, production Docker/HTTPS smoke, and frontend build. It fails if any dependency is failed, skipped, cancelled, or otherwise not `success`; its job summary records the exact candidate SHA and every dependency result. Configure this named check as required in repository branch protection before treating it as a hard merge block.
+
+## Live-site acceptance
+
+The manual GitHub Actions workflow **Tagore Live-Site Acceptance** tests the deployed website from a GitHub-hosted browser runner. It is read-only: it signs into dedicated test accounts, checks dashboard rendering and visible navigation routes, and verifies responsive login rendering. It does not submit forms or mutate student, fee, or attendance data.
+
+Before the first run, configure the repository Actions secret `TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON` with a JSON object containing a dedicated test account for each role. Example shape (use test credentials, never production staff passwords):
+
+```json
+{
+  "owner": {"email": "owner-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "principal": {"email": "principal-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "coordinator": {"email": "coordinator-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "teacher": {"email": "teacher-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "parent": {"email": "parent-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "student": {"email": "student-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "accounts": {"email": "accounts-acceptance@example.invalid", "password": "replace-with-test-password"},
+  "fee-editor": {"email": "fee-editor-acceptance@example.invalid", "password": "replace-with-test-password"}
+}
+```
+
+Run **Actions → Tagore Live-Site Acceptance → Run workflow**, enter the HTTPS base URL and environment label, and inspect the result and the uploaded screenshot/trace artifact. If the production server firewall does not permit GitHub-hosted runner access, use a self-hosted runner with a restricted network path; do not expose an administrative port or disable authentication to make the test pass.
+
+The live workflow fails closed when the base URL or any role account is missing. Test accounts should be least-privileged, contain synthetic records, and never be reused by real users. Rotate their passwords and remove the accounts when no longer needed. A passing live read-only sweep is evidence for those pages and routes only; it does not certify every mutating business workflow.
 
 ## Mandatory business workflow scenarios
 

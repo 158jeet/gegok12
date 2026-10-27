@@ -1,0 +1,96 @@
+name: Tagore Live-Site Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-acceptance.yml'
+      - 'e2e/**'
+      - 'docs/ACCEPTANCE_SYSTEM.md'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: HTTPS URL of the deployed Tagore ERP (production or staging)
+        required: true
+        type: string
+      environment_label:
+        description: Environment label for the report (for example staging)
+        required: true
+        default: staging
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tagore-live-acceptance
+  cancel-in-progress: false
+
+jobs:
+  validate-live-suite:
+    if: github.event_name == 'pull_request'
+    name: Validate live acceptance test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        working-directory: e2e
+        run: npm ci
+      - name: Validate Playwright live test discovery
+        working-directory: e2e
+        run: npx playwright test tests/live-site-acceptance.spec.js --list
+
+  live-browser-acceptance:
+    if: github.event_name == 'workflow_dispatch'
+    name: Live browser acceptance (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url }}
+      TAGORE_LIVE_ENVIRONMENT: ${{ inputs.environment_label }}
+      TAGORE_LIVE_ACCEPTANCE_ENABLED: 'true'
+      TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON: ${{ secrets.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON }}
+      CI: 'true'
+    steps:
+      - name: Validate target and dedicated test accounts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const url = new URL(process.env.E2E_BASE_URL);
+          if (url.protocol !== 'https:') throw new Error('Live acceptance requires an HTTPS URL.');
+          if (url.username || url.password || url.search || url.hash) throw new Error('Do not put credentials, query strings, or fragments in the base URL.');
+          if (['localhost', '127.0.0.1', '::1'].includes(url.hostname)) throw new Error('The GitHub-hosted runner cannot test a localhost URL.');
+          if (!process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON) throw new Error('Missing GitHub secret TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON.');
+          const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON);
+          const roles = ['owner','principal','coordinator','teacher','parent','student','accounts','fee-editor'];
+          const missing = roles.filter(role => !accounts[role] || !accounts[role].email || !accounts[role].password);
+          if (missing.length) throw new Error('Dedicated test-account credentials missing for roles: ' + missing.join(', '));
+          console.log('Target URL validated. All eight role-account entries are configured; secret values are not printed.');
+          NODE
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        working-directory: e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Run live authenticated role and responsive-page acceptance
+        working-directory: e2e
+        run: npx playwright test tests/live-site-acceptance.spec.js --project=desktop --project=mobile
+      - name: Upload live acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagore-live-acceptance-${{ github.run_id }}
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          if-no-files-found: warn
+          retention-days: 30
