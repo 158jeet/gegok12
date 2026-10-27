@@ -61,6 +61,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::patch('/admissions/{leadId}/assign', [AdmissionsController::class, 'assign'])->whereNumber('leadId')->name('tagore.admissions.assign');
     Route::get('/admissions/{leadId}', [AdmissionsController::class, 'show'])->whereNumber('leadId')->name('tagore.admissions.show');
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
+    Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
 
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
     Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');
