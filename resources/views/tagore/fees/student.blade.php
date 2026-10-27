@@ -12,6 +12,17 @@
     @if(session('success'))<div class="success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="error">{{ session('error') }}</div>@endif
     <div class="card"><h1>Fee Statement</h1><div>{{ $student->name }}</div><div class="muted">{{ $student->institution }} · Student #{{ $student->id }}</div></div>
+    @if(isset($familyBalances) && $familyBalances->isNotEmpty())
+    <div class="card" aria-labelledby="family-fee-summary-title">
+        <h2 id="family-fee-summary-title">Family fee summary</h2>
+        <p class="muted">All active children linked to each parent account, combined into one balance.</p>
+        <table class="table"><thead><tr><th>Parent / guardian</th><th>Children</th><th>Total payable</th><th>Total paid</th><th>Total outstanding</th></tr></thead><tbody>
+        @foreach($familyBalances as $family)
+        <tr><td>{{ $family->parent_name }}</td><td>{{ $family->children_count }}</td><td>₹{{ number_format($family->payable,2) }}</td><td>₹{{ number_format($family->paid,2) }}</td><td class="due">₹{{ number_format($family->outstanding,2) }}</td></tr>
+        @endforeach
+        </tbody></table>
+    </div>
+    @endif
     <div class="grid">
         <div class="metric">Gross<b>₹{{ number_format($summary['gross'],2) }}</b></div>
         <div class="metric">Discount<b>₹{{ number_format($summary['discount'],2) }}</b></div>
