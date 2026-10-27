@@ -3,7 +3,7 @@
 <body class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.parent.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="/uploads/tgi-logo.webp" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Parent workspace</span></div></a><div class="tg-top-actions"><div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'P',0,1)) }}</div><span>{{ auth()->user()->name ?? 'Parent' }}</span></div></div></header>
 <main class="tg-main">
-<section class="tg-hero"><h1>Your family's school at a glance.</h1><p>Attendance, results, fees and school communication are organised around your children — not around ERP modules.</p><div class="tg-hero-actions"><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP home</a></div></section>
+<section class="tg-hero"><h1>Your family's school at a glance.</h1><p>Attendance, results, fees and school communication are organised around your children — not around ERP modules.</p><div class="tg-hero-actions"><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP home</a><a class="tg-btn" href="{{ route('tagore.diary.index') }}">Open daily diary</a></div></section>
 @if($cards->isEmpty())
 <div class="tg-card tg-empty"><strong>No children linked yet</strong><span>Ask the school office to link this parent account with the student's school account.</span></div>
 @else
