@@ -1,6 +1,12 @@
 name: Tagore Live-Site Acceptance
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-acceptance.yml'
+      - 'e2e/**'
+      - 'docs/ACCEPTANCE_SYSTEM.md'
   workflow_dispatch:
     inputs:
       base_url:
@@ -21,7 +27,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-live-suite:
+    if: github.event_name == 'pull_request'
+    name: Validate live acceptance test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        working-directory: e2e
+        run: npm ci
+      - name: Validate Playwright live test discovery
+        working-directory: e2e
+        run: npx playwright test tests/live-site-acceptance.spec.js --list
+
   live-browser-acceptance:
+    if: github.event_name == 'workflow_dispatch'
     name: Live browser acceptance (read-only)
     runs-on: ubuntu-latest
     timeout-minutes: 20
