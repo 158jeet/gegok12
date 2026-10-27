@@ -69,6 +69,17 @@ class DailyDiaryController extends Controller
             abort_unless(in_array((int) $link->institution_id, $this->institutionIds($userId, $roles), true), 403);
         }
 
+        // Remove fields this role cannot edit before validation; invalid unauthorized values
+        // must not block an authorized update, and can never be persisted by this request.
+        if (!$isParent || $isSchool) {
+            $request->request->remove('study_hours');
+            $request->request->remove('parent_feedback');
+        }
+        if (!$isSchool) {
+            $request->request->remove('school_feedback');
+            $request->request->remove('homework');
+        }
+
         $data = $request->validate([
             'diary_date' => ['required', 'date', 'before_or_equal:today'],
             'study_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
