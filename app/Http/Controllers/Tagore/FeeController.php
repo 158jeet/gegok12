@@ -58,6 +58,9 @@ class FeeController extends Controller
             ->whereNull('sibling.deleted_at');
         if ($roles->contains('PARENT')) {
             $familyQuery->where('focus.parent_user_id', $userId);
+        } else {
+            // Finance/admin family summaries stay within the institution already authorised above.
+            $familyQuery->where('sibling_institution.id', $student->institution_id);
         }
         $familyBalances = $familyQuery
             ->groupBy('focus.parent_user_id', 'parent.name')
