@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tagore\AcademicStructureController;
 use App\Http\Controllers\Tagore\AdministrationController;
 use App\Http\Controllers\Tagore\AdmissionsController;
+use App\Http\Controllers\Tagore\DailyDiaryController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
@@ -35,6 +36,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
+    Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
@@ -58,6 +61,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::patch('/admissions/{leadId}/assign', [AdmissionsController::class, 'assign'])->whereNumber('leadId')->name('tagore.admissions.assign');
     Route::get('/admissions/{leadId}', [AdmissionsController::class, 'show'])->whereNumber('leadId')->name('tagore.admissions.show');
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
+    Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
 
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
     Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');

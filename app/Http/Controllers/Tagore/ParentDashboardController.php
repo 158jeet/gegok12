@@ -43,6 +43,16 @@ class ParentDashboardController extends Controller
             return (object) ['exam_name' => $exam, 'percentage' => $max > 0 ? round(($marks / $max) * 100, 1) : null, 'subjects' => $examRows->count()];
         });
 
+        $familySummary = (object) [
+            'children_count' => $children->count(),
+            'payable' => round((float) $feeSummary->sum('payable'), 2),
+            'paid' => round((float) $feeSummary->sum('paid'), 2),
+            'outstanding' => round((float) $feeSummary->sum('outstanding'), 2),
+            'children_with_due' => $children->filter(function ($child) use ($feeSummary) {
+                return (float) ($feeSummary->get($child->student_id)->outstanding ?? 0) > 0;
+            })->count(),
+        ];
+
         $cards = $children->map(function ($child) use ($feeSummary, $attendanceSummary, $latestResults) {
             $fees = $feeSummary->get($child->student_id);
             $attendance = $attendanceSummary->get($child->student_id);
@@ -61,7 +71,7 @@ class ParentDashboardController extends Controller
             ];
         });
 
-        return view('tagore.parent-dashboard', compact('cards'));
+        return view('tagore.parent-dashboard', compact('cards', 'familySummary'));
     }
 
     private function roles(int $userId)

@@ -37,7 +37,38 @@ class FeeController extends Controller
             'outstanding' => round((float) $fees->sum('outstanding_amount'), 2),
         ];
 
-        return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles'));
+        // Show family-wide balances alongside an individual statement. Parents see only
+        // their own linked family; authorised school finance/admin users can see each linked guardian.
+        $familyQuery = DB::table('tagore_parent_students as focus')
+            ->join('users as parent', 'parent.id', '=', 'focus.parent_user_id')
+            ->join('tagore_parent_students as sibling_link', function ($join) {
+                $join->on('sibling_link.parent_user_id', '=', 'focus.parent_user_id')
+                    ->where('sibling_link.status', '=', 'active');
+            })
+            ->join('users as sibling', 'sibling.id', '=', 'sibling_link.student_id')
+            ->leftJoin('tagore_institutions as sibling_institution', 'sibling_institution.school_id', '=', 'sibling.school_id')
+            ->leftJoin('tagore_fee_obligations as sibling_fee', function ($join) {
+                $join->on('sibling_fee.student_id', '=', 'sibling.id')
+                    ->on('sibling_fee.institution_id', '=', 'sibling_institution.id');
+            })
+            ->where('focus.student_id', $studentId)
+            ->where('focus.status', 'active')
+            ->where('sibling_link.status', 'active')
+            ->whereNull('parent.deleted_at')
+            ->whereNull('sibling.deleted_at');
+        if ($roles->contains('PARENT')) {
+            $familyQuery->where('focus.parent_user_id', $userId);
+        } else {
+            // Finance/admin family summaries stay within the institution already authorised above.
+            $familyQuery->where('sibling_institution.id', $student->institution_id);
+        }
+        $familyBalances = $familyQuery
+            ->groupBy('focus.parent_user_id', 'parent.name')
+            ->selectRaw('focus.parent_user_id, parent.name as parent_name, COUNT(DISTINCT sibling_link.student_id) as children_count, COALESCE(SUM(sibling_fee.net_amount),0) as payable, COALESCE(SUM(sibling_fee.paid_amount),0) as paid, COALESCE(SUM(sibling_fee.outstanding_amount),0) as outstanding')
+            ->orderBy('parent.name')
+            ->get();
+
+        return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles', 'familyBalances'));
     }
 
     public function accounts(Request $request): View
@@ -67,7 +98,27 @@ class FeeController extends Controller
 
         $pendingReconciliation = (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count();
 
-        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles'));
+        // Consolidate each active parent account's children into one fee balance.
+        // The institution scope matches the accounts role's permitted institutions.
+        $familyBalances = DB::table('tagore_parent_students as ps')
+            ->join('users as parent', 'parent.id', '=', 'ps.parent_user_id')
+            ->join('users as child', 'child.id', '=', 'ps.student_id')
+            ->join('tagore_institutions as child_institution', 'child_institution.school_id', '=', 'child.school_id')
+            ->leftJoin('tagore_fee_obligations as o', function ($join) use ($ids) {
+                $join->on('o.student_id', '=', 'ps.student_id')->whereIn('o.institution_id', $ids);
+            })
+            ->where('ps.status', 'active')
+            ->whereIn('child_institution.id', $ids)
+            ->whereNull('parent.deleted_at')
+            ->whereNull('child.deleted_at')
+            ->groupBy('ps.parent_user_id', 'parent.name', 'parent.mobile_no')
+            ->selectRaw('ps.parent_user_id, parent.name as parent_name, parent.mobile_no, COUNT(DISTINCT ps.student_id) as children_count, COALESCE(SUM(o.net_amount),0) as payable, COALESCE(SUM(o.paid_amount),0) as paid, COALESCE(SUM(o.outstanding_amount),0) as outstanding')
+            ->orderByDesc('outstanding')
+            ->orderBy('parent.name')
+            ->limit(500)
+            ->get();
+
+        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances'));
     }
 
     public function recordOfflinePayment(Request $request, int $studentId, FeeService $feeService)
