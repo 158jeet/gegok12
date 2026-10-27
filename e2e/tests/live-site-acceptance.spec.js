@@ -15,7 +15,7 @@ function getAccounts() {
 function assertHealthyBody(body, context) {
   expect(body, context + ': page body should not be empty').toBeTruthy();
   expect(body, context + ': visible server exception').not.toMatch(/server error|whoops|internal server error/i);
-  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\u00BD|\uFFFD)/);
+  expect(body, context + ': visible mojibake/replacement characters').not.toMatch(/(?:\\u00C3|\\u00C2|\\u00E2\\u20AC|\\u00EF\\u00BF\\u00BD|\\uFFFD)/);
 }
 
 test.describe('Tagore live-site acceptance', () => {
@@ -41,7 +41,7 @@ test.describe('Tagore live-site acceptance', () => {
   });
 
   for (const role of requiredRoles) {
-    test(role + ': sign in, dashboard health and visible navigation routes', async ({ browser }, testInfo) => {
+    test(role + ': sign in, dashboard and render visible navigation pages', async ({ browser }, testInfo) => {
       test.skip(testInfo.project.name !== 'desktop', 'Authenticated route sweep runs once per role on desktop; mobile project checks responsive login.');
       test.setTimeout(150000);
       const accounts = getAccounts();
@@ -65,7 +65,7 @@ test.describe('Tagore live-site acceptance', () => {
         await page.locator('#email').fill(accounts[role].email);
         await page.locator('#password').fill(accounts[role].password);
         await page.getByRole('button', { name: 'Sign in to Tagore ERP' }).click();
-        await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/, { timeout: 30000 });
+        await expect(page).toHaveURL(/\\/tagore\\/dashboard(?:[/?#]|$)/, { timeout: 30000 });
         await expect(page.locator('body')).not.toContainText(/server error|whoops|internal server error/i);
         assertHealthyBody(await page.locator('body').innerText(), role + ' dashboard');
 
@@ -75,7 +75,6 @@ test.describe('Tagore live-site acceptance', () => {
         expect(brokenImages, role + ' dashboard broken images').toEqual([]);
         await page.screenshot({ path: 'test-results/live-' + role + '-dashboard.png', fullPage: true });
 
-        const origin = new URL(process.env.E2E_BASE_URL).origin;
         const links = await page.locator('a[href]').evaluateAll(anchors => [...new Set(anchors
           .map(a => a.href)
           .filter(href => {
@@ -88,15 +87,24 @@ test.describe('Tagore live-site acceptance', () => {
 
         const routeResults = [];
         for (const href of links.slice(0, 80)) {
-          const response = await context.request.get(href, { timeout: 15000, maxRedirects: 5 }).catch(() => null);
+          const response = await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
           const status = response ? response.status() : 0;
-          routeResults.push({ path: new URL(href).pathname, status });
+          const finalPath = new URL(page.url()).pathname;
+          const body = await page.locator('body').innerText().catch(() => '');
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2).catch(() => true);
+          const brokenImages = await page.locator('img').evaluateAll(images => images.filter(img => img.complete && img.naturalWidth === 0).map(img => img.src)).catch(() => ['image check failed']);
+          const loginRedirect = finalPath === '/login' || finalPath.startsWith('/login/');
+          routeResults.push({ path: new URL(href).pathname, status, finalPath, overflow, brokenImages: brokenImages.length });
+          expect(status, role + ' route HTTP response for ' + href).toBeGreaterThanOrEqual(200);
+          expect(status, role + ' route must not return 401/403/404/5xx for ' + href).toBeLessThan(400);
+          expect(loginRedirect, role + ' visible route unexpectedly redirected to login: ' + href).toBeFalsy();
+          assertHealthyBody(body, role + ' route ' + href);
+          expect(overflow, role + ' route horizontally overflows: ' + href).toBeFalsy();
+          expect(brokenImages, role + ' route has broken images: ' + href).toEqual([]);
         }
-        const brokenRoutes = routeResults.filter(item => item.status === 0 || item.status === 404 || item.status >= 500);
-        expect(brokenRoutes, role + ' visible navigation routes must not be missing or server-erroring').toEqual([]);
         expect(serverErrors, role + ' browser requests with 5xx responses').toEqual([]);
         expect(consoleErrors, role + ' browser console errors').toEqual([]);
-        console.log(JSON.stringify({ environment: process.env.TAGORE_LIVE_ENVIRONMENT || 'unspecified', role, dashboard: 'passed', visibleRoutesChecked: routeResults.length, routeResults }, null, 2));
+        console.log(JSON.stringify({ environment: process.env.TAGORE_LIVE_ENVIRONMENT || 'unspecified', role, dashboard: 'passed', renderedRoutesChecked: routeResults.length, routeResults }, null, 2));
       } finally {
         await context.close();
       }
