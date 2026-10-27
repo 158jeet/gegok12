@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 async function authenticate(page, role) {
   await page.goto('/__e2e/session/' + role, { waitUntil: 'domcontentloaded', timeout: 15000 });
-  await expect(page).toHaveURL(/\\/tagore\\/dashboard/);
+  await expect(page).toHaveURL(/\/tagore\/dashboard/);
 }
 
 test.describe('Daily diary acceptance workflow', () => {
