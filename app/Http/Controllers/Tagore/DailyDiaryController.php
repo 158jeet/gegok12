@@ -80,7 +80,9 @@ class DailyDiaryController extends Controller
         $key = ['student_id' => $studentId, 'diary_date' => $data['diary_date']];
         $entry = DB::table('tagore_daily_diary')->where($key)->first();
 
-        if ($isParent) {
+        // School staff must update only school-owned fields, even if an account has
+        // more than one active role. This prevents a school save from nulling parent data.
+        if ($isParent && !$isSchool) {
             $parentFields = [
                 'study_hours' => $data['study_hours'] ?? null,
                 'parent_feedback' => $data['parent_feedback'] ?? null,
