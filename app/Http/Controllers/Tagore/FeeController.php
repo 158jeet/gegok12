@@ -67,7 +67,24 @@ class FeeController extends Controller
 
         $pendingReconciliation = (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count();
 
-        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles'));
+        // Consolidate each active parent account's children into one fee balance.
+        // The institution scope matches the accounts role's permitted institutions.
+        $familyBalances = DB::table('tagore_parent_students as ps')
+            ->join('users as parent', 'parent.id', '=', 'ps.parent_user_id')
+            ->join('users as child', 'child.id', '=', 'ps.student_id')
+            ->join('tagore_fee_obligations as o', 'o.student_id', '=', 'ps.student_id')
+            ->where('ps.status', 'active')
+            ->whereIn('o.institution_id', $ids)
+            ->whereNull('parent.deleted_at')
+            ->whereNull('child.deleted_at')
+            ->groupBy('ps.parent_user_id', 'parent.name', 'parent.mobile_no')
+            ->selectRaw('ps.parent_user_id, parent.name as parent_name, parent.mobile_no, COUNT(DISTINCT ps.student_id) as children_count, COALESCE(SUM(o.net_amount),0) as payable, COALESCE(SUM(o.paid_amount),0) as paid, COALESCE(SUM(o.outstanding_amount),0) as outstanding')
+            ->orderByDesc('outstanding')
+            ->orderBy('parent.name')
+            ->limit(500)
+            ->get();
+
+        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances'));
     }
 
     public function recordOfflinePayment(Request $request, int $studentId, FeeService $feeService)
