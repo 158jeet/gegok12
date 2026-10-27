@@ -159,3 +159,34 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: root
         run: php artisan test --group=e2e
+
+  acceptance-gate:
+    name: Prototype acceptance gate (release blocking)
+    if: always()
+    needs: [test, mysql-migration-smoke, prototype-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish commit-specific acceptance decision
+        env:
+          TEST: ${{ needs.test.result }}
+          MYSQL_MIGRATION: ${{ needs.mysql-migration-smoke.result }}
+          PROTOTYPE_E2E: ${{ needs.prototype-e2e.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## TagoreK12 Prototype acceptance decision"
+            echo
+            echo "- Candidate commit: `$CANDIDATE_SHA`"
+            echo "- Tagore test suite: **$TEST**"
+            echo "- MySQL migration smoke: **$MYSQL_MIGRATION**"
+            echo "- Prototype end-to-end: **$PROTOTYPE_E2E**"
+            echo
+            echo "Acceptance requires success for every required job on this exact commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$TEST" != "success" || "$MYSQL_MIGRATION" != "success" || "$PROTOTYPE_E2E" != "success" ]]; then
+            echo "::error::Prototype acceptance blocked for $CANDIDATE_SHA. A failed, skipped, cancelled, or pending required job is not a pass."
+            exit 1
+          fi
+
+          echo "Prototype acceptance gate passed for $CANDIDATE_SHA."
