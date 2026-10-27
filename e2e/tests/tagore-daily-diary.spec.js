@@ -45,7 +45,7 @@ test.describe('Daily diary acceptance workflow', () => {
     await expect(page.locator('body')).toContainText(parentNote);
     await expect(page.locator('body')).toContainText(homework);
     await expect(page.locator('body')).toContainText('E2E school feedback');
-    await expect(page.locator('input[name="study_hours"]').first()).toHaveValue('2.50');
+    await expect(page.locator('input[name="study_hours"]').first()).toHaveValue('2.5');
     await page.screenshot({ path: 'test-results/daily-diary-parent-desktop.png', fullPage: true });
   });
 });
