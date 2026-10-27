@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tagore\AcademicStructureController;
 use App\Http\Controllers\Tagore\AdministrationController;
 use App\Http\Controllers\Tagore\AdmissionsController;
+use App\Http\Controllers\Tagore\DailyDiaryController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
 use App\Http\Controllers\Tagore\FeeImportController;
@@ -35,6 +36,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
+    Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
