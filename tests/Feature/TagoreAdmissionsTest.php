@@ -111,4 +111,48 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertSame('Fee concern',$lead->fresh()->lost_reason);
     }
 
+
+    public function test_authorized_staff_can_link_existing_parent_to_student_with_audit(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+
+        $student = User::query()->where('usergroup_id', 6)
+            ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+        $parent = User::query()->where('usergroup_id', 7)
+            ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $mobile = '98' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile]);
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-FAMILY-' . uniqid(),
+            'student_name' => 'Family Link Acceptance Student',
+            'status' => 'new',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id,
+            'parent_mobile' => $mobile,
+            'relationship' => 'Guardian',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_parent_students', [
+            'parent_user_id' => $parent->id,
+            'student_id' => $student->id,
+            'relationship' => 'Guardian',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('tagore_audit_events', [
+            'user_id' => $owner->id,
+            'action' => 'admissions.family_link',
+            'entity_type' => 'Student',
+            'entity_id' => $student->id,
+        ]);
+    }
+
 }
