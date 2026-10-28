@@ -65,11 +65,12 @@ class AdministrationController extends Controller
         $groupId = DB::table('tagore_groups')->where('code', 'TAGORE')->value('id');
         abort_unless($groupId, 422);
         abort_if(DB::table('tagore_institutions')->where('school_id', $data['school_id'])->exists(), 422, 'This GegoK12 school is already linked to a Tagore institution.');
-        abort_if(DB::table('tagore_institutions')->where('tagore_group_id', $groupId)->where('code', $data['code'])->exists(), 422, 'Institution code already exists.');
+        $code = strtoupper(trim($data['code']));
+        abort_if(DB::table('tagore_institutions')->where('tagore_group_id', $groupId)->whereRaw('UPPER(code) = ?', [$code])->exists(), 422, 'Institution code already exists.');
         DB::table('tagore_institutions')->insert([
             'tagore_group_id' => $groupId,
             'school_id' => $data['school_id'],
-            'code' => strtoupper($data['code']),
+            'code' => $code,
             'display_name' => $data['display_name'],
             'type' => $data['type'] ?: 'school',
             'status' => 'active',
@@ -89,8 +90,10 @@ class AdministrationController extends Controller
             'end_date' => ['required', 'date', 'after:start_date'],
             'status' => ['required', 'in:active,inactive'],
         ]);
-        $schoolId = DB::table('tagore_institutions')->where('id', $data['institution_id'])->value('school_id');
-        abort_unless($schoolId, 422);
+        $institution = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->first(['id', 'school_id']);
+        abort_unless($institution, 422, 'Select an active institution.');
+        $schoolId = $institution->school_id;
+        abort_if(DB::table('academic_years')->where('school_id', $schoolId)->where('name', trim($data['name']))->exists(), 422, 'Academic year already exists for this institution.');
         DB::table('academic_years')->insert([
             'school_id' => $schoolId,
             'name' => $data['name'],
@@ -153,11 +156,15 @@ class AdministrationController extends Controller
             'role_id' => ['required', 'integer', 'exists:tagore_roles,id'],
             'institution_id' => ['nullable', 'integer', 'exists:tagore_institutions,id'],
         ]);
-        $role = DB::table('tagore_roles')->where('id', $data['role_id'])->first(['id', 'code']);
+        $role = DB::table('tagore_roles')->where('id', $data['role_id'])->where('status', 'active')->first(['id', 'code']);
+        abort_unless($role, 422, 'Select an active role.');
         if ($role->code === 'OWNER') $data['institution_id'] = null;
+        if ($role->code !== 'OWNER') {
+            abort_unless(!empty($data['institution_id']), 422, 'An institution is required for this role.');
+        }
         if ($data['institution_id']) {
-            $schoolId = DB::table('tagore_institutions')->where('id', $data['institution_id'])->value('school_id');
-            abort_unless($schoolId, 422);
+            $schoolId = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->value('school_id');
+            abort_unless($schoolId, 422, 'Select an active institution.');
             abort_unless(DB::table('users')->where('id', $data['user_id'])->where('school_id', $schoolId)->exists(), 422, 'User must belong to the selected institution school.');
         }
         DB::table('tagore_user_roles')->updateOrInsert(
