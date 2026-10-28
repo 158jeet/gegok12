@@ -18,5 +18,5 @@ test('department: create, persist and validate duplicate code', async ({ page })
   await form.locator('[name="name"]').fill(unique('Duplicate Department'));
   await form.locator('[name="code"]').fill(code.toLowerCase());
   await form.getByRole('button', { name: 'Add department' }).click();
-  await expect(page.locator('body')).toContainText('Department code already exists');
+  await expect(page.locator('body')).toContainText('Department code already exists in this institution.');
 });
