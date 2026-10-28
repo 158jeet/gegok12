@@ -262,7 +262,7 @@ jobs:
           {
             echo "## ERP full acceptance decision"
             echo
-            echo "- Candidate SHA: `$CANDIDATE_SHA`"
+            echo "- Candidate SHA: \`$CANDIDATE_SHA\`"
             echo "- Job result before final gate: **$JOB_RESULT**"
             echo "- Production records changed: **No**"
             echo
