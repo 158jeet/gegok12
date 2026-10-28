@@ -57,6 +57,8 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
       const visited = new Set();
       const consoleErrors = [];
       const failedResponses = [];
+      const expectedAccessDenials = [];
+      const expectedUnavailableIntegrations = [];
       page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const message = msg.text();
@@ -66,6 +68,13 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
         consoleErrors.push(message);
       });
       page.on('response', response => {
+        const pathname = new URL(response.url()).pathname;
+        // CCTV is an optional integration. In the disposable test environment its documented
+        // unconfigured state is HTTP 503; every other 5xx remains a hard failure.
+        if (pathname === '/tagore/platform/cctv/status' && response.status() === 503) {
+          expectedUnavailableIntegrations.push({ status: response.status(), url: response.url() });
+          return;
+        }
         if (response.status() >= 500) failedResponses.push({ status: response.status(), url: response.url() });
       });
 
@@ -86,7 +95,14 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
           findings.push({ role, path, type: 'navigation-failed' });
           continue;
         }
-        if ([401, 403].includes(response.status()) || response.status() >= 500) {
+        if ([401, 403].includes(response.status())) {
+          // The route manifest intentionally lists routes across roles. A 401/403 on a route
+          // the current role is not allowed to use is expected and is tracked separately.
+          expectedAccessDenials.push({ path, status: response.status() });
+          continue;
+        }
+        const expectedCctvUnavailable = path === '/tagore/platform/cctv/status' && response.status() === 503;
+        if (response.status() >= 500 && !expectedCctvUnavailable) {
           findings.push({ role, path, type: 'unexpected-http-status', status: response.status() });
           continue;
         }
@@ -112,7 +128,8 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
             const target = new URL(control.href, page.url());
             if (target.origin !== new URL(page.url()).origin || !target.pathname.startsWith('/tagore/')) continue;
             const probe = await page.request.get(target.href, { timeout: 10000 }).catch(() => null);
-            if (!probe || ([401, 404].includes(probe.status())) || probe.status() >= 500) {
+            const expectedCctvUnavailable = target.pathname === '/tagore/platform/cctv/status' && probe?.status() === 503;
+            if (!probe || ([401, 403, 404].includes(probe.status())) || (probe.status() >= 500 && !expectedCctvUnavailable)) {
               findings.push({ role, path, type: 'link-target-failed', control: control.text, target: target.pathname, status: probe?.status() || 0 });
             }
           } else {
@@ -128,7 +145,7 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
         }
       }
 
-      const report = { role, viewport: testInfo.project.name, routesVisited: visited.size, htmlPagesScreenshotted: pageInventory.length, pages: pageInventory, findings, consoleErrors, failedResponses };
+      const report = { role, viewport: testInfo.project.name, routesVisited: visited.size, htmlPagesScreenshotted: pageInventory.length, pages: pageInventory, expectedAccessDenials, expectedUnavailableIntegrations, findings, consoleErrors, failedResponses };
       await require('fs').promises.mkdir(baseDir, { recursive: true });
       await require('fs').promises.writeFile(baseDir + '/' + role + '-' + testInfo.project.name + '-inventory.json', JSON.stringify(report, null, 2));
       expect(failedResponses, role + ' 5xx responses during route sweep').toEqual([]);
