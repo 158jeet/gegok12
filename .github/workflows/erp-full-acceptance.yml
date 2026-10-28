@@ -154,9 +154,9 @@ jobs:
           }
           for (const suite of report.suites || []) walk(suite);
           const skipped = all.filter(t => t.status === 'skipped' || t.expectedStatus === 'skipped');
-          // One documented non-applicable case: Olympiad POST is intentionally executed once on desktop to avoid consuming a shared IP rate limit twice; mobile verifies the same form layout without submitting.
-          const allowedSkips = skipped.filter(t => t.project === 'mobile' && t.title.includes('Olympiad registration is mobile-first and marketing consent stays optional'));
-          const unexpectedSkips = skipped.filter(t => !allowedSkips.includes(t));
+          // Required acceptance coverage may not be skipped. Each browser project must execute
+          // its own isolated synthetic-data workflow; intentional omissions are not PASS results.
+          const unexpectedSkips = skipped;
           const failed = all.filter(t => !['expected', 'passed'].includes(t.status) && t.status !== 'skipped');
           const flaky = all.filter(t => t.status === 'passed' && t.retries > 1);
           const counts = report.stats || {};
@@ -167,12 +167,12 @@ jobs:
             '- Playwright tests reported: **' + all.length + '**',
             '- Passed: **' + (counts.expected ?? all.filter(t => t.status === 'passed').length) + '**',
             '- Failed/unexpected: **' + failed.length + '**',
-            '- Skipped tests: **' + skipped.length + '** (documented non-applicable: ' + allowedSkips.length + '; unexpected: ' + unexpectedSkips.length + ')',
+            '- Skipped tests: **' + skipped.length + '** (required gate: zero)',
             '- Flaky/retried tests: **' + flaky.length + '**',
             '',
             'Required acceptance tests must run, not silently skip. Any skipped, failed, or flaky test blocks acceptance.'
           ];
-          if (skipped.length) lines.push('', '### Skipped tests', ...skipped.map(t => '- ' + t.title + ' [' + t.project + ']' + (allowedSkips.includes(t) ? ' — documented desktop-only POST workflow; mobile layout is checked' : ' — UNEXPECTED; must be implemented or explicitly reviewed')));
+          if (skipped.length) lines.push('', '### Skipped tests', ...skipped.map(t => '- ' + t.title + ' [' + t.project + '] — UNEXPECTED; required web acceptance must execute'));
           if (failed.length) lines.push('', '### Failed or unexpected tests', ...failed.map(t => '- ' + t.title + ' [' + t.project + ']: ' + t.status));
           fs.appendFileSync(summaryPath, lines.join('\n') + '\n');
           if (unexpectedSkips.length || failed.length || flaky.length || Number(process.env.TEST_EXIT_CODE || 0) !== 0) {
