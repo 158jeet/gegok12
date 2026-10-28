@@ -14,6 +14,10 @@ A change is accepted only when all applicable gates have a recorded result for t
 6. **Client gate** — Android build and emulator launch for parent and teacher apps; Windows client package and startup/sync smoke test when client code changes.
 7. **CI release gate** — the `Acceptance gate (release blocking)` job depends on backend tests, authenticated browser acceptance, production Docker/HTTPS smoke, and frontend build. It fails if any dependency is failed, skipped, cancelled, or otherwise not `success`; its job summary records the exact candidate SHA and every dependency result. Configure this named check as required in repository branch protection before treating it as a hard merge block.
 
+## Test account index
+
+The disposable automated test identities and their role mapping are documented in [`TEST_ACCOUNT_INDEX.md`](TEST_ACCOUNT_INDEX.md). They are seeded only in non-production test environments. Do not use these fixture credentials on production or staging; live acceptance requires separate dedicated staging accounts.
+
 ## Live-site acceptance
 
 The manual GitHub Actions workflow **Tagore Live-Site Acceptance** tests the deployed website from a GitHub-hosted browser runner. It is read-only: it signs into dedicated test accounts, checks dashboard rendering and visible navigation routes, and verifies responsive login rendering. It does not submit forms or mutate student, fee, or attendance data.
