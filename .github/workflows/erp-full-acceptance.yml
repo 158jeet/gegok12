@@ -181,6 +181,12 @@ jobs:
           }
           NODE
 
+      - name: Verify public login page on desktop and mobile
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npx playwright test tests/owner-smoke-acceptance.spec.js --grep "public login page renders" --project=desktop --project=mobile --workers=1
+
       - name: Run production Docker build and deployment-script syntax checks
         shell: bash
         run: |
