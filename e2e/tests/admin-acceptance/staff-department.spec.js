@@ -8,8 +8,8 @@ test('staff department: assign department and verify persisted assignment', asyn
   const departments = form.locator('[name="department_id"] option');
   test.skip(await staff.count() === 0, 'Staging fixture required: staff linked to an institution school.');
   test.skip(await departments.count() === 0, 'Staging fixture required: active department.');
-  const staffOption = await staff.first().evaluate(el => ({ value: el.value, schoolId: el.dataset.schoolId }));
-  const matchingDepartment = await departments.evaluateAll((opts, schoolId) => opts.find(o => o.dataset.schoolId === schoolId)?.value, staffOption.schoolId);
+  const staffOption = await staff.first().evaluate(el => ({ value: el.value, schoolId: el.dataset.school }));
+  const matchingDepartment = await departments.evaluateAll((opts, schoolId) => opts.find(o => o.dataset.school === schoolId)?.value, staffOption.schoolId);
   if (!matchingDepartment) test.skip(true, 'No active department matches the selected staff member school.');
   await form.locator('[name="user_id"]').selectOption(staffOption.value);
   await form.locator('[name="department_id"]').selectOption(matchingDepartment);
