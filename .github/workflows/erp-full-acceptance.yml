@@ -1,0 +1,265 @@
+name: ERP Full Acceptance Convergence
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'work/**', 'admin-acceptance-parallel']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-full-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full-acceptance:
+    name: Full ERP acceptance (fail closed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/e2e.sqlite
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      APP_URL: http://127.0.0.1:8000
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      TAGORE_E2E_ENABLED: 'true'
+      TAGORE_OLYMPIAD_INTAKE_ENABLED: 'true'
+      TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
+      CI: 'true'
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, sqlite3, pdo_sqlite, intl, pdo_mysql
+          coverage: none
+
+      - name: Validate Composer and install backend dependencies
+        run: |
+          composer validate --no-check-publish --no-interaction
+          composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP syntax and clean disposable database
+        run: |
+          find app routes database config -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          rm -f database/e2e.sqlite
+          mkdir -p database
+          touch database/e2e.sqlite
+          php artisan optimize:clear --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+
+      - name: Verify route bootstrap
+        run: php artisan route:list -vvv > route-list.txt
+
+      - name: Run backend feature and unit tests
+        run: php artisan test --stop-on-failure
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build production frontend assets
+        run: |
+          npm ci --no-audit --no-fund
+          npm run production
+
+      - name: Install browser dependencies
+        working-directory: e2e
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Ensure runtime directories and logo asset
+        run: |
+          mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs public/uploads
+          chmod -R ug+rwX storage bootstrap/cache
+          git show HEAD:public/uploads/tgi-logo.webp > public/uploads/tgi-logo.webp
+          test -s public/uploads/tgi-logo.webp
+
+      - name: Start disposable application and verify health
+        run: |
+          nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/__e2e/health >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/tagore-e2e-server.log; exit 1; fi
+          curl -fsS http://127.0.0.1:8000/uploads/tgi-logo.webp -o /tmp/tagore-logo.webp
+          test -s /tmp/tagore-logo.webp
+
+      - name: Run all mutating administrator acceptance workflows
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npx playwright test tests/admin-acceptance --project=desktop --workers=1
+
+      - name: Run full authenticated browser suite on desktop and mobile
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        shell: bash
+        run: |
+          set +e
+          npx playwright test --reporter=json > full-e2e-report.json
+          test_exit=$?
+          set -e
+          node - <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'full-e2e-report.json';
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          } catch (error) {
+            const message = 'Playwright did not produce valid JSON. The full E2E gate cannot be evaluated.';
+            fs.appendFileSync(summaryPath, '## Full browser acceptance\n\n- **FAIL**: ' + message + '\n');
+            console.error(message);
+            process.exit(1);
+          }
+          const all = [];
+          function walk(suite, parents = []) {
+            const next = suite.title ? [...parents, suite.title] : parents;
+            for (const spec of suite.specs || []) {
+              for (const test of spec.tests || []) {
+                const results = test.results || [];
+                const last = results[results.length - 1];
+                all.push({
+                  title: [...next, spec.title].filter(Boolean).join(' › '),
+                  project: test.projectName || '',
+                  status: last?.status || (test.expectedStatus === 'skipped' ? 'skipped' : 'unknown'),
+                  expectedStatus: test.expectedStatus || 'passed',
+                  retries: results.length
+                });
+              }
+            }
+            for (const child of suite.suites || []) walk(child, next);
+          }
+          for (const suite of report.suites || []) walk(suite);
+          const skipped = all.filter(t => t.status === 'skipped' || t.expectedStatus === 'skipped');
+          const failed = all.filter(t => !['expected', 'passed'].includes(t.status) && t.status !== 'skipped');
+          const flaky = all.filter(t => t.status === 'passed' && t.retries > 1);
+          const counts = report.stats || {};
+          const lines = [
+            '## Full browser acceptance',
+            '',
+            '- Candidate SHA: `' + process.env.GITHUB_SHA + '`',
+            '- Playwright tests reported: **' + all.length + '**',
+            '- Passed: **' + (counts.expected ?? all.filter(t => t.status === 'passed').length) + '**',
+            '- Failed/unexpected: **' + failed.length + '**',
+            '- Skipped or marked expected-skip: **' + skipped.length + '**',
+            '- Flaky/retried tests: **' + flaky.length + '**',
+            '',
+            'Required acceptance tests must run, not silently skip. Any skipped, failed, or flaky test blocks acceptance.'
+          ];
+          if (skipped.length) lines.push('', '### Skipped tests', ...skipped.map(t => '- ' + t.title + ' [' + t.project + ']'));
+          if (failed.length) lines.push('', '### Failed or unexpected tests', ...failed.map(t => '- ' + t.title + ' [' + t.project + ']: ' + t.status));
+          fs.appendFileSync(summaryPath, lines.join('\n') + '\n');
+          if (skipped.length || failed.length || flaky.length || Number(process.env.TEST_EXIT_CODE || 0) !== 0) {
+            console.error('Acceptance is incomplete: required tests were skipped, failed, or retried.');
+            process.exit(1);
+          }
+          NODE
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+          TEST_EXIT_CODE: ${{ steps.full_e2e.outcome == 'failure' && '1' || '0' }}
+
+      - name: Run production Docker build and deployment-script syntax checks
+        shell: bash
+        run: |
+          cat > .env.school <<'EOF'
+          APP_NAME="Tagore ERP"
+          APP_ENV=production
+          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1
+          TAGORE_NGINX_CERTS_PATH=./letsencrypt/live
+          TIMEZONE=Asia/Kolkata
+          DB_CONNECTION=mysql
+          DB_HOST=db
+          DB_PORT=3306
+          DB_DATABASE=tagore_erp
+          DB_USERNAME=tagore
+          DB_PASSWORD=TagoreTest@2026
+          TAGORE_DB_ROOT_PASSWORD=TagoreRoot@2026
+          QUEUE_CONNECTION=database
+          CACHE_STORE=file
+          SESSION_DRIVER=file
+          SESSION_SECURE_COOKIE=false
+          LOG_CHANNEL=stderr
+          FILESYSTEM_DISK=local
+          MAIL_MAILER=array
+          REDIS_HOST=redis
+          REDIS_PASSWORD=null
+          REDIS_PORT=6379
+          EOF
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml config --quiet
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build
+
+      - name: Validate Windows deployment PowerShell syntax
+        shell: pwsh
+        run: |
+          $files = @(
+            'deploy/windows/Server-Setup.ps1',
+            'deploy/windows/Renew-TagoreCertificate.ps1',
+            'deploy/windows/Install-TagoreServerTask.ps1'
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) { throw "Missing expected deployment script: $file" }
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error ($file + ': ' + $_.Message) }
+              exit 1
+            }
+          }
+
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-full-acceptance-${{ github.sha }}
+          path: |
+            e2e/full-e2e-report.json
+            e2e/playwright-report/
+            e2e/test-results/
+            route-list.txt
+            /tmp/tagore-e2e-server.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Final fail-closed decision
+        if: always()
+        env:
+          JOB_RESULT: ${{ job.status }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## ERP full acceptance decision"
+            echo
+            echo "- Candidate SHA: `$CANDIDATE_SHA`"
+            echo "- Job result before final gate: **$JOB_RESULT**"
+            echo "- Production records changed: **No**"
+            echo
+            echo "This workflow is PASS only when every required step passes and no required browser test is skipped or flaky."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$JOB_RESULT" != "success" ]]; then
+            echo "::error::Full ERP acceptance is incomplete for $CANDIDATE_SHA."
+            exit 1
+          fi
