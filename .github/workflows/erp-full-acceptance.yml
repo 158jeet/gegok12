@@ -110,6 +110,7 @@ jobs:
         run: npx playwright test tests/admin-acceptance --project=desktop --workers=1
 
       - name: Run full authenticated browser suite on desktop and mobile
+        id: full_e2e
         working-directory: e2e
         env:
           E2E_BASE_URL: http://127.0.0.1:8000
@@ -119,6 +120,7 @@ jobs:
           npx playwright test --reporter=json > full-e2e-report.json
           test_exit=$?
           set -e
+          export TEST_EXIT_CODE="$test_exit"
           node - <<'NODE'
           const fs = require('fs');
           const reportPath = 'full-e2e-report.json';
@@ -175,9 +177,6 @@ jobs:
             process.exit(1);
           }
           NODE
-        env:
-          E2E_BASE_URL: http://127.0.0.1:8000
-          TEST_EXIT_CODE: ${{ steps.full_e2e.outcome == 'failure' && '1' || '0' }}
 
       - name: Run production Docker build and deployment-script syntax checks
         shell: bash
