@@ -25,7 +25,7 @@ class FeeEditorController extends Controller
     {
         $roles=$this->roles((int)$request->user()->id); $this->assertEditor($roles);
         $institutions=DB::table('tagore_institutions')->where('status','active')->orderBy('display_name')->get(['id','display_name']);
-        return view('tagore.fees.editor',compact('institutions'));
+        return view('tagore.fees.editor', compact('institutions', 'roles'));
     }
 
     public function bulkAdjust(Request $request, FeeEditorService $service)
