@@ -51,6 +51,7 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
   for (const role of roles) {
     test(role + ' — screenshot every concrete authenticated HTML route and inventory every visible control', async ({ page }, testInfo) => {
       test.setTimeout(15 * 60 * 1000);
+      await require('fs').promises.mkdir(baseDir, { recursive: true });
       const findings = [];
       const pageInventory = [];
       const visited = new Set();
