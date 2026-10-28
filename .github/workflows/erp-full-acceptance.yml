@@ -117,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js --reporter=json > full-e2e-report.json
+          npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js tests/tagore-interaction-audit.spec.js --reporter=json > full-e2e-report.json
           test_exit=$?
           set -e
           export TEST_EXIT_CODE="$test_exit"
@@ -247,6 +247,7 @@ jobs:
             e2e/full-e2e-report.json
             e2e/playwright-report/
             e2e/test-results/
+            e2e/test-results/interaction-audit/
             route-list.txt
             /tmp/tagore-e2e-server.log
           if-no-files-found: warn
