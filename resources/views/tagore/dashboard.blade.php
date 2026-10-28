@@ -50,7 +50,9 @@
   @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.reports.index') }}"><span class="tg-side-icon">▥</span>Reports</a>
   @endif
-  <a class="tg-side-link" href="{{ route('tagore.operations.index') }}"><span class="tg-side-icon">⋮</span>All operations</a>
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.operations.index') }}"><span class="tg-side-icon">⋮</span>All operations</a>
+  @endif
 </aside>
 
 <main class="tg-main">
@@ -165,7 +167,9 @@
       @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.reports.index') }}"><div class="tg-module-icon">▥</div><b>Reports & analytics</b><span>Turn operational data into decisions</span></a>
       @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.operations.index') }}"><div class="tg-module-icon">⋮</div><b>All operations</b><span>Transport, inventory, payroll, security, hostel and more</span></a>
+      @endif
     </div>
   </section>
 
@@ -195,6 +199,7 @@
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.reports.index') }}"><b>▥</b>Reports</a>@endif
+@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())<a href="{{ route('tagore.operations.index') }}"><b>⋮</b>Operations</a>@endif
 </nav>
 </div>
 </body></html>
