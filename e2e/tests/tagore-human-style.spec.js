@@ -235,7 +235,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     }));
     expect(mobileMetrics.documentWidth, 'task page must not overflow the mobile viewport').toBeLessThanOrEqual(mobileMetrics.viewportWidth + 2);
     expect(mobileMetrics.tableWrap, 'task table must have a dedicated responsive scroll container').toBeTruthy();
-    expect(['auto', 'scroll'], mobileMetrics.tableWrap.overflowX).toContain(mobileMetrics.tableWrap.overflowX);
+    expect(['auto', 'scroll']).toContain(mobileMetrics.tableWrap.overflowX);
     expect(mobileMetrics.tableWrap.scrollWidth, 'wide task columns must remain reachable by horizontal scrolling').toBeGreaterThan(mobileMetrics.tableWrap.clientWidth);
     await page.screenshot({ path: 'test-results/task-workspace-mobile.png', fullPage: true });
   });
