@@ -17,5 +17,5 @@ test('institution: create, persist, refresh listing and reject duplicate school 
   await expect(page.locator('body')).toContainText(name);
   await page.reload();
   await expect(page.locator('body')).toContainText(name);
-  await expect(form.locator('[name="school_id"] option')).toHaveCount(0);
+  await expect(page.locator('[name="school_id"] option:disabled')).toContainText('No unlinked GegoK12 schools available');
 });
