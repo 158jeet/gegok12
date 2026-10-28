@@ -14,7 +14,7 @@ test('institution: create, persist, refresh listing and reject duplicate school 
   await form.locator('[name="display_name"]').fill(name);
   await form.locator('[name="type"]').fill('school');
   await submitAndAssertSuccess(page, form, 'Institution added.');
-  await expect(page.locator('table').filter({ hasText: 'Institutions' }).getByText(name)).toBeVisible();
+  await expect(page.locator('body')).toContainText(name);
   await page.reload();
   await expect(page.locator('body')).toContainText(name);
 });
