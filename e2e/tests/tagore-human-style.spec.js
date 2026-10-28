@@ -145,8 +145,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await page.screenshot({ path: 'test-results/olympiad-registration-mobile.png', fullPage: true });
   });
   test('Olympiad registration saves a reference and returns a usable confirmation', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === 'mobile', 'The POST workflow runs once per suite; the mobile project verifies the complete form layout without consuming the shared IP rate limit.');
-    const studentName = 'Playwright Olympiad ' + Date.now();
+    const studentName = 'Playwright Olympiad ' + testInfo.project.name + ' ' + Date.now();
     await page.goto('/olympiad/register?utm_source=playwright&utm_campaign=e2e-smoke', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Student name *').fill(studentName);
     await page.getByLabel('Class *').selectOption('8');
