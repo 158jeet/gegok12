@@ -44,8 +44,12 @@
     <a class="tg-side-link" href="{{ route('tagore.academic.structure') }}"><span class="tg-side-icon">▦</span>Academic setup</a>
   @endif
   <div class="tg-side-label">Platform</div>
-  <a class="tg-side-link" href="{{ route('tagore.communication.index') }}"><span class="tg-side-icon">✉</span>Communication</a>
-  <a class="tg-side-link" href="{{ route('tagore.reports.index') }}"><span class="tg-side-icon">▥</span>Reports</a>
+  @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.communication.index') }}"><span class="tg-side-icon">✉</span>Communication</a>
+  @endif
+  @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.reports.index') }}"><span class="tg-side-icon">▥</span>Reports</a>
+  @endif
   <a class="tg-side-link" href="{{ route('tagore.operations.index') }}"><span class="tg-side-icon">⋮</span>All operations</a>
 </aside>
 
@@ -155,8 +159,12 @@
       <a class="tg-module" href="{{ route('tagore.admin') }}"><div class="tg-module-icon">⚙</div><b>Administration</b><span>Institutions, roles and departments</span></a>
       <a class="tg-module" href="{{ route('tagore.academic.structure') }}"><div class="tg-module-icon">▦</div><b>Academic setup</b><span>Streams, sections and academic years</span></a>
       @endif
+      @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.communication.index') }}"><div class="tg-module-icon">✉</div><b>Communication</b><span>Announcements, campaigns and parent communication</span></a>
+      @endif
+      @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.reports.index') }}"><div class="tg-module-icon">▥</div><b>Reports & analytics</b><span>Turn operational data into decisions</span></a>
+      @endif
       <a class="tg-module" href="{{ route('tagore.operations.index') }}"><div class="tg-module-icon">⋮</div><b>All operations</b><span>Transport, inventory, payroll, security, hostel and more</span></a>
     </div>
   </section>
@@ -185,8 +193,8 @@
 <a href="{{ route('tagore.dashboard') }}"><b>⌂</b>Home</a>
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif
-<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>
-<a href="{{ route('tagore.reports.index') }}"><b>▥</b>Reports</a>
+@if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>@endif
+@if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.reports.index') }}"><b>▥</b>Reports</a>@endif
 </nav>
 </div>
 </body></html>
