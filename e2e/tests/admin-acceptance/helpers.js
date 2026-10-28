@@ -1,15 +1,12 @@
-const { expect } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 function unique(prefix) {
   return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
 }
 
 async function signInAsOwner(page) {
-  if (process.env.TAGORE_ADMIN_MUTATION_ENABLED !== 'true') {
-    throw new Error('Admin mutation tests require TAGORE_ADMIN_MUTATION_ENABLED=true.');
-  }
-  if ((process.env.TAGORE_LIVE_ENVIRONMENT || '').toLowerCase() !== 'staging') {
-    throw new Error('Mutating admin acceptance is restricted to an explicitly labelled staging environment.');
+  if (process.env.TAGORE_ADMIN_MUTATION_ENABLED !== 'true' || (process.env.TAGORE_LIVE_ENVIRONMENT || '').toLowerCase() !== 'staging') {
+    test.skip(true, 'Mutating admin acceptance runs only when explicitly enabled against staging.');
   }
   const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}');
   const owner = accounts.owner;
