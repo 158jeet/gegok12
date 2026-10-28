@@ -53,7 +53,7 @@
             <h2>Add Academic Year</h2>
             <form method="post" action="{{ url('/tagore/admin/academic-year') }}">
                 @csrf
-                <label>Institution</label><select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select>
+                <label>Institution</label><select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}" data-school-id="{{ $i->school_id }}">{{ $i->display_name }}</option>@endforeach</select>
                 <label>Name</label><input name="name" placeholder="e.g. 2026-27" required>
                 <label>Start date</label><input type="date" name="start_date" required>
                 <label>End date</label><input type="date" name="end_date" required>
@@ -89,8 +89,8 @@
             <h2>Assign Staff Department</h2>
             <form method="post" action="{{ route('tagore.admin.department.assign') }}">
                 @csrf
-                <label>Staff member</label><select name="user_id" required>@foreach($staff as $s)<option value="{{ $s->id }}">{{ $s->name }} — {{ $s->school_name }}</option>@endforeach</select>
-                <label>Department</label><select name="department_id" required>@foreach($departments as $d)<option value="{{ $d->id }}">{{ $d->institution }} — {{ $d->name }}</option>@endforeach</select>
+                <label>Staff member</label><select name="user_id" required>@foreach($staff as $s)<option value="{{ $s->id }}" data-school-id="{{ $s->school_id }}">{{ $s->name }} — {{ $s->school_name }}</option>@endforeach</select>
+                <label>Department</label><select name="department_id" required>@foreach($departments as $d)<option value="{{ $d->id }}" data-school-id="{{ $d->school_id }}">{{ $d->institution }} — {{ $d->name }}</option>@endforeach</select>
                 <label>Designation</label><input name="designation" placeholder="e.g. Academic Coordinator">
                 <label><input type="checkbox" name="is_primary" value="1" style="width:auto"> Primary department</label>
                 <button>Save department assignment</button>
