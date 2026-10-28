@@ -35,6 +35,7 @@ async function checkPageHealth(page, context) {
   if (/server error|exception|whoops/i.test(bodyText)) findings.push('server error text detected');
   if (/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\u00BD|\uFFFD)/.test(bodyText)) findings.push('mojibake or replacement characters detected in visible text');
   const overflowDetails = await page.evaluate(() => {
+    const oxScrollable = value => value === 'auto' || value === 'scroll';
     const viewport = window.innerWidth;
     const offenders = [...document.querySelectorAll('body *')].map(el => {
       const r = el.getBoundingClientRect();
@@ -45,8 +46,10 @@ async function checkPageHealth(page, context) {
         if (ox === 'auto' || ox === 'scroll') { insideHorizontalScroller = true; break; }
         p = p.parentElement;
       }
-      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), insideHorizontalScroller };
-    }).filter(x => x.width > 0 && !x.insideHorizontalScroller && (x.right > viewport + 2 || x.left < -2))
+      const ownOverflowX = getComputedStyle(el).overflowX;
+      const elementIsHorizontalScroller = oxScrollable(ownOverflowX);
+      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), insideHorizontalScroller, elementIsHorizontalScroller };
+    }).filter(x => x.width > 0 && !x.insideHorizontalScroller && !x.elementIsHorizontalScroller && (x.right > viewport + 2 || x.left < -2))
       .sort((a,b) => Math.max(b.right-viewport, -b.left) - Math.max(a.right-viewport, -a.left))
       .slice(0,5)
       .map(({el,...x}) => x);
