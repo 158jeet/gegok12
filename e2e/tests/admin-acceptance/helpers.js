@@ -5,17 +5,28 @@ function unique(prefix) {
 }
 
 async function signInAsOwner(page) {
-  if (process.env.TAGORE_ADMIN_MUTATION_ENABLED !== 'true' || (process.env.TAGORE_LIVE_ENVIRONMENT || '').toLowerCase() !== 'staging') {
-    test.skip(true, 'Mutating admin acceptance runs only when explicitly enabled against staging.');
+  // CI uses a disposable SQLite database seeded with synthetic demo identities.
+  // This route exists only in APP_ENV=testing and is never registered in production.
+  const baseUrl = process.env.E2E_BASE_URL || '';
+  const localTestRun = process.env.APP_ENV === 'testing'
+    && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseUrl);
+  if (localTestRun) {
+    test.skip(test.info().project.name !== 'desktop', 'Mutating admin acceptance runs once on desktop against disposable CI data.');
+    await page.goto('/__e2e/session/owner');
+    await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/);
+  } else {
+    if (process.env.TAGORE_ADMIN_MUTATION_ENABLED !== 'true' || (process.env.TAGORE_LIVE_ENVIRONMENT || '').toLowerCase() !== 'staging') {
+      test.skip(true, 'Mutating admin acceptance runs only in disposable CI or explicitly enabled staging.');
+    }
+    const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}');
+    const owner = accounts.owner;
+    if (!owner?.email || !owner?.password) throw new Error('Dedicated staging owner account is missing.');
+    await page.goto('/login');
+    await page.locator('#email').fill(owner.email);
+    await page.locator('#password').fill(owner.password);
+    await page.getByRole('button', { name: 'Sign in to Tagore ERP' }).click();
+    await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/);
   }
-  const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}');
-  const owner = accounts.owner;
-  if (!owner?.email || !owner?.password) throw new Error('Dedicated staging owner account is missing.');
-  await page.goto('/login');
-  await page.locator('#email').fill(owner.email);
-  await page.locator('#password').fill(owner.password);
-  await page.getByRole('button', { name: 'Sign in to Tagore ERP' }).click();
-  await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/);
   await page.goto('/tagore/admin');
   await expect(page.getByRole('heading', { name: 'Tagore Administration' })).toBeVisible();
 }
