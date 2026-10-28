@@ -218,8 +218,25 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     if (testInfo.project.name === 'desktop') await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Team tasks' })).toBeVisible();
-    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
-    expect(mobileOverflow, 'task page must not overflow the mobile viewport').toBeFalsy();
+    const mobileMetrics = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      tableWrap: (() => {
+        const wrap = document.querySelector('.task-table-wrap');
+        if (!wrap) return null;
+        const table = wrap.querySelector('table');
+        return {
+          clientWidth: wrap.clientWidth,
+          scrollWidth: wrap.scrollWidth,
+          tableWidth: table ? Math.round(table.getBoundingClientRect().width) : 0,
+          overflowX: getComputedStyle(wrap).overflowX
+        };
+      })()
+    }));
+    expect(mobileMetrics.documentWidth, 'task page must not overflow the mobile viewport').toBeLessThanOrEqual(mobileMetrics.viewportWidth + 2);
+    expect(mobileMetrics.tableWrap, 'task table must have a dedicated responsive scroll container').toBeTruthy();
+    expect(['auto', 'scroll'], mobileMetrics.tableWrap.overflowX).toContain(mobileMetrics.tableWrap.overflowX);
+    expect(mobileMetrics.tableWrap.scrollWidth, 'wide task columns must remain reachable by horizontal scrolling').toBeGreaterThan(mobileMetrics.tableWrap.clientWidth);
     await page.screenshot({ path: 'test-results/task-workspace-mobile.png', fullPage: true });
   });
   test('task lifecycle creates work, records progress, and completes it', async ({ page }) => {
