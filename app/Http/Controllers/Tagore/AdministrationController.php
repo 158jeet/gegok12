@@ -39,7 +39,7 @@ class AdministrationController extends Controller
             ->get(['ay.id', 'ay.school_id', 'ay.name', 'ay.start_date', 'ay.end_date', 'ay.status', 'i.id as institution_id', 'i.display_name as institution']);
 
         $rolesList = DB::table('tagore_roles')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'code', 'description']);
-        $departments = DB::table('tagore_departments as d')->join('tagore_institutions as i','i.id','=','d.institution_id')->where('d.status','active')->where('i.status','active')->orderBy('i.display_name')->orderBy('d.name')->get(['d.id','d.name','d.code','d.institution_id','i.display_name as institution']);
+        $departments = DB::table('tagore_departments as d')->join('tagore_institutions as i','i.id','=','d.institution_id')->where('d.status','active')->where('i.status','active')->orderBy('i.display_name')->orderBy('d.name')->get(['d.id','d.name','d.code','d.institution_id','i.school_id','i.display_name as institution']);
         $staff = DB::table('users as u')->join('schools as s','s.id','=','u.school_id')->whereNull('u.deleted_at')->whereIn('u.school_id',$institutions->pluck('school_id')->all())->orderBy('u.name')->limit(500)->get(['u.id','u.name','u.email','u.school_id','s.name as school_name']);
         $assignments = DB::table('tagore_user_roles as ur')
             ->join('users as u', 'u.id', '=', 'ur.user_id')
