@@ -94,3 +94,69 @@ jobs:
             e2e/playwright-report
           if-no-files-found: warn
           retention-days: 30
+
+  admin-feature-workflows:
+    if: github.event_name == 'workflow_dispatch'
+    name: Admin acceptance — ${{ matrix.feature }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - feature: institution
+            spec: e2e/tests/admin-acceptance/institution.spec.js
+          - feature: academic-year
+            spec: e2e/tests/admin-acceptance/academic-year.spec.js
+          - feature: department
+            spec: e2e/tests/admin-acceptance/department.spec.js
+          - feature: role-assignment
+            spec: e2e/tests/admin-acceptance/role-assignment.spec.js
+          - feature: staff-department
+            spec: e2e/tests/admin-acceptance/staff-department.spec.js
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url }}
+      TAGORE_LIVE_ENVIRONMENT: ${{ inputs.environment_label }}
+      TAGORE_LIVE_ACCEPTANCE_ENABLED: 'true'
+      TAGORE_ADMIN_MUTATION_ENABLED: 'true'
+      TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON: ${{ secrets.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON }}
+      CI: 'true'
+    steps:
+      - name: Refuse to run mutating tests outside staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${TAGORE_LIVE_ENVIRONMENT,,}" = "staging" || { echo "Mutating admin acceptance is staging-only."; exit 1; }
+          node - <<'NODE'
+          const url = new URL(process.env.E2E_BASE_URL);
+          if (url.protocol !== 'https:') throw new Error('Staging acceptance requires HTTPS.');
+          if (url.username || url.password || url.search || url.hash) throw new Error('Credentials/query/hash are not allowed in base URL.');
+          if (['localhost','127.0.0.1','::1'].includes(url.hostname)) throw new Error('GitHub-hosted runner cannot reach localhost.');
+          const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}');
+          if (!accounts.owner?.email || !accounts.owner?.password) throw new Error('A dedicated staging owner test account is required.');
+          console.log('Staging URL and owner test account configured; credentials withheld.');
+          NODE
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        working-directory: e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Run feature-specific UI and integration workflow
+        working-directory: e2e
+        run: npx playwright test "${{ matrix.spec }}" --project=desktop --workers=1
+      - name: Upload feature evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-${{ matrix.feature }}-${{ github.run_id }}
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          if-no-files-found: warn
+          retention-days: 30
