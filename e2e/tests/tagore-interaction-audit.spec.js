@@ -101,6 +101,10 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
           expectedAccessDenials.push({ path, status: response.status() });
           continue;
         }
+        if (response.status() === 404) {
+          findings.push({ role, path, type: 'route-not-found', status: response.status() });
+          continue;
+        }
         const expectedCctvUnavailable = path === '/tagore/platform/cctv/status' && response.status() === 503;
         if (response.status() >= 500 && !expectedCctvUnavailable) {
           findings.push({ role, path, type: 'unexpected-http-status', status: response.status() });
