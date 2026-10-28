@@ -14,8 +14,8 @@ test('role assignment: enforce active role and institution scope, then persist a
   test.skip(!role, 'Staging fixture required: an active non-owner role.');
   const userId = await page.locator('form').filter({ has: page.getByRole('button', { name: 'Save department assignment' }) }).locator('[name="user_id"] option').first().getAttribute('value').catch(() => null);
   test.skip(!userId, 'Staging fixture required: a staff user linked to an institution school.');
-  const staffOption = await page.locator('form').filter({ has: page.getByRole('button', { name: 'Save department assignment' }) }).locator('[name="user_id"] option').first().evaluate(el => ({ value: el.value, schoolId: el.dataset.schoolId }));
-  const matchingInstitution = await form.locator('[name="institution_id"] option').evaluateAll((opts, schoolId) => opts.find(o => o.dataset.schoolId === schoolId)?.value, staffOption.schoolId);
+  const staffOption = await page.locator('form').filter({ has: page.getByRole('button', { name: 'Save department assignment' }) }).locator('[name="user_id"] option').first().evaluate(el => ({ value: el.value, schoolId: el.dataset.school }));
+  const matchingInstitution = await form.locator('[name="institution_id"] option').evaluateAll((opts, schoolId) => opts.find(o => o.dataset.school === schoolId)?.value, staffOption.schoolId);
   if (!matchingInstitution) test.skip(true, 'No institution matches the selected staff member school.');
   await form.locator('[name="user_id"]').fill(staffOption.value);
   await form.locator('[name="role_id"]').selectOption(role);
