@@ -190,24 +190,17 @@ class TagoreAdmissionsTest extends TestCase
             $invalidMobile = '9000' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         } while (DB::table('users')->where('mobile_no', $invalidMobile)->exists());
 
+        $linksBefore = DB::table('tagore_parent_students')->where('student_id', $student->id)->count();
+
         $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
             'student_id' => $student->id,
             'parent_mobile' => $invalidMobile,
             'relationship' => 'Guardian',
         ])->assertStatus(422);
 
-        $this->assertSame(0, DB::table('tagore_parent_students')
+        $this->assertSame($linksBefore, DB::table('tagore_parent_students')
             ->where('student_id', $student->id)
-            ->where('status', 'active')
-            ->where('parent_user_id', '>', 0)
-            ->whereNotIn('parent_user_id', [])
-            ->whereExists(function ($query) use ($invalidMobile) {
-                $query->select(DB::raw(1))
-                    ->from('users')
-                    ->whereColumn('users.id', 'tagore_parent_students.parent_user_id')
-                    ->where('users.mobile_no', $invalidMobile);
-            })
-            ->count());
+            ->count(), 'A rejected family-link attempt must not change parent/student links.');
     }
 
 }
