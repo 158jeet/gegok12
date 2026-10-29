@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\Tagore\FeeService;
 use App\Services\Tagore\FeeEditorService;
+use App\Services\Tagore\FeeVaultService;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -234,6 +236,69 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
         $this->assertSame('110.00', number_format((float) DB::table('tagore_fee_obligation_items')->where('fee_obligation_id', $obligationId)->sum('net_amount'), 2, '.', ''));
     }
 
+
+
+    public function test_year_end_fee_vault_is_encrypted_integrity_checked_and_idempotent(): void
+    {
+        Storage::fake('local');
+
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $institution = DB::table('tagore_institutions')
+            ->where('school_id', $owner->school_id)
+            ->where('status', 'active')
+            ->firstOrFail();
+        $academicYear = DB::table('academic_years')
+            ->where('school_id', $institution->school_id)
+            ->orderByDesc('start_date')
+            ->first();
+        $this->assertNotNull($academicYear, 'Acceptance seed must include an academic year.');
+
+        $student = User::factory()->create([
+            'name' => 'Fee Vault Acceptance Student',
+            'email' => 'fee-vault-acceptance-' . bin2hex(random_bytes(4)) . '@example.invalid',
+            'school_id' => $institution->school_id,
+            'usergroup_id' => 6,
+        ]);
+
+        app(FeeService::class)->createObligation(
+            (int) $student->id,
+            (int) $institution->id,
+            [
+                'academic_year_id' => (int) $academicYear->id,
+                'gross_amount' => 125.00,
+                'items' => [[
+                    'fee_head' => 'Archived tuition',
+                    'code' => 'QA-VAULT-TUITION',
+                    'gross_amount' => 125.00,
+                ]],
+            ],
+            (int) $owner->id,
+        );
+
+        $vault = app(FeeVaultService::class);
+        $first = $vault->closeYear((int) $academicYear->id, (int) $institution->id, (int) $owner->id);
+        $second = $vault->closeYear((int) $academicYear->id, (int) $institution->id, (int) $owner->id);
+
+        $this->assertSame($first['id'], $second['id'], 'Closing the same year twice must not create a second archive.');
+        $this->assertSame('archived', $first['status']);
+        $this->assertTrue(Storage::disk('local')->exists($first['archive_path']));
+        $ciphertext = Storage::disk('local')->get($first['archive_path']);
+        $this->assertNotSame('{"students"', substr($ciphertext, 0, 11), 'Archive payload must not be stored as plain JSON.');
+        $this->assertSame(hash('sha256', $ciphertext), $first['archive_sha256']);
+        $this->assertDatabaseHas('tagore_audit_events', [
+            'user_id' => $owner->id,
+            'institution_id' => $institution->id,
+            'action' => 'FEE_YEAR_ARCHIVED',
+            'entity_id' => $first['id'],
+        ]);
+
+        $archives = $vault->studentArchives((int) $student->id);
+        $this->assertCount(1, $archives);
+        $this->assertSame($student->id, (int) $archives[0]['records'][0]['student_id']);
+
+        Storage::disk('local')->put($first['archive_path'], 'tampered archive');
+        $this->assertSame([], $vault->studentArchives((int) $student->id), 'Tampered archive must be rejected by its integrity hash.');
+    }
 
     public function test_fee_editor_is_limited_to_its_assigned_institution(): void
     {
