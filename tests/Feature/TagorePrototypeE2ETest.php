@@ -159,6 +159,17 @@ class TagorePrototypeE2ETest extends TestCase
         $payment = DB::table('tagore_payments')->where('id', $paymentId)->firstOrFail();
         $this->assertSame('success', $payment->status);
 
+        // Use the isolated array mailer in CI: this proves the receipt PDF and
+        // delivery ledger work without sending a message to a real mailbox.
+        $delivered = app(\App\Services\Tagore\FeeReceiptMailer::class)->send($paymentId);
+        $this->assertTrue($delivered, 'A linked parent with an email address should receive a recorded receipt delivery.');
+        $this->assertDatabaseHas('tagore_fee_receipt_deliveries', [
+            'payment_id' => $paymentId,
+            'channel' => 'email',
+            'status' => 'sent',
+            'recipient_email' => $parent->email,
+        ]);
+
         $this->actingAs($parent)
             ->get(route('tagore.fees.student', ['studentId' => $childId]))
             ->assertOk()
