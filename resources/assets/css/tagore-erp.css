@@ -366,3 +366,47 @@ body.tg-fee-editor .tg-field label{color:#d5deea!important;font-size:12px;font-w
 body.tg-fee-editor .tg-field input,body.tg-fee-editor .tg-field select,body.tg-fee-editor .tg-field textarea{background:#111a24!important;color:#edf2f7!important;border:1px solid #3b4b5d!important}
 body.tg-fee-editor .tg-field input::placeholder,body.tg-fee-editor .tg-field textarea::placeholder{color:#9aa9ba!important;opacity:1}
 body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field select:focus-visible,body.tg-fee-editor .tg-field textarea:focus-visible{outline:2px solid #38d996!important;outline-offset:2px}
+
+
+/* Dashboard command search: visible feedback, accessible keyboard affordance and empty states. */
+.tg-app .tg-search{min-width:260px;transition:border-color .16s ease,box-shadow .16s ease}
+.tg-app .tg-search:focus-within{border-color:#9bb6ff;box-shadow:0 0 0 3px rgba(36,87,230,.12)}
+.tg-app .tg-search input::placeholder{color:#98a2b3;opacity:1}
+.tg-app .tg-search-status{margin:0 0 12px 247px;padding:9px 12px;border:1px solid #cbd8ff;border-radius:10px;background:#edf3ff;color:#2349a6;font-size:12px;font-weight:700}
+.tg-app .tg-search-status.is-empty{border-color:#f0c7c7;background:#fff2f2;color:#a12d2d}
+.tg-app [hidden]{display:none!important}
+.tg-app .tg-sidebar [hidden],.tg-app .tg-module-grid [hidden],.tg-app .tg-list [hidden],.tg-app .tg-grid [hidden]{display:none!important}
+@media(max-width:900px){.tg-app .tg-search-status{margin-left:0}}
+@media(max-width:760px){.tg-app .tg-topbar{height:auto;min-height:76px;align-items:flex-start;padding-top:14px;flex-wrap:wrap}.tg-app .tg-top-actions{width:100%;align-items:stretch}.tg-app .tg-top-actions .tg-search{flex:1;min-width:0}.tg-app .tg-search-status{margin:0 0 12px}.tg-app .tg-user{max-width:46%;min-width:0}.tg-app .tg-user span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media(prefers-reduced-motion:reduce){.tg-app *, .tg-app *::before, .tg-app *::after{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* Keep the fixed mobile navigation aligned with Tagore ERP's charcoal/green visual system. */
+@media(max-width:760px){
+  body.tg-app .tg-mobile-nav{
+    background:rgba(26,34,45,.97)!important;
+    border-color:#303d4d!important;
+    box-shadow:0 14px 34px rgba(0,0,0,.38)!important;
+  }
+  body.tg-app .tg-mobile-nav a{
+    color:#c0cad7!important;
+    border-radius:10px;
+    min-width:0;
+    line-height:1.25;
+    transition:background-color .16s ease,color .16s ease;
+  }
+  body.tg-app .tg-mobile-nav a b{color:#53dfa8!important}
+  body.tg-app .tg-mobile-nav a:hover,
+  body.tg-app .tg-mobile-nav a:focus-visible{
+    background:#153c32!important;
+    color:#edf2f7!important;
+    outline:2px solid #43d9a0;
+    outline-offset:1px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.tg-app .tg-mobile-nav a{transition:none!important}
+}
+
+/* Search must collapse empty containers as well as individual results. */
+.tg-app [data-search-empty="true"]{display:none!important}
