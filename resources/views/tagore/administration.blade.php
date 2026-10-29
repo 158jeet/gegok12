@@ -7,9 +7,16 @@
     <style>
         body{font-family:system-ui,-apple-system,sans-serif;background:#f5f7f9;color:#17202a;margin:0}.wrap{max-width:1200px;margin:auto;padding:24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}.card{background:#fff;border:1px solid #e4e8ec;border-radius:14px;padding:20px;box-shadow:0 2px 8px #00000008}.wide{grid-column:1/-1}h1,h2{margin-top:0}label{display:block;font-size:13px;font-weight:600;margin:10px 0 5px}input,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccd3da;border-radius:8px}button{margin-top:12px;padding:10px 15px;border:0;border-radius:8px;background:#17202a;color:white;font-weight:600;cursor:pointer}.msg{padding:12px;background:#eaf7ee;border-radius:8px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px;border-bottom:1px solid #edf0f2}.muted{color:#68737d;font-size:13px}@media(max-width:650px){.wrap{padding:14px}table{display:block;overflow:auto;white-space:nowrap}}
     </style>
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}"></head>
-<body>
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui10' }}"></head>
+<body class="tg-app">
 <div class="wrap">
+    <header class="tg-topbar">
+      <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none">
+        <img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions">
+        <div><strong>Tagore ERP</strong><span>Administration workspace</span></div>
+      </a>
+      <a class="tg-btn" href="{{ route('tagore.dashboard') }}">← Dashboard</a>
+    </header>
     <h1>Tagore Administration</h1>
     <p class="muted">Group, institution, academic-year and role administration. Owner access only.</p>
     @if(session('success'))<div class="msg">{{ session('success') }}</div>@endif
