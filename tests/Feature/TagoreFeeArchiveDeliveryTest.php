@@ -49,7 +49,8 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
         ]);
 
         $archivePath = 'tagore-fee-vault/' . $institution->id . '/' . $yearId . '/qa-' . bin2hex(random_bytes(6)) . '.json';
-        $ciphertext = Crypt::encryptString(json_encode(['academic_year_id' => $yearId, 'secret' => 'must remain encrypted'], JSON_THROW_ON_ERROR));
+        $plainArchive = json_encode(['academic_year_id' => $yearId, 'secret' => 'must remain encrypted'], JSON_THROW_ON_ERROR);
+        $ciphertext = Crypt::encryptString($plainArchive);
         Storage::disk('local')->put($archivePath, $ciphertext);
 
         try {
@@ -85,7 +86,9 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
             );
 
             $this->assertTrue(Storage::disk('local')->exists($archivePath));
-            $this->assertSame('must remain encrypted', Crypt::decryptString(Storage::disk('local')->get($archivePath)) === $ciphertext ? 'must remain encrypted' : 'ciphertext changed');
+            $storedCiphertext = Storage::disk('local')->get($archivePath);
+            $this->assertStringNotContainsString('must remain encrypted', $storedCiphertext);
+            $this->assertSame($plainArchive, Crypt::decryptString($storedCiphertext));
         } finally {
             Storage::disk('local')->delete($archivePath);
         }
