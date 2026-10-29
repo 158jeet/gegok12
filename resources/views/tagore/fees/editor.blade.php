@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fee Editor · TagoreK12</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui9' }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><title>Fee Editor · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui9' }}"></head>
 <body class="tg-fee-editor"><main class="tg-shell">
-<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Fee administration</span></div></div><div class="tg-user">Controlled Editor</div></header>
+<header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Fee administration</span></div></a><div class="tg-user">Controlled Editor</div></header>
 <nav class="tg-nav"><a href="{{ route('tagore.dashboard') }}">ERP Home</a>@if($roles->contains('OWNER') || $roles->contains('PRINCIPAL') || $roles->contains('ACCOUNTS'))<a href="{{ route('tagore.fees.accounts') }}">Accounts</a><a href="{{ route('tagore.fees.manage') }}">Fee Management</a>@endif<a href="{{ route('tagore.fees.editor') }}" aria-current="page">Fee Editor</a></nav>
 <section class="tg-hero"><h1>Fee Editor</h1><p>Make controlled fee adjustments without touching opening balances or the original archived financial record.</p></section>
 @if(session('success'))<div class="tg-alert" style="margin-bottom:16px">{{ session('success') }}</div>@endif
