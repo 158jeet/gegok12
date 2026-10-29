@@ -234,6 +234,39 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
         $this->assertSame('110.00', number_format((float) DB::table('tagore_fee_obligation_items')->where('fee_obligation_id', $obligationId)->sum('net_amount'), 2, '.', ''));
     }
 
+
+    public function test_fee_editor_is_limited_to_its_assigned_institution(): void
+    {
+        $editor = User::query()->where('email', 'fees@tagore-demo.local')->firstOrFail();
+        $assignedInstitutionId = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $editor->id)
+            ->where('ur.status', 'active')
+            ->where('r.code', 'FEE_EDITOR')
+            ->whereNotNull('ur.institution_id')
+            ->value('ur.institution_id');
+        $this->assertNotNull($assignedInstitutionId, 'Fee editor fixture must have an assigned institution.');
+
+        $otherInstitution = DB::table('tagore_institutions')
+            ->where('status', 'active')
+            ->where('id', '!=', $assignedInstitutionId)
+            ->first();
+        $this->assertNotNull($otherInstitution, 'Acceptance seed must provide another institution for cross-scope testing.');
+
+        $this->actingAs($editor)
+            ->get(route('tagore.fees.editor'))
+            ->assertOk()
+            ->assertDontSee($otherInstitution->display_name);
+
+        $this->actingAs($editor)
+            ->post(route('tagore.fees.editor.bulk'), [
+                'institution_id' => $otherInstitution->id,
+                'min_percent' => 5,
+                'max_percent' => 5,
+            ])
+            ->assertForbidden();
+    }
+
     public function test_fee_editor_and_coordinator_cannot_record_offline_payments(): void
     {
         $institution = DB::table('tagore_institutions')->where('status', 'active')->first();
