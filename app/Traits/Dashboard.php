@@ -242,7 +242,7 @@ trait Dashboard
         }
 
         if (class_exists('Gegok12\\Exam\\Models\\Mark') && $academic_year) {
-            $marks = \\Gegok12\\Exam\\Models\\Mark::where([
+            $marks = \Gegok12\Exam\Models\Mark::where([
                 ['school_id',$school_id],
                 ['academic_year_id',$academic_year->id],
                 ['user_id',$user_id->id],
