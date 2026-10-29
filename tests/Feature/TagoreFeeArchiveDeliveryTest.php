@@ -79,10 +79,11 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
                 'error' => null,
             ]);
 
+            $this->assertTrue(app(FeeVaultArchiveNotifier::class)->send($closureId), 'Already-sent archives should be idempotent.');
             $this->assertSame(
                 1,
                 DB::table('tagore_fee_archive_deliveries')->where('closure_id', $closureId)->count(),
-                'Re-running archive delivery must use the same idempotent delivery record.'
+                'Re-running archive delivery must reuse the same delivery record.'
             );
 
             $this->assertTrue(Storage::disk('local')->exists($archivePath));
