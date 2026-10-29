@@ -217,21 +217,38 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       await authenticate(page, role);
       const search = page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' });
       await expect(search).toBeVisible();
-      const students = page.locator('.tg-kpi').filter({ hasText: 'Students' }).first();
-      const fees = page.locator('.tg-kpi').filter({ hasText: 'Fee outstanding' }).first();
-      await expect(students).toBeVisible();
-      await expect(fees).toBeVisible();
-      await search.fill('Students');
-      await expect(students).toBeVisible();
-      await expect(fees).toBeHidden();
-      await search.fill('tagore-no-matching-dashboard-item');
-      await expect(page.locator('.tg-kpi:visible')).toHaveCount(0);
-      await expect(page.locator('#tg-search-status')).toContainText('No matching modules or items');
-      await search.press('Escape');
-      await expect(search).toHaveValue('');
-      await expect(page.locator('#tg-search-status')).toBeHidden();
-      await expect(students).toBeVisible();
-      await expect(fees).toBeVisible();
+
+      if (role === 'student') {
+        const overview = page.locator('.tg-side-link.active').filter({ hasText: 'Overview' });
+        await expect(overview).toBeVisible();
+        await search.fill('Overview');
+        await expect(overview).toBeVisible();
+        await search.fill('tagore-no-matching-dashboard-item');
+        await expect(page.locator('.tg-side-link:visible, .tg-kpi:visible, .tg-module:visible, .tg-list-item:visible')).toHaveCount(0);
+        await expect(page.locator('#tg-search-status')).toContainText('No matching modules or items');
+        await search.press('Escape');
+        await expect(search).toHaveValue('');
+        await expect(page.locator('#tg-search-status')).toBeHidden();
+        await expect(overview).toBeVisible();
+      } else {
+        const primaryLabel = role === 'parent' ? 'My children' : 'Students';
+        const secondaryLabel = role === 'parent' ? 'Fee items due' : 'Fee outstanding';
+        const primary = page.locator('.tg-kpi').filter({ hasText: primaryLabel }).first();
+        const secondary = page.locator('.tg-kpi').filter({ hasText: secondaryLabel }).first();
+        await expect(primary).toBeVisible();
+        await expect(secondary).toBeVisible();
+        await search.fill(primaryLabel);
+        await expect(primary).toBeVisible();
+        await expect(secondary).toBeHidden();
+        await search.fill('tagore-no-matching-dashboard-item');
+        await expect(page.locator('.tg-kpi:visible, .tg-module:visible, .tg-list-item:visible')).toHaveCount(0);
+        await expect(page.locator('#tg-search-status')).toContainText('No matching modules or items');
+        await search.press('Escape');
+        await expect(search).toHaveValue('');
+        await expect(page.locator('#tg-search-status')).toBeHidden();
+        await expect(primary).toBeVisible();
+        await expect(secondary).toBeVisible();
+      }
 
       await page.keyboard.press('Control+/');
       await expect(search).toBeFocused();
@@ -356,9 +373,10 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
   });
   test('parent and student dashboards show role-appropriate summaries instead of misleading school-wide zeros', async ({ page }) => {
     await authenticate(page, 'parent');
-    await expect(page.getByText('My children', { exact: true })).toBeVisible();
-    await expect(page.getByText('Fee items due', { exact: true })).toBeVisible();
-    await expect(page.getByText('Open feedback', { exact: true })).toBeVisible();
+    const familySummary = page.getByRole('region', { name: 'Family dashboard summary' });
+    await expect(familySummary.getByText('My children', { exact: true })).toBeVisible();
+    await expect(familySummary.getByText('Fee items due', { exact: true })).toBeVisible();
+    await expect(familySummary.getByText('Open feedback', { exact: true })).toBeVisible();
     await expect(page.getByText('Students', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Staff', { exact: true })).toHaveCount(0);
 
@@ -372,13 +390,13 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
   test('operations records support typed status filters and live search', async ({ page }) => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Inventory & Assets' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventory & Assets', exact: true })).toBeVisible();
     await expect(page.locator('#tg-operations-search')).toBeVisible();
     await expect(page.locator('#tg-operations-status')).toBeVisible();
 
     await page.locator('#tg-operations-module').selectOption('expense');
     await page.getByRole('button', { name: 'Open module' }).click();
-    await expect(page.getByRole('heading', { name: 'Expenses & Purchases' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Expenses & Purchases', exact: true })).toBeVisible();
     await page.locator('#tg-operations-module').selectOption('inventory');
     await page.getByRole('button', { name: 'Open module' }).click();
     await expect(page.getByRole('heading', { name: 'Inventory & Assets' })).toBeVisible();
