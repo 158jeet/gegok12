@@ -354,6 +354,21 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileMetrics.tableWrap.scrollWidth, 'wide task columns must remain reachable by horizontal scrolling').toBeGreaterThan(mobileMetrics.tableWrap.clientWidth);
     await page.screenshot({ path: 'test-results/task-workspace-mobile.png', fullPage: true });
   });
+  test('parent and student dashboards show role-appropriate summaries instead of misleading school-wide zeros', async ({ page }) => {
+    await authenticate(page, 'parent');
+    await expect(page.getByText('My children', { exact: true })).toBeVisible();
+    await expect(page.getByText('Fee items due', { exact: true })).toBeVisible();
+    await expect(page.getByText('Open feedback', { exact: true })).toBeVisible();
+    await expect(page.getByText('Students', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Staff', { exact: true })).toHaveCount(0);
+
+    await authenticate(page, 'student');
+    await expect(page.getByRole('heading', { name: 'Your student workspace' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open student portal/ })).toHaveAttribute('href', '/student/dashboard');
+    await expect(page.getByText('Fee outstanding', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Active work', { exact: true })).toHaveCount(0);
+  });
+
   test('operations records support typed status filters and live search', async ({ page }) => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
