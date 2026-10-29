@@ -262,7 +262,9 @@
   const searchable = Array.from(document.querySelectorAll(
     '.tg-module, .tg-list-item, .tg-kpi, .tg-side-link'
   ));
-  const groups = Array.from(document.querySelectorAll('.tg-list, .tg-module-grid, .tg-grid, .tg-sidebar'));
+  const groups = Array.from(document.querySelectorAll(
+    '.tg-list, .tg-module-grid, .tg-grid, .tg-sidebar, .tg-section, .tg-two, .tg-three'
+  ));
   const update = () => {
     const query = input.value.trim().toLocaleLowerCase();
     let matches = 0;
@@ -270,12 +272,19 @@
     searchable.forEach(item => {
       const matched = !query || (item.textContent || '').toLocaleLowerCase().includes(query);
       item.hidden = !matched;
+      if (matched) {
+        // Inline important display avoids legacy component CSS overriding the native hidden attribute.
+        item.style.removeProperty('display');
+      } else {
+        item.style.setProperty('display', 'none', 'important');
+      }
       if (matched && query) matches++;
     });
 
     groups.forEach(group => {
-      const children = Array.from(group.children).filter(child => searchable.includes(child));
-      if (children.length) group.dataset.searchEmpty = String(query.length > 0 && children.every(child => child.hidden));
+      const items = Array.from(group.querySelectorAll('.tg-module, .tg-list-item, .tg-kpi, .tg-side-link'));
+      const empty = query.length > 0 && items.length > 0 && items.every(item => item.hidden);
+      group.dataset.searchEmpty = String(empty);
     });
 
     if (status) {
