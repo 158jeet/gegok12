@@ -64,6 +64,11 @@ jobs:
       - name: Verify route bootstrap
         run: php artisan route:list -vvv > route-list.txt
 
+      - name: Verify Laravel scheduler registrations
+        run: |
+          php artisan schedule:list > schedule-list.txt
+          grep -q 'tagore:archive-closed-fees' schedule-list.txt
+
       - name: Run backend feature and unit tests
         run: php artisan test --stop-on-failure
 
@@ -225,7 +230,8 @@ jobs:
           $files = @(
             'deploy/windows/Server-Setup.ps1',
             'deploy/windows/Renew-TagoreCertificate.ps1',
-            'deploy/windows/Install-TagoreServerTask.ps1'
+            'deploy/windows/Install-TagoreServerTask.ps1',
+            'deploy/windows/Run-TagoreScheduler.ps1'
           )
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing expected deployment script: $file" }
