@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui8' }}">
+<title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui9' }}">
 </head>
 <body class="tg-app">
 <div class="tg-shell">
@@ -22,6 +22,7 @@
   </div>
 </header>
 
+<p id="tg-search-status" class="tg-search-status" role="status" aria-live="polite" hidden></p>
 <div class="tg-layout">
 <aside class="tg-sidebar">
   <div class="tg-side-label">Workspace</div>
@@ -216,18 +217,55 @@
 <script>
 (() => {
   const input = document.getElementById('tg-dashboard-search');
+  const status = document.getElementById('tg-search-status');
   if (!input) return;
-  const searchable = Array.from(document.querySelectorAll('.tg-module, .tg-list-item, .tg-kpi'));
-  input.addEventListener('input', () => {
+
+  const searchable = Array.from(document.querySelectorAll(
+    '.tg-module, .tg-list-item, .tg-kpi, .tg-side-link'
+  ));
+  const groups = Array.from(document.querySelectorAll('.tg-list, .tg-module-grid, .tg-grid, .tg-sidebar'));
+  const update = () => {
     const query = input.value.trim().toLocaleLowerCase();
+    let matches = 0;
+
     searchable.forEach(item => {
-      item.hidden = !!query && !(item.textContent || '').toLocaleLowerCase().includes(query);
+      const matched = !query || (item.textContent || '').toLocaleLowerCase().includes(query);
+      item.hidden = !matched;
+      if (matched && query) matches++;
     });
-    document.querySelectorAll('.tg-list, .tg-module-grid, .tg-grid').forEach(group => {
+
+    groups.forEach(group => {
       const children = Array.from(group.children).filter(child => searchable.includes(child));
-      if (children.length) group.dataset.searchEmpty = String(children.every(child => child.hidden));
+      if (children.length) group.dataset.searchEmpty = String(query.length > 0 && children.every(child => child.hidden));
     });
+
+    if (status) {
+      status.hidden = !query;
+      status.textContent = !query
+        ? ''
+        : matches
+          ? matches + (matches === 1 ? ' matching item' : ' matching items') + ' · press Esc to clear'
+          : 'No matching modules or items. Try a different search.';
+      status.classList.toggle('is-empty', !!query && matches === 0);
+    }
+  };
+
+  input.addEventListener('input', update);
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      input.value = '';
+      update();
+      input.blur();
+    }
   });
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+      event.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+  update();
 })();
 </script>
 </body></html>
