@@ -238,6 +238,58 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
 
 
 
+
+    public function test_parent_fee_statement_shows_balances_but_hides_payment_history_and_receipt_identifiers(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+        $institution = DB::table('tagore_institutions')
+            ->where('school_id', $student->school_id)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        DB::table('tagore_parent_students')->updateOrInsert(
+            ['parent_user_id' => $parent->id, 'student_id' => $student->id],
+            ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]
+        );
+
+        $feeService = app(FeeService::class);
+        $obligationId = $feeService->createObligation(
+            (int) $student->id,
+            (int) $institution->id,
+            [
+                'gross_amount' => 90.00,
+                'items' => [[
+                    'fee_head' => 'Parent-visible balance',
+                    'code' => 'QA-PARENT-BALANCE',
+                    'gross_amount' => 90.00,
+                ]],
+            ],
+            null,
+        );
+        $paymentId = $feeService->recordOfflinePayment(
+            (int) $student->id,
+            (int) $institution->id,
+            20.00,
+            (int) $parent->id,
+            (int) $parent->id,
+            'QA-PRIVATE-HISTORY-' . bin2hex(random_bytes(4)),
+            [['fee_obligation_id' => $obligationId, 'amount' => 20.00]],
+            'cash',
+        );
+        $receiptNo = DB::table('tagore_payments')->where('id', $paymentId)->value('receipt_no');
+
+        $this->actingAs($parent)
+            ->get(route('tagore.fees.student', ['studentId' => $student->id]))
+            ->assertOk()
+            ->assertSee('Fee Statement')
+            ->assertSee('Fee obligations')
+            ->assertSee('Outstanding')
+            ->assertDontSee('Payment history')
+            ->assertDontSee((string) $receiptNo)
+            ->assertDontSee('QA-PRIVATE-HISTORY');
+    }
+
     public function test_year_end_fee_vault_is_encrypted_integrity_checked_and_idempotent(): void
     {
         Storage::fake('local');
