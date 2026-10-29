@@ -2,7 +2,7 @@
 
 @extends('layouts.app')
 @section('base-content')
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui11' }}
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui11' }}">
 <style>
 .tg-operations-nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
 .tg-operations-nav a{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid var(--tg-line);border-radius:11px;background:var(--tg-surface);color:var(--tg-muted);text-decoration:none;font-size:12px;font-weight:700}
@@ -28,11 +28,11 @@
       <a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a>
     </header>
 
-    <div class="tg-nav">
+    <nav class="tg-operations-nav" aria-label="Operations modules">
       @foreach($modules as $key=>$label)
         <a class="{{ $module===$key?'active':'' }}" href="{{ route('tagore.operations.index',['module'=>$key]) }}">{{ $label }}</a>
       @endforeach
-    </div>
+    </nav>
 
     @if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="tg-alert danger"><strong>Please correct the form:</strong> {{ $errors->first() }}</div>@endif
@@ -67,11 +67,8 @@
                 </select>
               @elseif(str_ends_with($column,'_json'))
                 <textarea name="{{ $column }}" rows="3" placeholder='{"key":"value"}'></textarea>
-              @elseif(in_array($column,['status','channel','format','post_type','content_type','type']))
-                <select name="{{ $column }}">
-                  <option value="active">Active</option><option value="pending">Pending</option><option value="draft">Draft</option>
-                  <option value="scheduled">Scheduled</option><option value="sent">Sent</option><option value="approved">Approved</option>
-                </select>
+              @elseif(in_array($column,['channel','format','post_type','content_type','type']))
+                <input name="{{ $column }}" value="{{ old($column) }}" />
               @elseif(in_array($column,['description','message','body','notes','reason','action','trigger']))
                 <textarea name="{{ $column }}" rows="2"></textarea>
               @else
@@ -118,7 +115,7 @@
                             </select>
                           @elseif(str_ends_with($column,'_json'))
                             <textarea name="{{ $column }}" rows="3">{{ is_array($value) ? json_encode($value, JSON_PRETTY_PRINT) : $value }}</textarea>
-                          @elseif(in_array($column,['status','channel','format','post_type','content_type','type']))
+                          @elseif(in_array($column,['channel','format','post_type','content_type','type']))
                             <input name="{{ $column }}" value="{{ $value }}" />
                           @elseif(in_array($column,['description','message','body','notes','reason','action','trigger']))
                             <textarea name="{{ $column }}" rows="2">{{ $value }}</textarea>
