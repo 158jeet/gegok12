@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Tagore\FeeVaultArchiveNotifier;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -15,6 +16,9 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
     {
         parent::setUp();
         DB::beginTransaction();
+        config(['mail.driver' => 'array']);
+        config()->offsetUnset('mail.default');
+        Mail::purge();
     }
 
     protected function tearDown(): void
@@ -31,7 +35,7 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
         config([
             'tagore.fee_vault_owner_user_id' => (int) $owner->id,
             'tagore.mail_profiles_json' => '',
-            'mail.default' => 'array',
+
         ]);
 
         $school = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first();
@@ -101,7 +105,7 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
         config([
             'tagore.fee_vault_owner_user_id' => (int) $owner->id,
             'tagore.mail_profiles_json' => '',
-            'mail.default' => 'array',
+
         ]);
 
         $school = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first();
