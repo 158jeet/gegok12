@@ -149,6 +149,7 @@ class OperationsController extends Controller
             'institutions'=>$institutions,
             'institutionId'=>$institutionId,
             'statusOptions'=>self::STATUS_OPTIONS[$module] ?? ['active','inactive'],
+            'requiredFields'=>self::REQUIRED_FIELDS[$module] ?? [],
         ]);
     }
 
