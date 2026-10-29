@@ -65,7 +65,6 @@ class FeeVaultArchiveNotifier
 
         $settings = json_decode((string) $closure->institution_settings_json, true) ?: [];
         $mailConfig = $this->mailConfig((int) $closure->institution_id, $settings);
-        $mailer = $mailConfig ? Mail::build($mailConfig) : Mail::mailer(config('mail.default'));
 
         $filename = sprintf('tagore-fee-archive-institution-%d-year-%d.json.enc', (int) $closure->institution_id, (int) $closure->academic_year_id);
         $body = implode("\n", [
@@ -85,6 +84,7 @@ class FeeVaultArchiveNotifier
         $this->recordDelivery($closureId, (int) $owner->id, (string) $owner->email, 'queued', null);
 
         try {
+            $mailer = $mailConfig ? Mail::build($mailConfig) : Mail::mailer(config('mail.default'));
             $mailer->raw($body, function ($message) use ($owner, $closure, $ciphertext, $filename, $mailConfig) {
                 if (!empty($mailConfig['from']['address'])) {
                     $message->from($mailConfig['from']['address'], $mailConfig['from']['name'] ?? config('mail.from.name'));
