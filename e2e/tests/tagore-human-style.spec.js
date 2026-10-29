@@ -380,13 +380,14 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByRole('heading', { name: 'Family shortcuts' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Fee wallet/ })).toBeVisible();
     await expect(page.locator('.tg-module-grid').getByRole('link', { name: /Daily diary/ })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Children/ })).toBeVisible();
     await expect(page.getByText('Students', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Staff', { exact: true })).toHaveCount(0);
 
     await authenticate(page, 'student');
     await expect(page.getByRole('heading', { name: 'Your student workspace' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Open student portal/ })).toHaveAttribute('href', '/student/dashboard');
+    await expect(page.getByRole('link', { name: /Open student portal/ })).toHaveAttribute('href', /\/student\/dashboard$/);
     await expect(page.getByRole('heading', { name: 'Go to work' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Institutions' })).toHaveCount(0);
     await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Portal/ })).toBeVisible();
@@ -431,7 +432,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
   test('operations records support typed status filters and live search', async ({ page }) => {
     await authenticate(page, 'owner');
-    await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
+    await page.goto('/tagore/operations', { waitUntil: 'domcontentloaded' });
+    await page.locator('#tg-operations-module').selectOption('inventory');
+    await page.getByRole('button', { name: 'Open module' }).click();
     await expect(page.getByRole('heading', { name: 'Inventory & Assets', exact: true })).toBeVisible();
     await expect(page.locator('#tg-operations-search')).toBeVisible();
     await expect(page.locator('#tg-operations-status')).toBeVisible();
