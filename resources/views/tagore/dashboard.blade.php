@@ -17,7 +17,7 @@
     <img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Tagore Group of Institutions</span></div>
   </a>
   <div class="tg-top-actions">
-    <div class="tg-search">⌕&nbsp;&nbsp;Search students, staff, fees, tasks…</div>
+    <label class="tg-search" for="tg-dashboard-search" style="display:flex;align-items:center;gap:8px">⌕ <input id="tg-dashboard-search" type="search" placeholder="Search dashboard modules and items…" aria-label="Search dashboard modules and visible items" autocomplete="off" style="min-width:0;width:220px;border:0;outline:0;background:transparent;color:inherit;font:inherit"></label>
     <div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</div><span>{{ auth()->user()->name ?? 'User' }}</span></div>
   </div>
 </header>
@@ -206,4 +206,21 @@
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())<a href="{{ route('tagore.operations.index') }}"><b>⋮</b>Operations</a>@endif
 </nav>
 </div>
+<script>
+(() => {
+  const input = document.getElementById('tg-dashboard-search');
+  if (!input) return;
+  const searchable = Array.from(document.querySelectorAll('.tg-module, .tg-list-item, .tg-kpi'));
+  input.addEventListener('input', () => {
+    const query = input.value.trim().toLocaleLowerCase();
+    searchable.forEach(item => {
+      item.hidden = !!query && !(item.textContent || '').toLocaleLowerCase().includes(query);
+    });
+    document.querySelectorAll('.tg-list, .tg-module-grid, .tg-grid').forEach(group => {
+      const children = Array.from(group.children).filter(child => searchable.includes(child));
+      if (children.length) group.dataset.searchEmpty = String(children.every(child => child.hidden));
+    });
+  });
+})();
+</script>
 </body></html>
