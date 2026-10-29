@@ -156,8 +156,8 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(viewportAudit.tableScroller).toBeTruthy();
 
     await authenticate(page, 'parent');
-    await page.goto('/tagore/accounts/fees', { waitUntil: 'domcontentloaded' });
-    await expect(page).toHaveURL(/\/tagore\/dashboard/);
+    const denied = await page.goto('/tagore/accounts/fees', { waitUntil: 'domcontentloaded' });
+    expect(denied.status()).toBe(403);
   });
 
   test('academic-year archive controls are owner-only in the fee editor', async ({ page }) => {
