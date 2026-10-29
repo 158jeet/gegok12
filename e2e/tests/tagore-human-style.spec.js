@@ -379,7 +379,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(familySummary.getByText('Open feedback', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Family shortcuts' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Fee wallet/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Daily diary/ })).toBeVisible();
+    await expect(page.locator('.tg-module-grid').getByRole('link', { name: /Daily diary/ })).toBeVisible();
     await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Children/ })).toBeVisible();
     await expect(page.getByText('Students', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Staff', { exact: true })).toHaveCount(0);
