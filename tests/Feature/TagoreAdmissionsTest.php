@@ -153,6 +153,61 @@ class TagoreAdmissionsTest extends TestCase
             'entity_type' => 'Student',
             'entity_id' => $student->id,
         ]);
+
+        // Repeating the same family-link action must be idempotent, not create duplicate links.
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id,
+            'parent_mobile' => $mobile,
+            'relationship' => 'Guardian',
+        ])->assertRedirect();
+
+        $this->assertSame(1, DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('student_id', $student->id)
+            ->where('status', 'active')
+            ->count());
+    }
+
+    public function test_family_link_rejects_an_unmatched_parent_mobile_without_creating_a_link(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+
+        $student = User::query()->where('usergroup_id', 6)
+            ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-FAMILY-INVALID-' . uniqid(),
+            'student_name' => 'Invalid Family Link Student',
+            'status' => 'new',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        do {
+            $invalidMobile = '9000' . str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while (DB::table('users')->where('mobile_no', $invalidMobile)->exists());
+
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id,
+            'parent_mobile' => $invalidMobile,
+            'relationship' => 'Guardian',
+        ])->assertStatus(422);
+
+        $this->assertSame(0, DB::table('tagore_parent_students')
+            ->where('student_id', $student->id)
+            ->where('status', 'active')
+            ->where('parent_user_id', '>', 0)
+            ->whereNotIn('parent_user_id', [])
+            ->whereExists(function ($query) use ($invalidMobile) {
+                $query->select(DB::raw(1))
+                    ->from('users')
+                    ->whereColumn('users.id', 'tagore_parent_students.parent_user_id')
+                    ->where('users.mobile_no', $invalidMobile);
+            })
+            ->count());
     }
 
 }
