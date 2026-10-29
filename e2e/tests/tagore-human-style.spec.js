@@ -248,7 +248,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await form.locator('textarea[name="description"]').fill('Disposable staging acceptance workflow.');
     await form.locator('select[name="priority"]').selectOption('high');
     await form.getByRole('button', { name: 'Create task' }).click();
-    let taskRow = page.locator('.task-table tr').filter({ hasText: title });
+    let taskRow = page.locator('.task-table tr').filter({ hasText: title }).filter({ has: page.locator('select[name="status"]') }).first();
     await expect(taskRow).toBeVisible();
 
     let updateForm = taskRow.locator('td').last().locator('form');
