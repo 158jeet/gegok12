@@ -166,6 +166,9 @@ class TagorePrototypeE2ETest extends TestCase
         $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $otherInstitution = DB::table('tagore_institutions')->where('school_id', '!=', $student->school_id)->first();
 
+        $createdOtherSchoolId = null;
+        $createdOtherInstitutionId = null;
+
         // Build an isolated second-institution fixture when the legacy seed has only one
         // school. Cross-institution fee validation is required coverage, not a skippable case.
         if (!$otherInstitution) {
@@ -196,12 +199,22 @@ class TagorePrototypeE2ETest extends TestCase
         $this->assertNotSame((int) $student->school_id, (int) $otherInstitution->school_id);
 
         $this->expectException(\Illuminate\Validation\ValidationException::class);
-        app(\App\Services\Tagore\FeeService::class)->createObligation(
-            (int) $student->id,
-            (int) $otherInstitution->id,
-            ['items' => [['fee_head' => 'QA', 'gross_amount' => 100]]],
-            (int) $owner->id
-        );
+        try {
+            app(\App\Services\Tagore\FeeService::class)->createObligation(
+                (int) $student->id,
+                (int) $otherInstitution->id,
+                ['items' => [['fee_head' => 'QA', 'gross_amount' => 100]]],
+                (int) $owner->id
+            );
+        } finally {
+            // Keep the shared disposable CI database clean for subsequent tests.
+            if ($createdOtherInstitutionId) {
+                DB::table('tagore_institutions')->where('id', $createdOtherInstitutionId)->delete();
+            }
+            if ($createdOtherSchoolId) {
+                DB::table('schools')->where('id', $createdOtherSchoolId)->delete();
+            }
+        }
     }
 
     public function test_online_payment_confirmation_requires_order_owner_or_authorized_staff(): void
