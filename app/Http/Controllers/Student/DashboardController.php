@@ -28,12 +28,13 @@ class DashboardController extends Controller
         //
         $school_id          =   Auth::user()->school_id;
         $student_id         =   Auth::id();
-        $student            =   User::where('id',$student_id)->first();
-        $standardLink_id    =   $student->studentAcademicLatest->standardLink_id;
-        
-        if($request->exam_date != null)
+        $student            =   User::where('id',$student_id)->firstOrFail();
+        $standardLink_id    =   $student->studentAcademicLatest?->standardLink_id;
+        $exam_date          =   null;
+
+        if($request->filled('exam_date'))
         {
-            $exam_date          =   date('Y-m-d H:i:s',strtotime($request->exam_date));
+            $exam_date = date('Y-m-d H:i:s', strtotime($request->exam_date));
         }
 
         $dashboard = $this->studentDashboard($school_id,$student,$standardLink_id,$request->subject,$request->exam,$request->mark,$exam_date);
