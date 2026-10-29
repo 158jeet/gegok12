@@ -94,6 +94,12 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
             'outstanding_amount' => '60.00',
             'status' => 'partial',
         ]);
+        $this->assertDatabaseHas('tagore_fee_obligation_items', [
+            'fee_obligation_id' => $this->obligationId,
+            'fee_head' => 'Acceptance tuition',
+            'paid_amount' => '40.00',
+            'outstanding_amount' => '60.00',
+        ]);
         $this->assertDatabaseHas('tagore_financial_transactions', [
             'reference_type' => 'tagore_payment',
             'reference_id' => $paymentId,
