@@ -34,6 +34,9 @@
   @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.manage') }}"><span class="tg-side-icon">₹</span>Fee management</a>
   @endif
+  @if($roles->contains('FEE_EDITOR'))
+    <a class="tg-side-link" href="{{ route('tagore.fees.editor') }}"><span class="tg-side-icon">₹</span>Fee editor</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}"><span class="tg-side-icon">▤</span>Accounts</a>
   @endif
@@ -151,6 +154,9 @@
       @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.fees.manage') }}"><div class="tg-module-icon">₹</div><b>Fee management</b><span>Fee structures, demands and assignments</span></a>
       @endif
+      @if($roles->contains('FEE_EDITOR'))
+      <a class="tg-module" href="{{ route('tagore.fees.editor') }}"><div class="tg-module-icon">₹</div><b>Fee editor</b><span>Adjust fee records and manage fee-editing tasks</span></a>
+      @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.fees.accounts') }}"><div class="tg-module-icon">▤</div><b>Accounts</b><span>Collections, receipts and reconciliation</span></a>
       @endif
@@ -199,6 +205,7 @@
 </div>
 <nav class="tg-mobile-nav">
 <a href="{{ route('tagore.dashboard') }}"><b>⌂</b>Home</a>
+@if($roles->contains('FEE_EDITOR'))<a href="{{ route('tagore.fees.editor') }}"><b>₹</b>Fee editor</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>@endif
