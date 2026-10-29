@@ -1,3 +1,13 @@
+@php
+  $studentNavUser = Auth::user();
+  $studentNavProfile = $studentNavUser?->userprofile;
+  $studentNavName = trim(($studentNavProfile->firstname ?? '') . ' ' . ($studentNavProfile->lastname ?? '')) ?: ($studentNavUser->name ?? 'Student');
+  $studentNavAvatar = $studentNavProfile && $studentNavProfile->avatar
+    ? asset($studentNavProfile->AvatarPath)
+    : asset('uploads/user/avatar/default-user.jpg');
+  $schoolLogo = $studentNavUser?->SchoolLogo;
+  $schoolLogoPath = $schoolLogo && (($schoolLogo['meta_value'] ?? '-') !== '-') ? $studentNavUser->SchoolLogoPath : null;
+@endphp
 <nav class="navbar bg-white w-full flex  lg:flex-row px-4 lg:px-8 py-2 justify-between items-center">
   <div class="nav-brand flex items-center">
     @if(\Auth::user())
@@ -7,9 +17,9 @@
         </span>
       </button>
 
-      @if(Auth::user()->SchoolLogo['meta_value'] != '-')
+      @if($schoolLogoPath)
         <a class="h-10 object-contain" href="{{ route('dashboard') }}">
-          <img src="{{ Auth::user()->SchoolLogoPath }}" class="h-10 w-auto object-cover">
+          <img src="{{ $schoolLogoPath }}" class="h-10 w-auto object-cover">
         </a>
          <a class="text-lg lg:text-3xl font-exo font-medium text-gray-700 px-4" href="{{ route('dashboard') }}">
           <strong>{{ ucwords(Auth::user()->school->name) }}</strong>
@@ -44,23 +54,23 @@
           <!-- start -->
           <li>
             <div class="profile-click" dusk="profile-menu">
-              @if(Auth::user()->userprofile->avatar!= null)
-                <img src="{{asset(Auth::user()->userprofile->AvatarPath)}}" class="w-8 h-8 rounded-full cursor-pointer">
+              @if($studentNavProfile && $studentNavProfile->avatar)
+                <img src="{{ $studentNavAvatar }}" class="w-8 h-8 rounded-full cursor-pointer">
               @else
                 <img src="{{asset('uploads/user/avatar/default-user.jpg')}}" class="w-8 h-8 rounded-full cursor-pointer">
               @endif
               <div class="user-dtl rounded">
                 <ul class="list-reset">
                   <div class="flex border-b p-2 items-center">
-                    @if(Auth::user()->userprofile->avatar!= null)
-                      <img src="{{asset(Auth::user()->userprofile->AvatarPath)}}" class="w-10 h-10 rounded-full cursor-pointer">
+                    @if($studentNavProfile && $studentNavProfile->avatar)
+                      <img src="{{ $studentNavAvatar }}" class="w-10 h-10 rounded-full cursor-pointer">
                     @else
                       <img src="{{asset('uploads/user/avatar/default-user.jpg')}}" class="w-10 h-10 rounded-full cursor-pointer">
                     @endif
                     <div>
                       <div>
                         <a id="navbarDropdown" class="nav-link dropdown-toggle text-sm  no-underline text-black px-2" href="{{url('/student/dashboard')}}">
-                          {{ Auth::user()->FullName }} <span class="caret"></span>
+                          {{ $studentNavName }} <span class="caret"></span>
                         </a>
                       </div>
                       <div>
