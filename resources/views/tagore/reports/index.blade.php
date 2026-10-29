@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('base-content')
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}">
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui10' }}">
 <div class="tg-app"><div class="tg-shell">
-<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Report Builder</span></div></div><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>
+<header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Report Builder</span></div></a><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></header>
 @if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="tg-alert danger">{{ $errors->first() }}</div>@endif
 <section class="tg-hero"><div><span class="tg-eyebrow">Analytics</span><h1>Custom Report Builder</h1><p>Select a safe data source and fields, save the definition, then export CSV or PDF.</p></div></section>
