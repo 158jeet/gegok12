@@ -123,6 +123,18 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('academic-year archive controls are owner-only in the fee editor', async ({ page }) => {
+    await authenticate(page, 'fee-editor');
+    await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'load' });
+    await expect(page.getByRole('heading', { name: 'Close an academic year' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Archive original records' })).toHaveCount(0);
+
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'load' });
+    await expect(page.getByRole('heading', { name: 'Close an academic year' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Archive original records' })).toBeVisible();
+  });
+
   test('fee editor form contrast and navigation spacing remain readable', async ({ page }) => {
     await authenticate(page, 'fee-editor');
     await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'load' });
