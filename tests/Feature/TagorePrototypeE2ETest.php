@@ -101,6 +101,8 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_parent_fee_statement_hides_payment_history_even_when_a_successful_payment_exists(): void
     {
+        DB::beginTransaction();
+        try {
         $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
         $childId = DB::table('tagore_parent_students')
             ->where('parent_user_id', $parent->id)
@@ -164,6 +166,11 @@ class TagorePrototypeE2ETest extends TestCase
             ->assertDontSee('Payment history')
             ->assertDontSee($reference)
             ->assertDontSee($payment->receipt_no);
+        } finally {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+        }
     }
 
     public function test_owner_can_view_accounts_and_seeded_fee_data_exists(): void
