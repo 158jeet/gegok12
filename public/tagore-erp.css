@@ -369,3 +369,6 @@ body.tg-app .shell .task-alert-error{background:#4a1d22!important;color:#fecaca!
     margin-right:8px;
   }
 }
+
+/* Ensure dashboard search filtering overrides component display rules. */
+.tg-app [hidden]{display:none!important}
