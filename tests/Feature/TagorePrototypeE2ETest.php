@@ -163,12 +163,37 @@ class TagorePrototypeE2ETest extends TestCase
     public function test_fee_service_rejects_cross_institution_student_obligation(): void
     {
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
-        $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->first();
+        $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $otherInstitution = DB::table('tagore_institutions')->where('school_id', '!=', $student->school_id)->first();
 
+        // Build an isolated second-institution fixture when the legacy seed has only one
+        // school. Cross-institution fee validation is required coverage, not a skippable case.
         if (!$otherInstitution) {
-            $this->markTestSkipped('Prototype seed currently has one institution; cross-institution fixture unavailable.');
+            $sourceInstitution = DB::table('tagore_institutions')->where('school_id', $student->school_id)->firstOrFail();
+            $now = now();
+            $otherSchoolId = DB::table('schools')->insertGetId([
+                'name' => 'QA Cross-Institution School',
+                'email' => 'qa-cross-institution@example.test',
+                'phone' => '9000000099',
+                'status' => 1,
+                'slug' => 'qa-cross-institution-school',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $otherInstitutionId = DB::table('tagore_institutions')->insertGetId([
+                'tagore_group_id' => $sourceInstitution->tagore_group_id,
+                'school_id' => $otherSchoolId,
+                'code' => 'QA-CROSS-INSTITUTION',
+                'display_name' => 'QA Cross-Institution School',
+                'type' => 'school',
+                'status' => 'active',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $otherInstitution = DB::table('tagore_institutions')->where('id', $otherInstitutionId)->first();
         }
+
+        $this->assertNotSame((int) $student->school_id, (int) $otherInstitution->school_id);
 
         $this->expectException(\Illuminate\Validation\ValidationException::class);
         app(\App\Services\Tagore\FeeService::class)->createObligation(
