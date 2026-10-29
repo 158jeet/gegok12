@@ -17,6 +17,7 @@
 </form>
 <div class="tg-alert warning" style="margin-top:16px"><strong>How the range works:</strong> if you enter 30–40%, every eligible fee record receives its own independently generated percentage inside that range. The exact percentage and before/after amounts are written to the audit trail. Opening-balance records are always excluded.</div>
 </section>
+@if($roles->contains('OWNER'))
 <section class="card" style="padding:22px;margin-top:18px"><div class="tg-section-head"><h2>Close an academic year</h2><span class="tg-kpi-label">Owner only</span></div>
 <form method="post" action="{{ route('tagore.fees.editor.close-year') }}" class="tg-form">@csrf
 <div class="tg-field"><label>Institution ID</label><input name="institution_id" type="number" min="1" required></div>
@@ -25,4 +26,5 @@
 </form>
 <p class="tg-kpi-label" style="margin-top:13px">The archive is encrypted in private application storage, hashed for integrity, and separated from normal ERP editing. It is not shown to parents or ordinary staff.</p>
 </section>
+@endif
 </main></body></html>
