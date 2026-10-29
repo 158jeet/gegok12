@@ -59,6 +59,7 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
       const failedResponses = [];
       const expectedAccessDenials = [];
       const expectedUnavailableIntegrations = [];
+      const searchInteractions = [];
       page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const message = msg.text();
@@ -150,18 +151,17 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
 
         // Exercise every visible GET-form search box with a harmless no-match query.
         // GET search/filter forms are read-only; no POST/PUT/PATCH/DELETE forms are submitted here.
-        const searchSelector = 'form:not([method]), form[method="get" i]';
-        const searchCount = await page.locator(searchSelector + ' input:not([type="hidden"]):not([type="submit"])').count();
+        const searchInputSelector = 'form:not([method]) input:not([type="hidden"]):not([type="submit"]), form[method="get" i] input:not([type="hidden"]):not([type="submit"])';
+        const searchCount = await page.locator(searchInputSelector).count();
         for (let searchIndex = 0; searchIndex < searchCount; searchIndex++) {
           await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
-          const candidates = page.locator(searchSelector + ' input:not([type="hidden"]):not([type="submit"])');
+          const candidates = page.locator(searchInputSelector);
           const input = candidates.nth(searchIndex);
           if (!(await input.isVisible().catch(() => false))) continue;
           const type = (await input.getAttribute('type') || 'text').toLowerCase();
           const name = (await input.getAttribute('name') || '').toLowerCase();
           const placeholder = (await input.getAttribute('placeholder') || '').toLowerCase();
           if (!(type === 'search' || name === 'q' || name.includes('search') || placeholder.includes('search') || placeholder.includes('filter'))) continue;
-          const beforeUrl = page.url();
           await input.fill('tagore-acceptance-no-match').catch(() => null);
           const navigationPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 8000 }).catch(() => null);
           await input.press('Enter').catch(() => null);
@@ -169,12 +169,12 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
           const status = searchResponse ? searchResponse.status() : 0;
           const redirectedToLogin = new URL(page.url()).pathname.endsWith('/login');
           const pass = !!searchResponse && status < 400 && !redirectedToLogin;
-          results.push({ role, page: 'search-form', path, input: name || placeholder || type, status, navigated: !!searchResponse, redirectedToLogin, pass });
-          if (!pass) failures.push(role.code + ' search box on ' + path + ' did not submit successfully (HTTP ' + status + (redirectedToLogin ? ', redirected to login' : '') + ')');
+          searchInteractions.push({ role, path, input: name || placeholder || type, status, navigated: !!searchResponse, redirectedToLogin, pass });
+          if (!pass) findings.push({ role, path, type: 'search-submit-failed', input: name || placeholder || type, status, redirectedToLogin });
         }
       }
 
-      const report = { role, viewport: testInfo.project.name, routesVisited: visited.size, htmlPagesScreenshotted: pageInventory.length, pages: pageInventory, expectedAccessDenials, expectedUnavailableIntegrations, findings, consoleErrors, failedResponses };
+      const report = { role, viewport: testInfo.project.name, routesVisited: visited.size, htmlPagesScreenshotted: pageInventory.length, pages: pageInventory, expectedAccessDenials, expectedUnavailableIntegrations, searchInteractions, findings, consoleErrors, failedResponses };
       await require('fs').promises.mkdir(baseDir, { recursive: true });
       await require('fs').promises.writeFile(baseDir + '/' + role + '-' + testInfo.project.name + '-inventory.json', JSON.stringify(report, null, 2));
       expect(failedResponses, role + ' 5xx responses during route sweep').toEqual([]);
