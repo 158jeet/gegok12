@@ -12,6 +12,20 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
 {
     private ?int $obligationId = null;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        DB::beginTransaction();
+    }
+
+    protected function tearDown(): void
+    {
+        if (DB::transactionLevel() > 0) {
+            DB::rollBack();
+        }
+        parent::tearDown();
+    }
+
     public function test_offline_payment_updates_obligation_ledger_and_receipt_atomically(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
