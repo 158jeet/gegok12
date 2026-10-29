@@ -23,24 +23,62 @@ class FeeEditorController extends Controller
 
     public function index(Request $request)
     {
-        $roles=$this->roles((int)$request->user()->id); $this->assertEditor($roles);
-        $institutions=DB::table('tagore_institutions')->where('status','active')->orderBy('display_name')->get(['id','display_name']);
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        $this->assertEditor($roles);
+
+        $query = DB::table('tagore_institutions')->where('status', 'active');
+        if (!$roles->contains('OWNER')) {
+            $query->whereIn('id', DB::table('tagore_user_roles as ur')
+                ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->where('ur.user_id', $userId)
+                ->where('ur.status', 'active')
+                ->where('r.code', 'FEE_EDITOR')
+                ->whereNotNull('ur.institution_id')
+                ->select('ur.institution_id'));
+        }
+        $institutions = $query->orderBy('display_name')->get(['id', 'display_name']);
+
         return view('tagore.fees.editor', compact('institutions', 'roles'));
     }
 
     public function bulkAdjust(Request $request, FeeEditorService $service)
     {
         $roles=$this->roles((int)$request->user()->id); $this->assertEditor($roles);
-        $data=$request->validate([
-            'institution_id'=>['required','integer'],
-            'academic_year_id'=>['nullable','integer'],
-            'fee_structure_id'=>['nullable','integer'],
-            'student_id'=>['nullable','integer'],
-            'min_percent'=>['required','numeric','between:-100,100'],
-            'max_percent'=>['required','numeric','between:-100,100'],
+        $userId = (int) $request->user()->id;
+        $data = $request->validate([
+            'institution_id' => ['required', 'integer', 'exists:tagore_institutions,id'],
+            'academic_year_id' => ['nullable', 'integer'],
+            'fee_structure_id' => ['nullable', 'integer'],
+            'student_id' => ['nullable', 'integer'],
+            'min_percent' => ['required', 'numeric', 'between:-100,100'],
+            'max_percent' => ['required', 'numeric', 'between:-100,100'],
         ]);
-        $count=$service->bulkAdjust($data,$data['min_percent'],$data['max_percent'],(int)$request->user()->id);
+        $this->authorizeInstitution($userId, (int) $data['institution_id'], $roles);
+        $count = $service->bulkAdjust($data, $data['min_percent'], $data['max_percent'], $userId);
         return back()->with('success', "{$count} fee records adjusted. Opening balances were excluded. Each applied percentage is stored in the audit trail.");
+    }
+
+    private function authorizeInstitution(int $userId, int $institutionId, $roles): void
+    {
+        $activeInstitution = DB::table('tagore_institutions')
+            ->where('id', $institutionId)
+            ->where('status', 'active')
+            ->exists();
+        abort_unless($activeInstitution, 404);
+
+        if ($roles->contains('OWNER')) {
+            return;
+        }
+
+        $assigned = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->where('ur.institution_id', $institutionId)
+            ->where('ur.status', 'active')
+            ->where('r.code', 'FEE_EDITOR')
+            ->exists();
+        abort_unless($assigned, 403);
     }
 
     public function closeYear(Request $request, FeeVaultService $vault)
