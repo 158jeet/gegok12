@@ -41,6 +41,7 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
         $school = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first();
         $institution = DB::table('tagore_institutions')->where('school_id', $school->id)->where('status', 'active')->first();
         $this->assertNotNull($institution);
+        DB::table('tagore_institutions')->where('id', $institution->id)->update(['settings_json' => json_encode([])]);
 
         $yearId = DB::table('academic_years')->insertGetId([
             'school_id' => $school->id,
