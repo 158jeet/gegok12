@@ -82,12 +82,25 @@
     </div>
   </section>
 
-  <section class="tg-grid">
+  @if($roles->contains('PARENT'))
+  <section class="tg-grid" aria-label="Family dashboard summary">
+    <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">My children</span><span class="tg-kpi-icon">●</span></div><div class="tg-kpi-value">{{ number_format($stats['children']) }}</div><div class="tg-kpi-meta">Linked student accounts</div></div>
+    <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Fee items due</span><span class="tg-kpi-icon">₹</span></div><div class="tg-kpi-value">{{ number_format($stats['pending_fees']) }}</div><div class="tg-kpi-meta">Pending, partial or overdue items</div></div>
+    <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Open feedback</span><span class="tg-kpi-icon">✉</span></div><div class="tg-kpi-value">{{ number_format($stats['open_feedback']) }}</div><div class="tg-kpi-meta">Your requests awaiting review</div></div>
+    <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Schools</span><span class="tg-kpi-icon">⌂</span></div><div class="tg-kpi-value">{{ number_format($stats['institutions']) }}</div><div class="tg-kpi-meta">Institutions linked to your family</div></div>
+  </section>
+  @elseif(!$roles->contains('STUDENT'))
+  <section class="tg-grid" aria-label="Institution dashboard summary">
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Students</span><span class="tg-kpi-icon">●</span></div><div class="tg-kpi-value">{{ number_format($erp['students']) }}</div><div class="tg-kpi-meta">Across your visible institutions</div></div>
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Staff</span><span class="tg-kpi-icon">♙</span></div><div class="tg-kpi-value">{{ number_format($erp['staff']) }}</div><div class="tg-kpi-meta">{{ $erp['departments'] }} active departments</div></div>
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Fee outstanding</span><span class="tg-kpi-icon">₹</span></div><div class="tg-kpi-value">₹{{ number_format($erp['fee_outstanding'],0) }}</div><div class="tg-kpi-meta">Pending, partial & overdue</div></div>
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Active work</span><span class="tg-kpi-icon">✓</span></div><div class="tg-kpi-value">{{ number_format($erp['active_tasks']) }}</div><div class="tg-kpi-meta">{{ $erp['pending_leave'] }} leave requests pending</div></div>
   </section>
+  @else
+  <section class="tg-card" style="padding:20px;margin-bottom:18px">
+    <div class="tg-section-head"><div><h2>Your student workspace</h2><p>Your account is signed in. Use the student portal for classes, assignments, homework and results.</p></div><a class="tg-btn primary" href="{{ url('/student/dashboard') }}">Open student portal →</a></div>
+  </section>
+  @endif
 
   @if($isManager)
   <section class="tg-section">
@@ -193,14 +206,22 @@
         <div class="tg-list">@foreach($institutions->take(6) as $institution)<div class="tg-list-item"><div><div class="tg-list-title">{{ $institution->display_name }}</div><div class="tg-list-meta">{{ $institution->code }} · {{ $institution->school_name }}</div></div><span class="tg-status success">Active</span></div>@endforeach</div>
       @endif
     </div>
+    @if(!$roles->contains('STUDENT'))
     <div class="tg-card" style="padding:18px">
-      <div class="tg-section-head"><div><h2>Quick snapshot</h2><p>Operational signals</p></div></div>
+      <div class="tg-section-head"><div><h2>Quick snapshot</h2><p>{{ $roles->contains('PARENT') ? 'Your family activity' : 'Operational signals' }}</p></div></div>
       <div class="tg-list">
-        <div class="tg-list-item"><div><div class="tg-list-title">Admissions pipeline</div><div class="tg-list-meta">{{ $erp['pending_leads'] }} leads need follow-up</div></div><span class="tg-status {{ $erp['pending_leads'] ? 'warning' : 'success' }}">{{ $erp['pending_leads'] ? 'Action' : 'Clear' }}</span></div>
-        <div class="tg-list-item"><div><div class="tg-list-title">Fee collection</div><div class="tg-list-meta">₹{{ number_format($erp['fee_collected'],0) }} collected</div></div><span class="tg-status success">Tracked</span></div>
-        <div class="tg-list-item"><div><div class="tg-list-title">Staff requests</div><div class="tg-list-meta">{{ $erp['pending_leave'] }} pending leave requests</div></div><span class="tg-status {{ $erp['pending_leave'] ? 'warning' : 'success' }}">{{ $erp['pending_leave'] ? 'Review' : 'Clear' }}</span></div>
+        @if($roles->contains('PARENT'))
+          <div class="tg-list-item"><div><div class="tg-list-title">Fee items</div><div class="tg-list-meta">{{ $stats['pending_fees'] }} items need payment or review</div></div><span class="tg-status {{ $stats['pending_fees'] ? 'warning' : 'success' }}">{{ $stats['pending_fees'] ? 'Review' : 'Clear' }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Feedback</div><div class="tg-list-meta">{{ $stats['open_feedback'] }} open requests</div></div><span class="tg-status {{ $stats['open_feedback'] ? 'warning' : 'success' }}">{{ $stats['open_feedback'] ? 'Waiting' : 'Clear' }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Family access</div><div class="tg-list-meta">{{ $stats['children'] }} linked children across {{ $stats['institutions'] }} schools</div></div><span class="tg-status success">Connected</span></div>
+        @else
+          <div class="tg-list-item"><div><div class="tg-list-title">Admissions pipeline</div><div class="tg-list-meta">{{ $erp['pending_leads'] }} leads need follow-up</div></div><span class="tg-status {{ $erp['pending_leads'] ? 'warning' : 'success' }}">{{ $erp['pending_leads'] ? 'Action' : 'Clear' }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Fee collection</div><div class="tg-list-meta">₹{{ number_format($erp['fee_collected'],0) }} collected</div></div><span class="tg-status success">Tracked</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Staff requests</div><div class="tg-list-meta">{{ $erp['pending_leave'] }} pending leave requests</div></div><span class="tg-status {{ $erp['pending_leave'] ? 'warning' : 'success' }}">{{ $erp['pending_leave'] ? 'Review' : 'Clear' }}</span></div>
+        @endif
       </div>
     </div>
+    @endif
   </section>
 </main>
 </div>
