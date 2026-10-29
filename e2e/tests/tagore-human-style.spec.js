@@ -403,7 +403,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
     const search = page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' });
     await expect(search).toBeVisible();
-    await search.fill('Family shortcuts');
+    await search.fill('Fee wallet');
     await expect(page.locator('#tg-search-status')).toContainText('matching item');
     await search.press('Escape');
     await expect(search).toHaveValue('');
