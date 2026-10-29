@@ -42,7 +42,13 @@ class FeeVaultArchiveNotifier
             : null;
 
         if (!$owner || !filter_var((string) $owner->email, FILTER_VALIDATE_EMAIL)) {
-            $this->recordDelivery($closureId, $ownerId > 0 ? $ownerId : null, null, 'failed', 'Configured fee-vault owner is missing, is not an active Owner, or has no valid email address.');
+            $this->recordDelivery(
+                $closureId,
+                $owner ? (int) $owner->id : null,
+                null,
+                'failed',
+                'Configured fee-vault owner is missing, is not an active Owner, or has no valid email address.'
+            );
             return false;
         }
 
