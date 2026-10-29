@@ -6,9 +6,20 @@
     <style>body{font-family:system-ui,sans-serif;background:#f6f7f9;margin:0;color:#17202a}.wrap{max-width:1100px;margin:30px auto;padding:0 18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:18px}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.metric{padding:14px;background:#f8fafc;border-radius:10px}.metric b{display:block;font-size:20px;margin-top:5px}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:10px;border-bottom:1px solid #eee}.due{font-weight:700}.muted{color:#6b7280}.pay{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.pay input{padding:11px;border:1px solid #d1d5db;border-radius:8px}.pay button{padding:11px 18px;border:0;border-radius:8px;cursor:pointer}.success{padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;margin-bottom:18px}.error{padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:18px}@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.table{font-size:13px}}
     </style>
 
-    <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui7' }}">
-</head>
-<body><div class="wrap">
+    <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui10' }}">
+<style>body.tg-app .metric{background:#222d3a!important;color:#edf2f7!important}body.tg-app .metric b{color:#fff!important}body.tg-app .muted{color:#a2afbf!important}</style></head>
+<body class="tg-app"><div class="wrap">
+    <header class="tg-topbar">
+      <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none">
+        <img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions">
+        <div><strong>Tagore ERP</strong><span>Fee statement</span></div>
+      </a>
+      @if($roles->contains('PARENT'))
+        <a class="tg-btn" href="{{ route('tagore.parent.dashboard') }}">← Parent home</a>
+      @else
+        <a class="tg-btn" href="{{ route('tagore.dashboard') }}">← ERP Home</a>
+      @endif
+    </header>
     @if(session('success'))<div class="success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="error">{{ session('error') }}</div>@endif
     <div class="card"><h1>Fee Statement</h1><div>{{ $student->name }}</div><div class="muted">{{ $student->institution }} · Student #{{ $student->id }}</div></div>
