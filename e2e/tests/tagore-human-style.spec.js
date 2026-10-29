@@ -555,25 +555,44 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     }
   });
 
-  test('login form supports keyboard input and remember-me interaction without submitting', async ({ page }) => {
+  test('login form is keyboard-usable and visually consistent on desktop and mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     const email = page.locator('input[name="email"]');
     const password = page.locator('input[name="password"]');
     const remember = page.locator('input[name="remember"]');
     const submit = page.getByRole('button', { name: /sign in to tagore erp/i });
+    const loginCard = page.locator('.tg-login-card');
 
     await expect(email).toBeVisible();
     await expect(password).toBeVisible();
     await expect(remember).toBeVisible();
     await expect(submit).toBeVisible();
+    await expect(page.locator('.tg-login-brand')).toBeVisible();
+    await expect(loginCard).toHaveCSS('background-color', 'rgb(26, 34, 45)');
+    await expect(submit).toHaveCSS('background-image', /linear-gradient/);
 
     await email.fill('runner-test@example.invalid');
     await password.fill('not-a-real-password');
     await remember.check();
-
     await expect(email).toHaveValue('runner-test@example.invalid');
     await expect(password).toHaveValue('not-a-real-password');
     await expect(remember).toBeChecked();
     expect(new URL(page.url()).pathname).toBe('/login');
-  });
-});
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.tg-login-brand')).toBeVisible();
+    await expect(page.locator('.tg-login-copy')).toBeHidden();
+    await expect(loginCard).toBeVisible();
+    const mobile = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      brandWidth: document.querySelector('.tg-login-brand').getBoundingClientRect().width,
+      cardWidth: document.querySelector('.tg-login-card').getBoundingClientRect().width,
+    }));
+    expect(mobile.document, 'mobile login must not overflow the viewport').toBeLessThanOrEqual(mobile.viewport + 2);
+    expect(mobile.brandWidth).toBeGreaterThan(0);
+    expect(mobile.cardWidth).toBeLessThanOrEqual(mobile.viewport);
+    await page.screenshot({ path: 'test-results/login-mobile-charcoal-green.png', fullPage: true });
+  });});
