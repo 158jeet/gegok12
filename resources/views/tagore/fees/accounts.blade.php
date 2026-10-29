@@ -30,8 +30,16 @@
 .tg-accounts-empty strong{display:block;color:var(--tg-ink);font-size:13px;margin-bottom:4px}
 @media(max-width:760px){.tg-accounts-form{grid-template-columns:1fr;min-width:0}.tg-accounts-form .wide{grid-column:auto}.tg-accounts-tools input{max-width:none;width:100%}}
 </style>
+<style>
+@media(max-width:760px){
+  body.tg-accounts-page .tg-top-actions{display:flex;flex-wrap:wrap;align-items:stretch;width:100%;min-width:0;gap:8px}
+  body.tg-accounts-page .tg-top-actions .tg-search{flex:1 1 100%;width:100%;min-width:0}
+  body.tg-accounts-page .tg-top-actions .tg-user{flex:1 1 140px;max-width:none;min-width:0}
+  body.tg-accounts-page .tg-top-actions>.tg-btn{flex:0 0 auto;white-space:nowrap}
+}
+</style>
 </head>
-<body class="tg-app">
+<body class="tg-app tg-accounts-page">
 <div class="tg-shell">
 <header class="tg-topbar">
   <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none">
