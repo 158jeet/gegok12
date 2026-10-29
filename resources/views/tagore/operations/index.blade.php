@@ -71,8 +71,18 @@
                 <input name="{{ $column }}" value="{{ old($column) }}" />
               @elseif(in_array($column,['description','message','body','notes','reason','action','trigger']))
                 <textarea name="{{ $column }}" rows="2"></textarea>
+              @elseif($column === 'email')
+                <input name="{{ $column }}" type="email" maxlength="190" value="{{ old($column) }}" @if(in_array($column,$requiredFields,true)) required @endif />
+              @elseif($column === 'is_anonymous')
+                <select name="{{ $column }}"><option value="0">No</option><option value="1">Yes</option></select>
+              @elseif(in_array($column,['employee_id','gross_amount','deductions','net_amount','quantity','reorder_level','unit_cost','amount','approved_by','capacity','student_id','passout_year','owner_id','version','sent_count','failed_count','fee','author_id','price','stock','tenure','emi_amount'],true))
+                <input name="{{ $column }}" type="number" min="0" @if(in_array($column,['gross_amount','deductions','net_amount','quantity','reorder_level','unit_cost','amount','fee','price','emi_amount'],true)) step="0.01" @else step="1" @endif value="{{ old($column) }}" @if(in_array($column,$requiredFields,true)) required @endif />
+              @elseif(in_array($column,['expense_date'],true))
+                <input name="{{ $column }}" type="date" value="{{ old($column) }}" @if(in_array($column,$requiredFields,true)) required @endif />
+              @elseif(in_array($column,['check_in','check_out','valid_from','valid_until','published_at','scheduled_at','last_sync_at','last_run_at','next_run_at'],true) || str_ends_with($column,'_at'))
+                <input name="{{ $column }}" type="datetime-local" value="{{ old($column) }}" @if(in_array($column,$requiredFields,true)) required @endif />
               @else
-                <input name="{{ $column }}" value="{{ old($column) }}" />
+                <input name="{{ $column }}" value="{{ old($column) }}" @if(in_array($column,$requiredFields,true)) required @endif maxlength="5000" />
               @endif
             </label>
           @endforeach
@@ -119,8 +129,18 @@
                             <input name="{{ $column }}" value="{{ $value }}" />
                           @elseif(in_array($column,['description','message','body','notes','reason','action','trigger']))
                             <textarea name="{{ $column }}" rows="2">{{ $value }}</textarea>
+                          @elseif($column === 'email')
+                            <input name="{{ $column }}" type="email" maxlength="190" value="{{ $value }}" @if(in_array($column,$requiredFields,true)) required @endif />
+                          @elseif($column === 'is_anonymous')
+                            <select name="{{ $column }}"><option value="0" {{ (string)$value === '0' ? 'selected' : '' }}>No</option><option value="1" {{ (string)$value === '1' ? 'selected' : '' }}>Yes</option></select>
+                          @elseif(in_array($column,['employee_id','gross_amount','deductions','net_amount','quantity','reorder_level','unit_cost','amount','approved_by','capacity','student_id','passout_year','owner_id','version','sent_count','failed_count','fee','author_id','price','stock','tenure','emi_amount'],true))
+                            <input name="{{ $column }}" type="number" min="0" @if(in_array($column,['gross_amount','deductions','net_amount','quantity','reorder_level','unit_cost','amount','fee','price','emi_amount'],true)) step="0.01" @else step="1" @endif value="{{ $value }}" @if(in_array($column,$requiredFields,true)) required @endif />
+                          @elseif(in_array($column,['expense_date'],true))
+                            <input name="{{ $column }}" type="date" value="{{ $value ? substr((string)$value,0,10) : '' }}" @if(in_array($column,$requiredFields,true)) required @endif />
+                          @elseif(in_array($column,['check_in','check_out','valid_from','valid_until','published_at','scheduled_at','last_sync_at','last_run_at','next_run_at'],true) || str_ends_with($column,'_at'))
+                            <input name="{{ $column }}" type="datetime-local" value="{{ $value ? str_replace(' ','T',substr((string)$value,0,16)) : '' }}" @if(in_array($column,$requiredFields,true)) required @endif />
                           @else
-                            <input name="{{ $column }}" value="{{ $value }}" />
+                            <input name="{{ $column }}" value="{{ $value }}" @if(in_array($column,$requiredFields,true)) required @endif maxlength="5000" />
                           @endif
                         </label>
                       @endforeach
