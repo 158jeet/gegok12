@@ -231,7 +231,8 @@ jobs:
             'deploy/windows/Server-Setup.ps1',
             'deploy/windows/Renew-TagoreCertificate.ps1',
             'deploy/windows/Install-TagoreServerTask.ps1',
-            'deploy/windows/Run-TagoreScheduler.ps1'
+            'deploy/windows/Run-TagoreScheduler.ps1',
+            'deploy/windows/Test-TagoreProduction.ps1'
           )
           foreach ($file in $files) {
             if (-not (Test-Path $file)) { throw "Missing expected deployment script: $file" }
