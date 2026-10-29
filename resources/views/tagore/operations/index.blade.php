@@ -4,9 +4,15 @@
 @section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui11' }}">
 <style>
-.tg-operations-nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-.tg-operations-nav a{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid var(--tg-line);border-radius:11px;background:var(--tg-surface);color:var(--tg-muted);text-decoration:none;font-size:12px;font-weight:700}
-.tg-operations-nav a.active{background:#173d32;border-color:#236b52;color:#a7f3d0}
+.tg-operations-switcher{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 16px;padding:14px 16px;border:1px solid var(--tg-line);border-radius:14px;background:var(--tg-surface)}
+.tg-operations-switcher-copy{min-width:180px}
+.tg-operations-switcher-copy strong{display:block;color:var(--tg-text);font-size:13px}
+.tg-operations-switcher-copy p{margin:4px 0 0;color:var(--tg-muted);font-size:11px}
+.tg-operations-switcher form{display:flex;align-items:end;gap:9px;flex:1 1 420px;justify-content:flex-end}
+.tg-operations-switcher label{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1 1 260px;color:var(--tg-muted);font-size:11px;font-weight:700}
+.tg-operations-switcher select{width:100%;min-width:0}
+.tg-operations-switcher button{white-space:nowrap}
+
 .tg-operations-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
 .tg-operations-tools input{flex:1 1 260px;max-width:440px}
 .tg-operations-tools select{width:auto;min-width:150px}
@@ -19,7 +25,7 @@
 .tg-operations-actions{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
 .tg-operations-row-status{display:inline-flex;padding:4px 8px;border-radius:999px;background:#263342;color:#c9d5e2;font-size:10px;font-weight:800}
 .tg-operations-empty{display:none;text-align:center;padding:24px;color:var(--tg-muted)}
-@media(max-width:760px){.tg-operations-form .tg-grid{grid-template-columns:1fr}.tg-operations-tools input,.tg-operations-tools select{max-width:none;width:100%;flex:1 1 100%}}
+@media(max-width:760px){.tg-operations-form .tg-grid{grid-template-columns:1fr}.tg-operations-tools input,.tg-operations-tools select{max-width:none;width:100%;flex:1 1 100%}.tg-operations-switcher{align-items:stretch}.tg-operations-switcher form{flex:1 1 100%;flex-direction:column;align-items:stretch}.tg-operations-switcher label{flex:1 1 auto}.tg-operations-switcher button{width:100%}}
 </style>
 <div class="tg-app">
   <div class="tg-shell">
@@ -28,11 +34,19 @@
       <a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a>
     </header>
 
-    <nav class="tg-operations-nav" aria-label="Operations modules">
-      @foreach($modules as $key=>$label)
-        <a class="{{ $module===$key?'active':'' }}" href="{{ route('tagore.operations.index',['module'=>$key]) }}">{{ $label }}</a>
-      @endforeach
-    </nav>
+    <section class="tg-operations-switcher" aria-label="Switch operations module">
+      <div class="tg-operations-switcher-copy"><strong>Extended modules</strong><p>Choose the workspace you want to manage.</p></div>
+      <form method="GET" action="{{ route('tagore.operations.index') }}">
+        <label for="tg-operations-module">Module
+          <select id="tg-operations-module" name="module">
+            @foreach($modules as $key=>$label)
+              <option value="{{ $key }}" {{ $module===$key?'selected':'' }}>{{ $label }}</option>
+            @endforeach
+          </select>
+        </label>
+        <button class="tg-btn primary" type="submit">Open module</button>
+      </form>
+    </section>
 
     @if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="tg-alert danger"><strong>Please correct the form:</strong> {{ $errors->first() }}</div>@endif

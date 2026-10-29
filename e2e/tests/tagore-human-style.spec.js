@@ -376,6 +376,13 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.locator('#tg-operations-search')).toBeVisible();
     await expect(page.locator('#tg-operations-status')).toBeVisible();
 
+    await page.locator('#tg-operations-module').selectOption('expense');
+    await page.getByRole('button', { name: 'Open module' }).click();
+    await expect(page.getByRole('heading', { name: 'Expenses & Purchases' })).toBeVisible();
+    await page.locator('#tg-operations-module').selectOption('inventory');
+    await page.getByRole('button', { name: 'Open module' }).click();
+    await expect(page.getByRole('heading', { name: 'Inventory & Assets' })).toBeVisible();
+
     const itemName = 'QA searchable inventory ' + Date.now();
     const form = page.locator('form[action*="/tagore/operations/inventory"]').first();
     await form.locator('input[name="item_name"]').fill(itemName);
