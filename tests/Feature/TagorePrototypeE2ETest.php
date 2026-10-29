@@ -183,6 +183,7 @@ class TagorePrototypeE2ETest extends TestCase
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+            $createdOtherSchoolId = $otherSchoolId;
             $otherInstitutionId = DB::table('tagore_institutions')->insertGetId([
                 'tagore_group_id' => $sourceInstitution->tagore_group_id,
                 'school_id' => $otherSchoolId,
@@ -193,6 +194,7 @@ class TagorePrototypeE2ETest extends TestCase
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+            $createdOtherInstitutionId = $otherInstitutionId;
             $otherInstitution = DB::table('tagore_institutions')->where('id', $otherInstitutionId)->first();
         }
 
