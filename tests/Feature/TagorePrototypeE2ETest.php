@@ -231,9 +231,12 @@ class TagorePrototypeE2ETest extends TestCase
             'gateway_order_id'=>'order_QA_AUTH','expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now(),
         ]);
 
-        $this->actingAs($teacher)->post(route('tagore.payments.confirm'), [
-            'razorpay_order_id'=>'order_QA_AUTH','razorpay_payment_id'=>'pay_QA_AUTH','razorpay_signature'=>'invalid',
-        ])->assertForbidden();
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->firstOrFail();
+        foreach ([$teacher, $coordinator] as $unauthorizedUser) {
+            $this->actingAs($unauthorizedUser)->post(route('tagore.payments.confirm'), [
+                'razorpay_order_id'=>'order_QA_AUTH','razorpay_payment_id'=>'pay_QA_AUTH','razorpay_signature'=>'invalid',
+            ])->assertForbidden();
+        }
 
         $this->assertDatabaseHas('tagore_payment_orders', ['id'=>$orderId,'status'=>'payment_initiated']);
     }
