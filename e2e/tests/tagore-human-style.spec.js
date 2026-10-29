@@ -125,12 +125,12 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
   test('fee editor has a visible authorized entry point while coordinator fee management stays hidden', async ({ page }) => {
     await authenticate(page, 'fee-editor');
-    await expect(page.locator('a[href="/tagore/accounts/fees/editor"]:visible').first()).toBeVisible();
+    await expect(page.locator('a[href$="/tagore/accounts/fees/editor"]:visible').first()).toBeVisible();
 
     await authenticate(page, 'coordinator');
-    await expect(page.locator('a[href="/tagore/accounts/fees/manage"]:visible')).toHaveCount(0);
-    await expect(page.locator('a[href="/tagore/accounts/fees/editor"]:visible')).toHaveCount(0);
-    await expect(page.locator('a[href="/tagore/accounts/fees"]:visible').first()).toBeVisible();
+    await expect(page.locator('a[href$="/tagore/accounts/fees/manage"]:visible')).toHaveCount(0);
+    await expect(page.locator('a[href$="/tagore/accounts/fees/editor"]:visible')).toHaveCount(0);
+    await expect(page.locator('a[href$="/tagore/accounts/fees"]:visible').first()).toBeVisible();
   });
 
   for (const role of roles) {
