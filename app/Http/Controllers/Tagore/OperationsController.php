@@ -248,7 +248,14 @@ class OperationsController extends Controller
             }
         }
 
-        return Validator::make($input, $rules)->validate();
+        $validated = Validator::make($input, $rules)->validate();
+        foreach (self::COLUMNS[$module] as $column) {
+            if (str_ends_with($column, '_json') && isset($validated[$column]) && is_array($validated[$column])) {
+                $validated[$column] = json_encode($validated[$column], JSON_THROW_ON_ERROR);
+            }
+        }
+
+        return $validated;
     }
 
     private function authorizeModule(Request $request, string $module): void
