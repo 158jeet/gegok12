@@ -99,6 +99,73 @@ class TagorePrototypeE2ETest extends TestCase
         }
     }
 
+    public function test_parent_fee_statement_hides_payment_history_even_when_a_successful_payment_exists(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $childId = DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('status', 'active')
+            ->value('student_id');
+        $this->assertNotNull($childId, 'Parent privacy acceptance requires a linked child.');
+
+        $child = User::query()->findOrFail($childId);
+        $institution = DB::table('tagore_institutions')
+            ->where('school_id', $child->school_id)
+            ->where('status', 'active')
+            ->first();
+        $this->assertNotNull($institution, 'Linked child must have an active institution.');
+
+        $obligation = DB::table('tagore_fee_obligations')
+            ->where('student_id', $childId)
+            ->where('institution_id', $institution->id)
+            ->where('outstanding_amount', '>', 0)
+            ->orderBy('due_date')
+            ->first();
+
+        if (!$obligation) {
+            $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+            $obligationId = app(\App\Services\Tagore\FeeService::class)->createObligation(
+                (int) $childId,
+                (int) $institution->id,
+                [
+                    'due_date' => now()->toDateString(),
+                    'gross_amount' => 10.00,
+                    'items' => [[
+                        'fee_head' => 'Privacy acceptance tuition',
+                        'code' => 'QA-PARENT-PRIVACY',
+                        'gross_amount' => 10.00,
+                    ]],
+                ],
+                (int) $owner->id,
+            );
+            $obligation = DB::table('tagore_fee_obligations')->where('id', $obligationId)->first();
+        }
+
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $amount = min(1.00, (float) $obligation->outstanding_amount);
+        $reference = 'QA-PARENT-PRIVATE-' . bin2hex(random_bytes(4));
+        $paymentId = app(\App\Services\Tagore\FeeService::class)->recordOfflinePayment(
+            (int) $childId,
+            (int) $institution->id,
+            $amount,
+            null,
+            (int) $owner->id,
+            $reference,
+            [],
+            'cash',
+        );
+        $payment = DB::table('tagore_payments')->where('id', $paymentId)->firstOrFail();
+        $this->assertSame('success', $payment->status);
+
+        $this->actingAs($parent)
+            ->get(route('tagore.fees.student', ['studentId' => $childId]))
+            ->assertOk()
+            ->assertSee('Fee Statement')
+            ->assertDontSee('Payment history')
+            ->assertDontSee($reference)
+            ->assertDontSee($payment->receipt_no);
+    }
+
     public function test_owner_can_view_accounts_and_seeded_fee_data_exists(): void
     {
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
