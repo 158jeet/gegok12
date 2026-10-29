@@ -151,7 +151,18 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
 
         // Exercise every visible GET-form search box with a harmless no-match query.
         // GET search/filter forms are read-only; no POST/PUT/PATCH/DELETE forms are submitted here.
-        const searchInputSelector = 'form:not([method]) input:not([type="hidden"]):not([type="submit"]), form[method="get" i] input:not([type="hidden"]):not([type="submit"])';
+        const searchInputSelector = [
+          'form:not([method]) input[type="search"]:not([disabled])',
+          'form:not([method]) input[name="q"]:not([type="hidden"]):not([disabled])',
+          'form:not([method]) input[name*="search" i]:not([type="hidden"]):not([disabled])',
+          'form:not([method]) input[placeholder*="search" i]:not([type="hidden"]):not([disabled])',
+          'form:not([method]) input[placeholder*="filter" i]:not([type="hidden"]):not([disabled])',
+          'form[method="get" i] input[type="search"]:not([disabled])',
+          'form[method="get" i] input[name="q"]:not([type="hidden"]):not([disabled])',
+          'form[method="get" i] input[name*="search" i]:not([type="hidden"]):not([disabled])',
+          'form[method="get" i] input[placeholder*="search" i]:not([type="hidden"]):not([disabled])',
+          'form[method="get" i] input[placeholder*="filter" i]:not([type="hidden"]):not([disabled])'
+        ].join(', ');
         const searchCount = await page.locator(searchInputSelector).count();
         for (let searchIndex = 0; searchIndex < searchCount; searchIndex++) {
           await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
