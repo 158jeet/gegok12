@@ -70,7 +70,11 @@ Sources: Fedena dashboard overview https://fedena.com/feature-tour/customizable-
 
 - Reworked the Accounts screen into the shared Tagore ERP shell and dark/green design system.
 - Added responsive table containers, family-level fee summary, settlement status badges, explicit empty states and family/payment filters.
-- Added browser acceptance coverage for Accounts search, mobile layout and parent denial.
-- Made cross-institution fee-editor test data self-contained so the authorization test does not depend on the seed database accidentally having multiple institutions.
+- Unified the login page with the charcoal/green theme and retained the original Tagore logo/brand on mobile.
+- Fixed dashboard search to hide non-matching items and empty groups; moved the hidden-state and mobile navigation styles into the Laravel Mix source stylesheet and synchronized the public copy so production builds do not erase them.
+- Added mobile navigation/search visual assertions, login desktop/mobile theme assertions, and corrected role/Operations E2E tests to use actual UI navigation.
+- Added owner-only encrypted annual fee-archive email delivery with SHA-256 integrity checks, idempotent delivery tracking, and visible command failure on delivery errors.
+- Renamed the live-acceptance workflow to distinguish pull-request suite validation from an actual manually dispatched live-site test.
+- Made cross-institution fee-editor test data self-contained so authorization tests do not depend on the seed database accidentally having multiple institutions.
 
 This document is a living audit. Mark a requirement accepted only after the corresponding test or operational evidence is attached to the same candidate commit.
