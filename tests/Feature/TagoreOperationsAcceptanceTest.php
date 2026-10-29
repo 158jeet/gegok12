@@ -28,7 +28,7 @@ class TagoreOperationsAcceptanceTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $response->assertStatus(422);
+        $response->assertSessionHasErrors('amount');
         $this->assertDatabaseMissing('tagore_expense_records', [
             'institution_id' => $institutionId,
             'description' => $description,
@@ -52,7 +52,7 @@ class TagoreOperationsAcceptanceTest extends TestCase
             'description' => $invalidStatusDescription,
             'amount' => 10,
             'status' => 'posted-to-production',
-        ])->assertStatus(422);
+        ])->assertSessionHasErrors('status');
 
         $invalidJsonTitle = 'QA invalid JSON ' . bin2hex(random_bytes(5));
         $this->actingAs($owner)->post(route('tagore.operations.store', 'survey'), [
