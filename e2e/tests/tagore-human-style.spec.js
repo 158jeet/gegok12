@@ -189,10 +189,10 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       await expect(fees).toBeHidden();
       await search.fill('tagore-no-matching-dashboard-item');
       await expect(page.locator('.tg-kpi:visible')).toHaveCount(0);
-      await expect(page.getByRole('status')).toContainText('No matching modules or items');
+      await expect(page.locator('#tg-search-status')).toContainText('No matching modules or items');
       await search.press('Escape');
       await expect(search).toHaveValue('');
-      await expect(page.getByRole('status')).toBeHidden();
+      await expect(page.locator('#tg-search-status')).toBeHidden();
       await expect(students).toBeVisible();
       await expect(fees).toBeVisible();
 
