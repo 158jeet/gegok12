@@ -1,4 +1,4 @@
-name: Tagore Live-Site Acceptance
+name: Tagore Live Acceptance — Validation (Live Tests Require Dispatch)
 
 on:
   pull_request:
@@ -47,6 +47,17 @@ jobs:
       - name: Validate Playwright live test discovery
         working-directory: e2e
         run: npx playwright test tests/live-site-acceptance.spec.js tests/admin-acceptance --list
+      - name: Explicitly report that live-site acceptance was not run
+        shell: bash
+        run: |
+          {
+            echo "## Live-site acceptance status"
+            echo
+            echo "- **Live-site result: NOT RUN.** This pull-request run validates test discovery only."
+            echo "- No deployed ERP was contacted by this validation job."
+            echo "- To perform actual live acceptance, manually dispatch this workflow with the HTTPS target and all eight dedicated role accounts configured."
+            echo "- A green result from this validation-only workflow must never be interpreted as production acceptance."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   live-browser-acceptance:
     if: github.event_name == 'workflow_dispatch'
