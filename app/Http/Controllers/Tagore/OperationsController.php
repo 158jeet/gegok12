@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class OperationsController extends Controller
@@ -52,6 +53,30 @@ class OperationsController extends Controller
         'integration'=>['name','provider','type','config_json','last_sync_at','status'],
         'automation'=>['name','module','trigger','action','schedule','last_run_at','next_run_at','status'],
         'creative'=>['name','template_type','template_json','brand_json','status'],
+    ];
+
+    private const REQUIRED_FIELDS = [
+        'payroll'=>['employee_id','month'],
+        'inventory'=>['item_name'],
+        'expense'=>['expense_date','category','description','amount'],
+        'transport'=>['vehicle_no','route_name'],
+        'hostel'=>['hostel_name','room_no'],
+        'alumni'=>['student_id'],
+        'visitor'=>['visitor_name','purpose'],
+        'gatepass'=>['student_id','pass_type','reason'],
+        'survey'=>['title'],
+        'notification'=>['channel','title','message'],
+        'document'=>['title','document_type'],
+        'course'=>['title','code'],
+        'content'=>['title','content_type'],
+        'report'=>['name','module'],
+        'social'=>['title','body'],
+        'website'=>['slug','title'],
+        'store'=>['product_name'],
+        'fee-plan'=>['name','amount'],
+        'integration'=>['name','provider','type'],
+        'automation'=>['name','module','trigger','action'],
+        'creative'=>['name','template_type'],
     ];
 
     private const STATUS_OPTIONS = [
@@ -176,23 +201,53 @@ class OperationsController extends Controller
     private function validated(Request $request, string $module): array
     {
         abort_unless(isset(self::COLUMNS[$module]),404);
-        $out = [];
+
+        $input = $request->only(self::COLUMNS[$module]);
+        $rules = [];
+        $numeric = [
+            'employee_id','gross_amount','deductions','net_amount','quantity','reorder_level','unit_cost',
+            'amount','approved_by','capacity','student_id','passout_year','owner_id','version','sent_count',
+            'failed_count','fee','author_id','price','stock','tenure','emi_amount',
+        ];
+        $integers = ['employee_id','approved_by','capacity','student_id','passout_year','owner_id','version','sent_count','failed_count','stock','tenure'];
+        $dates = ['expense_date','check_in','check_out','valid_from','valid_until','published_at','scheduled_at','last_sync_at','last_run_at','next_run_at'];
 
         foreach (self::COLUMNS[$module] as $column) {
-            if (!$request->has($column)) {
-                continue;
+            $required = in_array($column, self::REQUIRED_FIELDS[$module] ?? [], true);
+            if (str_ends_with($column, '_json')) {
+                $value = $input[$column] ?? null;
+                if (is_string($value) && trim($value) !== '') {
+                    $decoded = json_decode($value, true);
+                    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                        abort(422, 'Invalid JSON field: '.$column);
+                    }
+                    $input[$column] = $decoded;
+                } elseif (is_string($value) && trim($value) === '') {
+                    $input[$column] = null;
+                } elseif ($value !== null && !is_array($value)) {
+                    abort(422, 'Invalid JSON field: '.$column);
+                }
+                $rules[$column] = ($required ? 'required' : 'nullable').'|array';
+            } elseif ($column === 'status') {
+                $allowed = self::STATUS_OPTIONS[$module] ?? ['active','inactive'];
+                $rules[$column] = ($required ? 'required' : 'nullable').'|string|in:'.implode(',', $allowed);
+            } elseif (in_array($column, $numeric, true)) {
+                $rules[$column] = ($required ? 'required' : 'nullable').'|numeric|min:0';
+                if (in_array($column, $integers, true)) {
+                    $rules[$column] .= '|integer';
+                }
+            } elseif ($column === 'is_anonymous') {
+                $rules[$column] = ($required ? 'required' : 'nullable').'|boolean';
+            } elseif ($column === 'email') {
+                $rules[$column] = ($required ? 'required' : 'nullable').'|email|max:190';
+            } elseif (in_array($column, $dates, true) || str_ends_with($column, '_at')) {
+                $rules[$column] = ($required ? 'required' : 'nullable').'|date';
+            } else {
+                $rules[$column] = ($required ? 'required' : 'nullable').'|string|max:5000';
             }
-
-            $value = $request->input($column);
-            if (str_ends_with($column,'_json')) {
-                $decoded = is_array($value) ? $value : json_decode((string) $value, true);
-                abort_unless(is_array($decoded) && json_last_error() === JSON_ERROR_NONE || is_array($value), 422, 'Invalid JSON field: '.$column);
-                $value = $decoded;
-            }
-            $out[$column] = $value;
         }
 
-        return $out;
+        return Validator::make($input, $rules)->validate();
     }
 
     private function authorizeModule(Request $request, string $module): void
