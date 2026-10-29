@@ -76,7 +76,7 @@ jobs:
           catch { throw new Error('TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON must be valid JSON.'); }
           const roles = ['owner','principal','coordinator','teacher','parent','student','accounts','fee-editor'];
           const missing = roles.filter(role => !accounts[role] || !accounts[role].email || !accounts[role].password);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'missing_roles=' + missing.join(',') + '\\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'missing_roles=' + missing.join(',') + '\n');
           console.log('HTTPS target validated. Missing dedicated role accounts: ' + (missing.join(', ') || 'none') + '. Secret values are not printed.');
           NODE
       - uses: actions/checkout@v4
