@@ -147,6 +147,31 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
             }
           }
         }
+
+        // Exercise every visible GET-form search box with a harmless no-match query.
+        // GET search/filter forms are read-only; no POST/PUT/PATCH/DELETE forms are submitted here.
+        const searchSelector = 'form:not([method]), form[method="get" i]';
+        const searchCount = await page.locator(searchSelector + ' input:not([type="hidden"]):not([type="submit"])').count();
+        for (let searchIndex = 0; searchIndex < searchCount; searchIndex++) {
+          await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
+          const candidates = page.locator(searchSelector + ' input:not([type="hidden"]):not([type="submit"])');
+          const input = candidates.nth(searchIndex);
+          if (!(await input.isVisible().catch(() => false))) continue;
+          const type = (await input.getAttribute('type') || 'text').toLowerCase();
+          const name = (await input.getAttribute('name') || '').toLowerCase();
+          const placeholder = (await input.getAttribute('placeholder') || '').toLowerCase();
+          if (!(type === 'search' || name === 'q' || name.includes('search') || placeholder.includes('search') || placeholder.includes('filter'))) continue;
+          const beforeUrl = page.url();
+          await input.fill('tagore-acceptance-no-match').catch(() => null);
+          const navigationPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 8000 }).catch(() => null);
+          await input.press('Enter').catch(() => null);
+          const searchResponse = await navigationPromise;
+          const status = searchResponse ? searchResponse.status() : 0;
+          const redirectedToLogin = new URL(page.url()).pathname.endsWith('/login');
+          const pass = !!searchResponse && status < 400 && !redirectedToLogin;
+          results.push({ role, page: 'search-form', path, input: name || placeholder || type, status, navigated: !!searchResponse, redirectedToLogin, pass });
+          if (!pass) failures.push(role.code + ' search box on ' + path + ' did not submit successfully (HTTP ' + status + (redirectedToLogin ? ', redirected to login' : '') + ')');
+        }
       }
 
       const report = { role, viewport: testInfo.project.name, routesVisited: visited.size, htmlPagesScreenshotted: pageInventory.length, pages: pageInventory, expectedAccessDenials, expectedUnavailableIntegrations, findings, consoleErrors, failedResponses };
