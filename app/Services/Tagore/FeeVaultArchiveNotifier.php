@@ -116,17 +116,22 @@ class FeeVaultArchiveNotifier
         ?string $error,
         $sentAt = null,
     ): void {
+        $exists = DB::table('tagore_fee_archive_deliveries')->where('closure_id', $closureId)->exists();
+        $values = [
+            'recipient_user_id' => $recipientUserId,
+            'recipient_email' => $recipientEmail,
+            'status' => $status,
+            'error' => $error,
+            'sent_at' => $sentAt,
+            'updated_at' => now(),
+        ];
+        if (!$exists) {
+            $values['created_at'] = now();
+        }
+
         DB::table('tagore_fee_archive_deliveries')->updateOrInsert(
             ['closure_id' => $closureId],
-            [
-                'recipient_user_id' => $recipientUserId,
-                'recipient_email' => $recipientEmail,
-                'status' => $status,
-                'error' => $error,
-                'sent_at' => $sentAt,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
+            $values
         );
     }
 
