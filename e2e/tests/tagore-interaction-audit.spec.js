@@ -64,7 +64,7 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
         const message = msg.text();
         // Chromium emits generic console errors for failed HTTP resources; retain genuine JS/runtime errors here.
         // HTTP failures are assessed separately from response events below.
-        if (/Failed to load resource: the server responded with a status of (?:403|404|503) \\((?:Forbidden|Not Found|Service Unavailable)\\)/i.test(message)) return;
+        if (/Failed to load resource: the server responded with a status of (?:403|404|503) \((?:Forbidden|Not Found|Service Unavailable)\)/i.test(message)) return;
         consoleErrors.push(message);
       });
       page.on('response', response => {
