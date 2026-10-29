@@ -354,6 +354,41 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileMetrics.tableWrap.scrollWidth, 'wide task columns must remain reachable by horizontal scrolling').toBeGreaterThan(mobileMetrics.tableWrap.clientWidth);
     await page.screenshot({ path: 'test-results/task-workspace-mobile.png', fullPage: true });
   });
+  test('operations records support typed status filters and live search', async ({ page }) => {
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Inventory & Assets' })).toBeVisible();
+    await expect(page.locator('#tg-operations-search')).toBeVisible();
+    await expect(page.locator('#tg-operations-status')).toBeVisible();
+
+    const itemName = 'QA searchable inventory ' + Date.now();
+    const form = page.locator('form[action*="/tagore/operations/inventory"]').first();
+    await form.locator('input[name="item_name"]').fill(itemName);
+    await form.locator('input[name="category"]').fill('Acceptance QA');
+    await form.locator('input[name="sku"]').fill('QA-' + Date.now());
+    await form.locator('select[name="status"]').selectOption('active');
+    await form.getByRole('button', { name: 'Create Inventory & Assets record' }).click();
+
+    let row = page.locator('tr.tg-operations-record').filter({ hasText: itemName });
+    await expect(row).toBeVisible();
+    await page.locator('#tg-operations-search').fill(itemName);
+    await expect(row).toBeVisible();
+    await expect(page.locator('#tg-operations-count')).toContainText('1 of');
+
+    await page.locator('#tg-operations-status').selectOption('inactive');
+    await expect(row).toBeHidden();
+    await expect(page.locator('#tg-operations-empty')).toBeVisible();
+
+    await page.locator('#tg-operations-status').selectOption('');
+    await expect(row).toBeVisible();
+    await page.locator('#tg-operations-search').fill('');
+
+    page.once('dialog', dialog => dialog.accept());
+    row = page.locator('tr.tg-operations-record').filter({ hasText: itemName });
+    await row.getByRole('button', { name: 'Delete' }).click();
+    await expect(page.locator('tr.tg-operations-record').filter({ hasText: itemName })).toHaveCount(0);
+  });
+
   test('task lifecycle creates work, records progress, and completes it', async ({ page }) => {
     await authenticate(page, 'owner');
     const title = 'E2E task lifecycle ' + Date.now();
