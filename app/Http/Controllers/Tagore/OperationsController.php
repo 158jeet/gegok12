@@ -54,6 +54,30 @@ class OperationsController extends Controller
         'creative'=>['name','template_type','template_json','brand_json','status'],
     ];
 
+    private const STATUS_OPTIONS = [
+        'payroll'=>['draft','pending','processed','approved','paid','failed','cancelled'],
+        'inventory'=>['active','inactive','discontinued','out_of_stock'],
+        'expense'=>['draft','pending','submitted','approved','rejected','paid','cancelled'],
+        'transport'=>['active','inactive','maintenance','retired'],
+        'hostel'=>['active','occupied','vacant','checked_in','checked_out'],
+        'alumni'=>['active','inactive'],
+        'visitor'=>['pending','checked_in','checked_out','denied','cancelled'],
+        'gatepass'=>['pending','approved','rejected','used','expired','cancelled'],
+        'survey'=>['draft','active','published','closed','archived'],
+        'notification'=>['draft','scheduled','queued','sent','failed','cancelled'],
+        'document'=>['draft','active','restricted','archived'],
+        'course'=>['draft','active','published','archived'],
+        'content'=>['draft','active','published','archived'],
+        'report'=>['draft','active','scheduled','failed','archived'],
+        'social'=>['draft','pending','approved','published','rejected','archived'],
+        'website'=>['draft','published','archived'],
+        'store'=>['active','inactive','out_of_stock'],
+        'fee-plan'=>['draft','active','paused','completed','defaulted','cancelled'],
+        'integration'=>['active','inactive','connected','disconnected','error'],
+        'automation'=>['draft','active','paused','failed'],
+        'creative'=>['draft','active','archived'],
+    ];
+
     private const TABLES = [
         'payroll'=>'payroll','inventory'=>'inventory','expense'=>'expense','transport'=>'transport','hostel'=>'hostel',
         'alumni'=>'alumni','visitor'=>'visitor','gatepass'=>'gatepass','survey'=>'survey','notification'=>'notification',
@@ -99,6 +123,7 @@ class OperationsController extends Controller
             'roles'=>$roles,
             'institutions'=>$institutions,
             'institutionId'=>$institutionId,
+            'statusOptions'=>self::STATUS_OPTIONS[$module] ?? ['active','inactive'],
         ]);
     }
 
