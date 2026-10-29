@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Tagore\FeeVaultService;
+use App\Services\Tagore\FeeVaultArchiveNotifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,9 @@ class ArchiveClosedTagoreFeeYears extends Command
             ->where('i.status','active')
             ->get(['ay.id as academic_year_id','i.id as institution_id']);
 
-        $deliveryFailures = 0;\n\n        foreach($rows as $row){
+        $deliveryFailures = 0;
+
+        foreach($rows as $row){
             $ownerId=(int)config('tagore.fee_vault_owner_user_id');
             if ($ownerId <= 0) { $this->error('TAGORE_FEE_VAULT_OWNER_USER_ID is not configured.'); return self::FAILURE; }
             $closure = $vault->closeYear((int)$row->academic_year_id,(int)$row->institution_id,$ownerId);
