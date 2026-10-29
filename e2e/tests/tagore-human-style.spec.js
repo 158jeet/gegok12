@@ -123,6 +123,24 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('dashboard search filters visible modules and restores them when cleared', async ({ page }) => {
+    await authenticate(page, 'owner');
+    const search = page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' });
+    await expect(search).toBeVisible();
+    const admissions = page.locator('.tg-module').filter({ hasText: 'Admissions CRM' }).first();
+    const fees = page.locator('.tg-module').filter({ hasText: 'Fee management' }).first();
+    await expect(admissions).toBeVisible();
+    await expect(fees).toBeVisible();
+    await search.fill('Admissions CRM');
+    await expect(admissions).toBeVisible();
+    await expect(fees).toBeHidden();
+    await search.fill('tagore-no-matching-dashboard-item');
+    await expect(page.locator('.tg-module:visible')).toHaveCount(0);
+    await search.fill('');
+    await expect(admissions).toBeVisible();
+    await expect(fees).toBeVisible();
+  });
+
   test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }, testInfo) => {
     await page.goto('/olympiad/register', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
