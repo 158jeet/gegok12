@@ -125,8 +125,9 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
   test('fee editor form contrast and navigation spacing remain readable', async ({ page }) => {
     await authenticate(page, 'fee-editor');
-    await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'domcontentloaded' });
+    await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'load' });
     await expect(page.getByRole('heading', { name: 'Fee Editor' })).toBeVisible();
+    await expect.poll(() => page.locator('.tg-nav').evaluate((nav) => getComputedStyle(nav).display)).toBe('flex');
 
     const styles = await page.evaluate(() => {
       const nav = document.querySelector('.tg-nav');
