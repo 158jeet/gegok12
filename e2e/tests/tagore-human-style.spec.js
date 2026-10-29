@@ -123,6 +123,43 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('accounts dashboard supports responsive family and payment search without exposing transaction history to parents', async ({ page }) => {
+    await authenticate(page, 'accounts');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/tagore/accounts/fees', { waitUntil: 'load' });
+    await expect(page.getByRole('heading', { name: 'Accounts & fee collection' })).toBeVisible();
+    await expect(page.locator('#family-table')).toBeVisible();
+    await expect(page.locator('#payments-table')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Manage fee structures/i })).toBeVisible();
+
+    const globalSearch = page.getByRole('searchbox', { name: 'Search fee accounts and transactions' });
+    await globalSearch.fill('no-match-tagore-acceptance');
+    await expect(page.locator('.tg-accounts-table tbody tr:visible')).toHaveCount(0);
+    await globalSearch.fill('');
+    await expect(page.locator('.tg-accounts-table tbody tr:visible').first()).toBeVisible();
+
+    const familySearch = page.getByRole('searchbox', { name: 'Filter family fee balances' });
+    await familySearch.fill('no-match-family-acceptance');
+    await expect(page.locator('#family-table tbody tr:visible')).toHaveCount(0);
+    await familySearch.fill('');
+    await expect(page.locator('#family-table tbody tr:visible').first()).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: 'load' });
+    const viewportAudit = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      tableScroller: !!document.querySelector('.tg-table-wrap') &&
+        getComputedStyle(document.querySelector('.tg-table-wrap')).overflowX === 'auto',
+    }));
+    expect(viewportAudit.document).toBeLessThanOrEqual(viewportAudit.viewport + 2);
+    expect(viewportAudit.tableScroller).toBeTruthy();
+
+    await authenticate(page, 'parent');
+    await page.goto('/tagore/accounts/fees', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/tagore\/dashboard/);
+  });
+
   test('academic-year archive controls are owner-only in the fee editor', async ({ page }) => {
     await authenticate(page, 'fee-editor');
     await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'load' });
