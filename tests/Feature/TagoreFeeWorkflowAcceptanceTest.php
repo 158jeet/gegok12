@@ -205,6 +205,14 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
             'cash',
         );
 
+        $itemsAfterPayment = DB::table('tagore_fee_obligation_items')
+            ->where('fee_obligation_id', $obligationId)
+            ->orderBy('id')
+            ->get();
+        $this->assertSame('66.00', number_format((float) $itemsAfterPayment[0]->paid_amount, 2, '.', ''));
+        $this->assertSame('14.00', number_format((float) $itemsAfterPayment[1]->paid_amount, 2, '.', ''));
+        $this->assertSame('30.00', number_format((float) $itemsAfterPayment->sum('outstanding_amount'), 2, '.', ''));
+
         try {
             $editor->bulkAdjust([
                 'institution_id' => (int) $institution->id,
