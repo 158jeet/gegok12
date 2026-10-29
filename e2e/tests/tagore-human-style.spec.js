@@ -123,6 +123,35 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('fee editor form contrast and navigation spacing remain readable', async ({ page }) => {
+    await authenticate(page, 'fee-editor');
+    await page.goto('/tagore/accounts/fees/editor', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Fee Editor' })).toBeVisible();
+
+    const styles = await page.evaluate(() => {
+      const nav = document.querySelector('.tg-nav');
+      const label = document.querySelector('.tg-field label');
+      const input = document.querySelector('input[name="academic_year_id"]');
+      const user = document.querySelector('.tg-user');
+      return {
+        navDisplay: getComputedStyle(nav).display,
+        navGap: parseFloat(getComputedStyle(nav).columnGap),
+        labelColor: getComputedStyle(label).color,
+        inputBackground: getComputedStyle(input).backgroundColor,
+        inputColor: getComputedStyle(input).color,
+        userBackground: getComputedStyle(user).backgroundColor,
+        userColor: getComputedStyle(user).color,
+      };
+    });
+    expect(styles.navDisplay).toBe('flex');
+    expect(styles.navGap).toBeGreaterThanOrEqual(8);
+    expect(styles.labelColor).toBe('rgb(213, 222, 234)');
+    expect(styles.inputBackground).toBe('rgb(17, 26, 36)');
+    expect(styles.inputColor).toBe('rgb(237, 242, 247)');
+    expect(styles.userBackground).toBe('rgb(26, 34, 45)');
+    expect(styles.userColor).toBe('rgb(237, 242, 247)');
+  });
+
   test('fee editor has a visible authorized entry point while coordinator fee management stays hidden', async ({ page }) => {
     await authenticate(page, 'fee-editor');
     await expect(page.locator('a[href$="/tagore/accounts/fees/editor"]:visible').first()).toBeVisible();
