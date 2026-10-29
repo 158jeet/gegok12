@@ -372,3 +372,14 @@ body.tg-app .shell .task-alert-error{background:#4a1d22!important;color:#fecaca!
 
 /* Ensure dashboard search filtering overrides component display rules. */
 .tg-app [hidden]{display:none!important}
+
+
+/* Fee editor accessibility: keep controls and navigation readable on the dark ERP theme. */
+body.tg-fee-editor .tg-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:4px 0}
+body.tg-fee-editor .tg-nav a{display:inline-flex;align-items:center;padding:8px 11px;border:1px solid var(--tg-line);border-radius:9px;color:#d5deea!important;text-decoration:none;font-size:12px;font-weight:700}
+body.tg-fee-editor .tg-nav a:hover,body.tg-fee-editor .tg-nav a[aria-current="page"]{background:#153c32;border-color:#286a52;color:#66e6b2!important}
+body.tg-fee-editor .tg-user{background:var(--tg-surface)!important;border-color:var(--tg-line)!important;color:#edf2f7!important}
+body.tg-fee-editor .tg-field label{color:#d5deea!important;font-size:12px;font-weight:750}
+body.tg-fee-editor .tg-field input,body.tg-fee-editor .tg-field select,body.tg-fee-editor .tg-field textarea{background:#111a24!important;color:#edf2f7!important;border:1px solid #3b4b5d!important}
+body.tg-fee-editor .tg-field input::placeholder,body.tg-fee-editor .tg-field textarea::placeholder{color:#9aa9ba!important;opacity:1}
+body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field select:focus-visible,body.tg-fee-editor .tg-field textarea:focus-visible{outline:2px solid #38d996!important;outline-offset:2px}
