@@ -49,6 +49,7 @@
     <a class="tg-side-link" href="{{ route('tagore.admin') }}"><span class="tg-side-icon">⚙</span>Administration</a>
     <a class="tg-side-link" href="{{ route('tagore.academic.structure') }}"><span class="tg-side-icon">▦</span>Academic setup</a>
   @endif
+  @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())
   <div class="tg-side-label">Platform</div>
   @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.communication.index') }}"><span class="tg-side-icon">✉</span>Communication</a>
@@ -59,12 +60,13 @@
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.operations.index') }}"><span class="tg-side-icon">⋮</span>All operations</a>
   @endif
+  @endif
 </aside>
 
 <main class="tg-main">
   <section class="tg-hero">
     <h1>{{ $greeting }}, {{ auth()->user()->name ?? 'there' }}.</h1>
-    <p>{{ $roleLabel ?: 'Tagore ERP user' }} · Your school operations, people, academics and finance in one workspace.</p>
+    <p>{{ $roleLabel ?: 'Tagore ERP user' }} · @if($roles->contains('PARENT'))Your family, fees and school updates in one place.@elseif($roles->contains('STUDENT'))Your learning, attendance and school updates in one place.@else Your school operations, people, academics and finance in one workspace.@endif</p>
     <div class="tg-hero-actions">
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
@@ -159,9 +161,15 @@
   </section>
   @endif
 
+  @if(!$roles->contains('STUDENT'))
   <section class="tg-section">
-    <div class="tg-section-head"><div><h2>Go to work</h2><p>Common actions arranged around how your team actually works.</p></div></div>
+    <div class="tg-section-head"><div><h2>{{ $roles->contains('PARENT') ? 'Family shortcuts' : 'Go to work' }}</h2><p>{{ $roles->contains('PARENT') ? 'Quick access to your children’s school information.' : 'Common actions arranged around how your team actually works.' }}</p></div></div>
     <div class="tg-module-grid">
+      @if($roles->contains('PARENT'))
+      <a class="tg-module" href="{{ route('tagore.parent.dashboard') }}"><div class="tg-module-icon">●</div><b>My children</b><span>Statements, school details and family links</span></a>
+      <a class="tg-module" href="{{ route('tagore.fees.wallet') }}"><div class="tg-module-icon">₹</div><b>Fee wallet</b><span>Review balances and available payment options</span></a>
+      <a class="tg-module" href="{{ route('tagore.diary.index') }}"><div class="tg-module-icon">▤</div><b>Daily diary</b><span>School notices and day-to-day updates</span></a>
+      @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Admissions CRM</b><span>{{ $erp['admission_leads'] }} leads · {{ $erp['pending_leads'] }} need follow-up</span></a>
       @endif
@@ -196,7 +204,9 @@
       @endif
     </div>
   </section>
+  @endif
 
+  @if(!$roles->contains('STUDENT'))
   <section class="tg-section tg-two">
     <div class="tg-card" style="padding:18px">
       <div class="tg-section-head"><div><h2>Institutions</h2><p>Your Tagore Group operating units</p></div></div>
@@ -223,10 +233,18 @@
     </div>
     @endif
   </section>
+  @endif
 </main>
 </div>
 <nav class="tg-mobile-nav">
 <a href="{{ route('tagore.dashboard') }}"><b>⌂</b>Home</a>
+@if($roles->contains('PARENT'))
+<a href="{{ route('tagore.parent.dashboard') }}"><b>●</b>Children</a>
+<a href="{{ route('tagore.fees.wallet') }}"><b>₹</b>Fees</a>
+<a href="{{ route('tagore.diary.index') }}"><b>▤</b>Diary</a>
+@elseif($roles->contains('STUDENT'))
+<a href="{{ url('/student/dashboard') }}"><b>▦</b>Portal</a>
+@endif
 @if($roles->contains('FEE_EDITOR'))<a href="{{ route('tagore.fees.editor') }}"><b>₹</b>Fee editor</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif

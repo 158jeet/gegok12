@@ -377,12 +377,22 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(familySummary.getByText('My children', { exact: true })).toBeVisible();
     await expect(familySummary.getByText('Fee items due', { exact: true })).toBeVisible();
     await expect(familySummary.getByText('Open feedback', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Family shortcuts' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Fee wallet/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Daily diary/ })).toBeVisible();
+    await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Children/ })).toBeVisible();
     await expect(page.getByText('Students', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Staff', { exact: true })).toHaveCount(0);
 
     await authenticate(page, 'student');
     await expect(page.getByRole('heading', { name: 'Your student workspace' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Open student portal/ })).toHaveAttribute('href', '/student/dashboard');
+    await expect(page.getByRole('heading', { name: 'Go to work' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Institutions' })).toHaveCount(0);
+    await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Portal/ })).toBeVisible();
+    const studentPortalResponse = await page.goto('/student/dashboard', { waitUntil: 'domcontentloaded' });
+    expect(studentPortalResponse?.status()).toBe(200);
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
     await expect(page.getByText('Fee outstanding', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Active work', { exact: true })).toHaveCount(0);
   });
