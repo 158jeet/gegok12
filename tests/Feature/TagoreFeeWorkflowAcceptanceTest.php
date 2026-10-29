@@ -368,7 +368,33 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
             ->where('status', 'active')
             ->where('id', '!=', $assignedInstitutionId)
             ->first();
-        $this->assertNotNull($otherInstitution, 'Acceptance seed must provide another institution for cross-scope testing.');
+
+        // Cross-institution authorization tests must not depend on the demo seeder
+        // accidentally containing multiple schools. Create an isolated second tenant.
+        if (!$otherInstitution) {
+            $assignedInstitution = DB::table('tagore_institutions')->where('id', $assignedInstitutionId)->firstOrFail();
+            $suffix = bin2hex(random_bytes(4));
+            $otherSchoolId = DB::table('schools')->insertGetId([
+                'name' => 'Acceptance Isolation School ' . $suffix,
+                'email' => 'acceptance-isolation-' . $suffix . '@tagore-demo.local',
+                'phone' => '9' . str_pad((string) random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
+                'status' => 1,
+                'slug' => 'acceptance-isolation-' . $suffix,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $otherInstitutionId = DB::table('tagore_institutions')->insertGetId([
+                'tagore_group_id' => $assignedInstitution->tagore_group_id,
+                'school_id' => $otherSchoolId,
+                'code' => 'QA-' . strtoupper($suffix),
+                'display_name' => 'Acceptance Isolation School ' . $suffix,
+                'type' => 'school',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $otherInstitution = DB::table('tagore_institutions')->where('id', $otherInstitutionId)->first();
+        }
 
         $this->actingAs($editor)
             ->get(route('tagore.fees.editor'))
