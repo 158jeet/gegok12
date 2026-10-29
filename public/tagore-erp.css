@@ -379,3 +379,31 @@ body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field se
 @media(max-width:900px){.tg-app .tg-search-status{margin-left:0}}
 @media(max-width:760px){.tg-app .tg-topbar{height:auto;min-height:76px;align-items:flex-start;padding-top:14px;flex-wrap:wrap}.tg-app .tg-top-actions{width:100%;align-items:stretch}.tg-app .tg-top-actions .tg-search{flex:1;min-width:0}.tg-app .tg-search-status{margin:0 0 12px}.tg-app .tg-user{max-width:46%;min-width:0}.tg-app .tg-user span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.tg-app *, .tg-app *::before, .tg-app *::after{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* Keep the fixed mobile navigation aligned with Tagore ERP's charcoal/green visual system. */
+@media(max-width:760px){
+  body.tg-app .tg-mobile-nav{
+    background:rgba(26,34,45,.97)!important;
+    border-color:#303d4d!important;
+    box-shadow:0 14px 34px rgba(0,0,0,.38)!important;
+  }
+  body.tg-app .tg-mobile-nav a{
+    color:#c0cad7!important;
+    border-radius:10px;
+    min-width:0;
+    line-height:1.25;
+    transition:background-color .16s ease,color .16s ease;
+  }
+  body.tg-app .tg-mobile-nav a b{color:#53dfa8!important}
+  body.tg-app .tg-mobile-nav a:hover,
+  body.tg-app .tg-mobile-nav a:focus-visible{
+    background:#153c32!important;
+    color:#edf2f7!important;
+    outline:2px solid #43d9a0;
+    outline-offset:1px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.tg-app .tg-mobile-nav a{transition:none!important}
+}
