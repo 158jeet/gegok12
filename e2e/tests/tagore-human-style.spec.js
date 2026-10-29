@@ -397,6 +397,38 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.getByText('Active work', { exact: true })).toHaveCount(0);
   });
 
+  test('mobile dashboard navigation and search match the dark theme and remain usable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await authenticate(page, 'parent');
+
+    const search = page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' });
+    await expect(search).toBeVisible();
+    await search.fill('Family shortcuts');
+    await expect(page.locator('#tg-search-status')).toContainText('matching item');
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+
+    const nav = page.locator('.tg-mobile-nav');
+    await expect(nav).toBeVisible();
+    await expect(nav).toHaveCSS('background-color', 'rgba(26, 34, 45, 0.97)');
+    await expect(nav.getByRole('link', { name: /Children/ })).toHaveCSS('color', 'rgb(192, 202, 215)');
+    await expect(nav.locator('b').first()).toHaveCSS('color', 'rgb(83, 223, 168)');
+
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      navClient: document.querySelector('.tg-mobile-nav').clientWidth,
+      navScroll: document.querySelector('.tg-mobile-nav').scrollWidth,
+    }));
+    expect(dimensions.document, 'mobile dashboard must not overflow the viewport').toBeLessThanOrEqual(dimensions.viewport + 2);
+    expect(dimensions.navScroll, 'mobile navigation links must fit the visible navigation bar').toBeLessThanOrEqual(dimensions.navClient + 2);
+    await page.screenshot({ path: 'test-results/dashboard-mobile-navigation.png', fullPage: true });
+
+    await authenticate(page, 'student');
+    await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Portal/ })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' })).toBeVisible();
+  });
+
   test('operations records support typed status filters and live search', async ({ page }) => {
     await authenticate(page, 'owner');
     await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
