@@ -410,3 +410,6 @@ body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field se
 
 /* Search must collapse empty containers as well as individual results. */
 .tg-app [data-search-empty="true"]{display:none!important}
+
+/* When search removes every navigation result, let the main workspace reclaim the sidebar column. */
+.tg-app .tg-layout:has(> .tg-sidebar[data-search-empty="true"]){grid-template-columns:minmax(0,1fr)}
