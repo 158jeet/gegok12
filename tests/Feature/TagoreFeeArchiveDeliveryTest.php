@@ -16,9 +16,11 @@ class TagoreFeeArchiveDeliveryTest extends TestCase
     {
         parent::setUp();
         DB::beginTransaction();
-        config(['mail.driver' => 'array']);
-        config()->offsetUnset('mail.default');
-        Mail::purge();
+        config([
+            'mail.default' => 'array',
+            'mail.mailers.array' => ['transport' => 'array'],
+        ]);
+        Mail::purge('array');
     }
 
     protected function tearDown(): void
