@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class FeeManagementController extends Controller
 {
-    private const MANAGE_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'];
+    private const MANAGE_ROLES = ['OWNER', 'PRINCIPAL', 'ACCOUNTS'];
 
     public function index(Request $request): View
     {
