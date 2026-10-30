@@ -27,6 +27,9 @@
 <aside class="tg-sidebar">
   <div class="tg-side-label">Workspace</div>
   <a class="tg-side-link active" href="{{ route('tagore.dashboard') }}"><span class="tg-side-icon">⌂</span>Overview</a>
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
@@ -169,6 +172,9 @@
       <a class="tg-module" href="{{ route('tagore.parent.dashboard') }}"><div class="tg-module-icon">●</div><b>My children</b><span>Statements, school details and family links</span></a>
       <a class="tg-module" href="{{ route('tagore.fees.wallet') }}"><div class="tg-module-icon">₹</div><b>Fee wallet</b><span>Review balances and available payment options</span></a>
       <a class="tg-module" href="{{ route('tagore.diary.index') }}"><div class="tg-module-icon">▤</div><b>Daily diary</b><span>School notices and day-to-day updates</span></a>
+      @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
+      <a class="tg-module" href="{{ route('tagore.examinations.index') }}"><div class="tg-module-icon">▤</div><b>Examinations & results</b><span>Schedules, marks entry, moderation and published results</span></a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Admissions CRM</b><span>{{ $erp['admission_leads'] }} leads · {{ $erp['pending_leads'] }} need follow-up</span></a>
