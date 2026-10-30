@@ -29,7 +29,7 @@ class ExaminationController extends Controller
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'school_id', 'display_name']);
         $academicYears = DB::table('academic_years')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->orderByDesc('start_date')->get(['id', 'school_id', 'name']);
         $standardLinks = DB::table('standards_link as sl')->join('standards as s', 's.id', '=', 'sl.standard_id')->join('sections as sec', 'sec.id', '=', 'sl.section_id')->whereIn('sl.school_id', $institutions->pluck('school_id'))->whereNull('sl.deleted_at')->where('sl.status', 1)->orderBy('s.order')->orderBy('sec.name')->get(['sl.id', 'sl.school_id', 'sl.academic_year_id', 'sl.standard_id', 'sl.section_id', 's.name as standard_name', 'sec.name as section_name']);
-        $subjectOptions = DB::table('subjects')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->where('status', 1)->orderBy('name')->get(['id', 'school_id', 'academic_year_id', 'standard_id', 'name']);
+        $subjectOptions = DB::table('subjects')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->where('status', 1)->orderBy('name')->get(['id', 'school_id', 'academic_year_id', 'standard_id', 'section_id', 'name']);
         $examSubjects = DB::table('tagore_exam_subjects')->join('tagore_exams', 'tagore_exams.id', '=', 'tagore_exam_subjects.exam_id')->orderBy('tagore_exam_subjects.exam_date')->get(['tagore_exam_subjects.*', 'tagore_exams.id as parent_exam_id'])->groupBy('parent_exam_id');
         return view('tagore.examinations.index', compact('exams', 'institutions', 'academicYears', 'standardLinks', 'subjectOptions', 'examSubjects', 'roles'));
     }
@@ -88,7 +88,7 @@ class ExaminationController extends Controller
             ->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')
             ->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')
             ->where('es.id', $examSubjectId)
-            ->first(['es.*', 'e.id as exam_id', 'e.name as exam_name', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.status', 'i.school_id']);
+            ->first(['es.*', 'e.id as exam_id', 'e.name as exam_name', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.standard_link_id', 'e.status', 'i.school_id']);
         abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
         $students = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
@@ -110,7 +110,7 @@ class ExaminationController extends Controller
         $data = $request->validate(['marks' => 'required|array|min:1', 'marks.*.student_id' => 'required|integer', 'marks.*.marks_obtained' => 'nullable|numeric|min:0|max:' . $subject->max_marks, 'marks.*.is_absent' => 'nullable|boolean', 'marks.*.remarks' => 'nullable|string|max:500']);
         $validStudents = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $this->schoolIdForInstitution((int) $subject->institution_id))
-            ->where('sa.academic_year_id', $subject->academic_year_id)->whereExists(function ($query) use ($subject) { $query->selectRaw('1')->from('standards_link as sl')->whereColumn('sl.id', 'sa.standardLink_id')->where('sl.standard_id', $subject->standard_id)->whereNull('sl.deleted_at'); })
+            ->where('sa.academic_year_id', $subject->academic_year_id)->where('sa.standardLink_id', $subject->standard_link_id)
             ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')->pluck('u.id')->map(fn ($id) => (int) $id)->all();
         DB::transaction(function () use ($data, $validStudents, $examSubjectId, $request) {
             foreach ($data['marks'] as $row) {
