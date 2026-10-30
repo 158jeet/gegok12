@@ -104,7 +104,7 @@ class ExaminationController extends Controller
     {
         [$roles] = $this->context($request);
         abort_unless($roles->intersect(self::MARKS_ROLES)->isNotEmpty(), 403);
-        $subject = DB::table('tagore_exam_subjects as es')->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')->where('es.id', $examSubjectId)->first(['es.*', 'e.id as exam_id', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.status', 'i.school_id']);
+        $subject = DB::table('tagore_exam_subjects as es')->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')->where('es.id', $examSubjectId)->first(['es.*', 'e.id as exam_id', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.standard_link_id', 'e.status', 'i.school_id']);
         abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
         $data = $request->validate(['marks' => 'required|array|min:1', 'marks.*.student_id' => 'required|integer', 'marks.*.marks_obtained' => 'nullable|numeric|min:0|max:' . $subject->max_marks, 'marks.*.is_absent' => 'nullable|boolean', 'marks.*.remarks' => 'nullable|string|max:500']);
