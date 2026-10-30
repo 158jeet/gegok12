@@ -14,8 +14,8 @@
 <div class="exam-grid">
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','IT_ADMIN'])->isNotEmpty())
 <section class="exam-card"><h2 style="font-size:18px;font-weight:750;margin:0 0 14px">Create examination</h2><form class="exam-form" method="post" action="{{ route('tagore.examinations.store') }}">@csrf
-<label>Institution<select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select></label>
-<label>Academic year<select name="academic_year_id" required>@foreach($academicYears as $y)<option value="{{ $y->id }}">{{ $y->name }}</option>@endforeach</select></label>
+<label>Institution<select name="institution_id" id="exam-institution" required>@foreach($institutions as $i)<option value="{{ $i->id }}" data-school-id="{{ $i->school_id }}">{{ $i->display_name }}</option>@endforeach</select></label>
+<label>Academic year<select name="academic_year_id" id="exam-year" required>@foreach($academicYears as $y)<option value="{{ $y->id }}" data-school-id="{{ $y->school_id }}">{{ $y->name }}</option>@endforeach</select></label>
 <label>Class<select name="standard_id" required>@foreach($standardLinks->where('school_id', $institutions->first()->school_id ?? 0) as $sl)<option value="{{ $sl->id }}">{{ $sl->standard_name }} · Section {{ $sl->section_name }}</option>@endforeach</select></label>
 <label>Examination name<input name="name" maxlength="120" required placeholder="e.g. Half Yearly Examination"></label>
 <label>Exam type<select name="exam_type"><option value="unit_test">Unit test</option><option value="half_yearly">Half yearly</option><option value="annual">Annual</option><option value="pre_board">Pre-board</option><option value="board">Board</option><option value="other">Other</option></select></label>
