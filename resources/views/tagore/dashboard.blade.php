@@ -103,7 +103,7 @@
   </section>
   @else
   <section class="tg-card" style="padding:20px;margin-bottom:18px">
-    <div class="tg-section-head"><div><h2>Your student workspace</h2><p>Your account is signed in. Use the student portal for classes, assignments, homework and results.</p></div><a class="tg-btn primary" href="{{ url('/student/dashboard') }}">Open student portal →</a></div>
+    <div class="tg-section-head"><div><h2>Your student workspace</h2><p>Your account is signed in. Use the student portal for classes, assignments, homework and results.</p></div><a class="tg-btn primary" href="{{ url('/student/dashboard') }}">Open student portal →</a><a class="tg-btn" href="{{ route('tagore.results.student', auth()->id()) }}">My published results</a></div>
   </section>
   @endif
 
