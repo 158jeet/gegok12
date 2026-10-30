@@ -24,7 +24,7 @@ class ExaminationController extends Controller
             ->whereIn('e.institution_id', $institutionIds)
             ->orderByDesc('e.id')
             ->limit(100)
-            ->get(['e.*', 'i.display_name as institution_name', 'ay.name as academic_year_name', 's.name as standard_name']);
+            ->get(['e.*', 'i.school_id as school_id', 'i.display_name as institution_name', 'ay.name as academic_year_name', 's.name as standard_name']);
 
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'school_id', 'display_name']);
         $academicYears = DB::table('academic_years')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->orderByDesc('start_date')->get(['id', 'school_id', 'name']);
