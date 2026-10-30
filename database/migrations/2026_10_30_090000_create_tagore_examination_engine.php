@@ -14,6 +14,8 @@ return new class extends Migration {
             $table->foreign('academic_year_id')->references('id')->on('academic_years')->cascadeOnDelete();
             $table->unsignedInteger('standard_id');
             $table->foreign('standard_id')->references('id')->on('standards')->cascadeOnDelete();
+            $table->unsignedInteger('standard_link_id');
+            $table->foreign('standard_link_id')->references('id')->on('standards_link')->cascadeOnDelete();
             $table->string('name', 120);
             $table->string('exam_type', 40)->default('unit_test');
             $table->date('start_date');
