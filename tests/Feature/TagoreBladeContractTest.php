@@ -7,6 +7,17 @@ use Tests\TestCase;
 
 class TagoreBladeContractTest extends TestCase
 {
+    public function test_admin_feedback_views_escape_user_submitted_message_content(): void
+    {
+        $list = File::get(resource_path('views/admin/feedbacks/list.blade.php'));
+        $details = File::get(resource_path('views/admin/feedbacks/details.blade.php'));
+
+        $this->assertStringNotContainsString('{!! str_limit($feedback->feedbackMessage->first()->message', $list);
+        $this->assertStringNotContainsString('{!! $message->message !!}', $details);
+        $this->assertStringContainsString('{{ str_limit($feedback->feedbackMessage->first()->message', $list);
+        $this->assertStringContainsString('{{ $message->message }}', $details);
+    }
+
     public function test_tagore_blade_views_have_safe_form_and_route_contracts(): void
     {
         $files = File::allFiles(resource_path('views/tagore'));
