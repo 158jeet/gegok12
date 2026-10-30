@@ -63,7 +63,7 @@ class ExaminationController extends Controller
         [$roles] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
         $exam = $this->examForUser($request, $examId);
-        abort_unless($exam->status === 'draft', 409, 'Only draft examinations can be changed.');
+        abort_unless(in_array($exam->status, ['draft', 'marks_entry'], true), 409, 'Only draft or marks-entry examinations can be changed.');
         $data = $request->validate([
             'subject_id' => 'required|integer',
             'max_marks' => 'required|numeric|min:1|max:10000',
@@ -109,7 +109,7 @@ class ExaminationController extends Controller
         $validStudents = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $this->schoolIdForInstitution((int) $subject->institution_id))
             ->where('sa.academic_year_id', $subject->academic_year_id)->whereExists(function ($query) use ($subject) { $query->selectRaw('1')->from('standards_link as sl')->whereColumn('sl.id', 'sa.standardLink_id')->where('sl.standard_id', $subject->standard_id)->whereNull('sl.deleted_at'); })
-            ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->pluck('u.id')->map(fn ($id) => (int) $id)->all();
+            ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')->pluck('u.id')->map(fn ($id) => (int) $id)->all();
         DB::transaction(function () use ($data, $validStudents, $examSubjectId, $request) {
             foreach ($data['marks'] as $row) {
                 $studentId = (int) $row['student_id'];
@@ -170,7 +170,7 @@ class ExaminationController extends Controller
                 foreach ($marks as $mark) {
                     $grade = $mark->is_absent ? 'AB' : ($mark->marks_obtained >= $subject->pass_marks ? 'PASS' : 'FAIL');
                     DB::table('tagore_results')->updateOrInsert(
-                        ['student_id' => $mark->student_id, 'institution_id' => $exam->institution_id, 'academic_year_id' => $exam->academic_year_id, 'exam_name' => $exam->name, 'subject' => $subject->subject_name],
+                        ['exam_id' => $examId, 'student_id' => $mark->student_id, 'institution_id' => $exam->institution_id, 'academic_year_id' => $exam->academic_year_id, 'exam_name' => $exam->name, 'subject' => $subject->subject_name],
                         ['marks' => $mark->marks_obtained ?? 0, 'max_marks' => $subject->max_marks, 'grade' => $grade, 'status' => 'published', 'published_at' => now(), 'updated_at' => now(), 'created_at' => now()]
                     );
                 }
@@ -188,7 +188,7 @@ class ExaminationController extends Controller
         $exam = $this->examForUser($request, $examId);
         abort_unless($exam->status === 'published', 409, 'Only published results can be withdrawn.');
         DB::transaction(function () use ($exam, $examId, $request) {
-            DB::table('tagore_results')->where('institution_id', $exam->institution_id)->where('academic_year_id', $exam->academic_year_id)->where('exam_name', $exam->name)->update(['status' => 'withdrawn', 'updated_at' => now()]);
+            DB::table('tagore_results')->where('exam_id', $examId)->update(['status' => 'withdrawn', 'updated_at' => now()]);
             DB::table('tagore_exams')->where('id', $examId)->update(['status' => 'withdrawn', 'withdrawn_at' => now(), 'updated_at' => now()]);
             $this->event($examId, $request, 'withdrawn', 'published', 'withdrawn');
         });
