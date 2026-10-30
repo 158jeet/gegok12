@@ -31,7 +31,8 @@ class ExaminationController extends Controller
         $standardLinks = DB::table('standards_link as sl')->join('standards as s', 's.id', '=', 'sl.standard_id')->join('sections as sec', 'sec.id', '=', 'sl.section_id')->join('tagore_institutions as ti', 'ti.school_id', '=', 'sl.school_id')->whereIn('sl.school_id', $institutions->pluck('school_id'))->whereNull('sl.deleted_at')->where('sl.status', 1)->orderBy('s.order')->orderBy('sec.name')->get(['sl.id', 'sl.school_id', 'sl.academic_year_id', 'sl.standard_id', 'sl.section_id', 's.name as standard_name', 'sec.name as section_name', 'ti.display_name as institution_name']);
         $subjectOptions = DB::table('subjects')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->where('status', 1)->orderBy('name')->get(['id', 'school_id', 'academic_year_id', 'standard_id', 'section_id', 'name']);
         $examSubjects = DB::table('tagore_exam_subjects')->join('tagore_exams', 'tagore_exams.id', '=', 'tagore_exam_subjects.exam_id')->orderBy('tagore_exam_subjects.exam_date')->get(['tagore_exam_subjects.*', 'tagore_exams.id as parent_exam_id'])->groupBy('parent_exam_id');
-        return view('tagore.examinations.index', compact('exams', 'institutions', 'academicYears', 'standardLinks', 'subjectOptions', 'examSubjects', 'roles'));
+        $gradeScales = DB::table('tagore_exam_grade_scales')->orderByDesc('min_percentage')->get()->groupBy('exam_id');
+        return view('tagore.examinations.index', compact('exams', 'institutions', 'academicYears', 'standardLinks', 'subjectOptions', 'examSubjects', 'gradeScales', 'roles'));
     }
 
     public function store(Request $request)
@@ -148,10 +149,54 @@ class ExaminationController extends Controller
         return back()->with('success', 'Marks saved.');
     }
 
+    public function saveGradeScale(Request $request, int $examId)
+    {
+        [$roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $exam = $this->examForUser($request, $examId);
+        abort_unless(in_array($exam->status, ['draft', 'marks_entry'], true), 409, 'Grade rules are locked after submission.');
+        $data = $request->validate([
+            'grades' => 'required|array|min:1|max:15',
+            'grades.*.grade' => 'required|string|max:12',
+            'grades.*.min_percentage' => 'required|numeric|between:0,100',
+            'grades.*.max_percentage' => 'required|numeric|between:0,100',
+            'grades.*.remark' => 'nullable|string|max:120',
+        ]);
+        $ranges = collect($data['grades'])->map(fn ($row) => [
+            'grade' => trim($row['grade']),
+            'min' => (float) $row['min_percentage'],
+            'max' => (float) $row['max_percentage'],
+            'remark' => $row['remark'] ?? null,
+        ])->sortBy('min')->values();
+        abort_if($ranges->pluck('grade')->unique()->count() !== $ranges->count(), 422, 'Grade names must be unique.');
+        abort_if($ranges->first()['min'] !== 0.0 || $ranges->last()['max'] !== 100.0, 422, 'Grade ranges must cover 0% through 100%.');
+        for ($i = 0; $i < $ranges->count(); $i++) {
+            abort_if($ranges[$i]['max'] <= $ranges[$i]['min'], 422, 'Each grade range must have a maximum greater than its minimum.');
+            if ($i > 0) {
+                abort_if(abs($ranges[$i - 1]['max'] - $ranges[$i]['min']) > 0.001, 422, 'Grade ranges must be continuous without gaps or overlaps.');
+            }
+        }
+        DB::transaction(function () use ($ranges, $examId) {
+            DB::table('tagore_exam_grade_scales')->where('exam_id', $examId)->delete();
+            foreach ($ranges as $range) {
+                DB::table('tagore_exam_grade_scales')->insert([
+                    'exam_id' => $examId,
+                    'grade' => $range['grade'],
+                    'min_percentage' => $range['min'],
+                    'max_percentage' => $range['max'],
+                    'remark' => $range['remark'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+        return back()->with('success', 'Grading scale saved and locked when the examination is submitted.');
+    }
+
     public function submit(Request $request, int $examId)
     {
         [$roles] = $this->context($request);
-        abort_unless($roles->intersect(self::MARKS_ROLES)->isNotEmpty(), 403);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
         $exam = $this->examForUser($request, $examId);
         abort_unless(in_array($exam->status, ['draft', 'marks_entry'], true), 409);
         $subjects = DB::table('tagore_exam_subjects')->where('exam_id', $examId)->get();
@@ -188,7 +233,9 @@ class ExaminationController extends Controller
             foreach ($subjects as $subject) {
                 $marks = DB::table('tagore_exam_marks')->where('exam_subject_id', $subject->id)->get();
                 foreach ($marks as $mark) {
-                    $grade = $mark->is_absent ? 'AB' : ($mark->marks_obtained >= $subject->pass_marks ? 'PASS' : 'FAIL');
+                    $percentage = $subject->max_marks > 0 ? ((float) $mark->marks_obtained / (float) $subject->max_marks) * 100 : 0;
+                    $gradeRule = $mark->is_absent ? null : DB::table('tagore_exam_grade_scales')->where('exam_id', $examId)->where('min_percentage', '<=', $percentage)->where('max_percentage', '>=', $percentage)->first();
+                    $grade = $mark->is_absent ? 'AB' : ($gradeRule->grade ?? ($mark->marks_obtained >= $subject->pass_marks ? 'PASS' : 'FAIL'));
                     DB::table('tagore_results')->updateOrInsert(
                         ['exam_id' => $examId, 'student_id' => $mark->student_id, 'institution_id' => $exam->institution_id, 'academic_year_id' => $exam->academic_year_id, 'exam_name' => $exam->name, 'subject' => $subject->subject_name],
                         ['marks' => $mark->marks_obtained ?? 0, 'max_marks' => $subject->max_marks, 'grade' => $grade, 'status' => 'published', 'published_at' => now(), 'updated_at' => now(), 'created_at' => now()]
