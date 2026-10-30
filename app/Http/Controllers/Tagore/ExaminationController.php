@@ -228,7 +228,7 @@ class ExaminationController extends Controller
     {
         return DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $exam->school_id)->where('sa.academic_year_id', $exam->academic_year_id)
-            ->where('sa.standardLink_id', $exam->standard_link_id)->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->select('u.id');
+            ->where('sa.standardLink_id', $exam->standard_link_id)->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')->distinct()->select('u.id');
     }
 
     private function event(int $examId, Request $request, string $event, ?string $from, ?string $to): void
