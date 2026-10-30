@@ -276,7 +276,7 @@ class ExaminationController extends Controller
             ->leftJoin('tagore_exams as e', 'e.id', '=', 'r.exam_id')
             ->where('r.student_id', $studentId)->where('r.status', 'published')
             ->orderByDesc('r.published_at')->orderBy('r.subject')
-            ->get(['r.exam_id', 'r.exam_name', 'r.subject', 'r.marks', 'r.max_marks', 'r.grade', 'r.published_at', 'e.exam_type', 'e.start_date', 'e.end_date']);
+            ->get(['r.exam_id', 'r.exam_name', 'r.subject', 'r.marks', 'r.max_marks', 'r.grade', 'r.grade_remark', 'r.published_at', 'e.exam_type', 'e.start_date', 'e.end_date']);
         $examGroups = $results->groupBy(fn ($row) => $row->exam_id ?: $row->exam_name);
         return view('tagore.examinations.student-results', compact('student', 'examGroups'));
     }
