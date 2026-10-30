@@ -24,7 +24,8 @@ class TagoreBladeContractTest extends TestCase
 
         $this->assertStringNotContainsString('{!! str_limit($feedback->feedbackMessage->first()->message', $list);
         $this->assertStringNotContainsString('{!! $message->message !!}', $details);
-        $this->assertStringContainsString('{{ str_limit($feedback->feedbackMessage->first()->message', $list);
+        $this->assertStringContainsString('$messageText = $firstMessage?->message ?? \'No message content\';', $list);
+        $this->assertStringContainsString('{{ \\Illuminate\\Support\\Str::limit($messageText, 90', $list);
         $this->assertStringContainsString('{{ $message->message }}', $details);
     }
 
