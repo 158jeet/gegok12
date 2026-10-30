@@ -38,7 +38,7 @@ class AttendanceAddRequest extends FormRequest
             $start_date = date('Y-m-d',strtotime($academic_year->start_date));
             $end_date = $academic_year->end_date ? date('Y-m-d',strtotime($academic_year->end_date)) : date('Y-m-d');
 
-            if( ( request('date') <= date('Y-m-d') ) && ( request('date') >= $start_date ) && ( request('date') <= $end_date )
+            if( ( request('date') <= date('Y-m-d') ) && ( request('date') >= $start_date ) && ( request('date') <= $end_date ))
             {
                 return true;
             }
