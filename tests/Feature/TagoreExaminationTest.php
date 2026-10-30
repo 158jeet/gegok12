@@ -45,6 +45,27 @@ class TagoreExaminationTest extends TestCase
         $this->actingAs($parent)->get(route('tagore.examinations.index'))->assertForbidden();
     }
 
+    public function test_parent_can_only_view_a_linked_child_report_card(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($parent)
+            ->get(route('tagore.results.student', $student->id))
+            ->assertOk()
+            ->assertSee('Published report card');
+    }
+
+    public function test_student_can_view_own_published_report_card(): void
+    {
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('tagore.results.student', $student->id))
+            ->assertOk()
+            ->assertSee('Published report card');
+    }
+
     public function test_examination_routes_are_named_and_registered(): void
     {
         foreach ([
