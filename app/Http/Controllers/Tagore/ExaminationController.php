@@ -76,17 +76,37 @@ class ExaminationController extends Controller
         return back()->with('success', 'Subject added to the examination.');
     }
 
+    public function marksEntry(Request $request, int $examSubjectId)
+    {
+        [$roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MARKS_ROLES)->isNotEmpty(), 403);
+        $subject = DB::table('tagore_exam_subjects as es')
+            ->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')
+            ->where('es.id', $examSubjectId)
+            ->first(['es.*', 'e.id as exam_id', 'e.name as exam_name', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.status', 'i.school_id']);
+        abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
+        abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
+        $students = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
+            ->where('u.school_id', $subject->school_id)->where('sa.academic_year_id', $subject->academic_year_id)
+            ->whereExists(function ($query) use ($subject) { $query->selectRaw('1')->from('standards_link as sl')->whereColumn('sl.id', 'sa.standardLink_id')->where('sl.standard_id', $subject->standard_id)->whereNull('sl.deleted_at'); })
+            ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')
+            ->orderBy('sa.roll_number')->orderBy('u.name')->get(['u.id', 'u.name', 'sa.roll_number']);
+        $saved = DB::table('tagore_exam_marks')->where('exam_subject_id', $examSubjectId)->get()->keyBy('student_id');
+        return view('tagore.examinations.marks', compact('subject', 'students', 'saved'));
+    }
+
     public function marks(Request $request, int $examSubjectId)
     {
         [$roles] = $this->context($request);
         abort_unless($roles->intersect(self::MARKS_ROLES)->isNotEmpty(), 403);
-        $subject = DB::table('tagore_exam_subjects as es')->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')->where('es.id', $examSubjectId)->first(['es.*', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.status', 'e.school_id']);
+        $subject = DB::table('tagore_exam_subjects as es')->join('tagore_exams as e', 'e.id', '=', 'es.exam_id')->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')->where('es.id', $examSubjectId)->first(['es.*', 'e.id as exam_id', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.status', 'i.school_id']);
         abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
         $data = $request->validate(['marks' => 'required|array|min:1', 'marks.*.student_id' => 'required|integer', 'marks.*.marks_obtained' => 'nullable|numeric|min:0|max:' . $subject->max_marks, 'marks.*.is_absent' => 'nullable|boolean', 'marks.*.remarks' => 'nullable|string|max:500']);
         $validStudents = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $this->schoolIdForInstitution((int) $subject->institution_id))
-            ->where('sa.academic_year_id', $subject->academic_year_id)->where('sa.standardLink_id', $subject->standard_id)
+            ->where('sa.academic_year_id', $subject->academic_year_id)->whereExists(function ($query) use ($subject) { $query->selectRaw('1')->from('standards_link as sl')->whereColumn('sl.id', 'sa.standardLink_id')->where('sl.standard_id', $subject->standard_id)->whereNull('sl.deleted_at'); })
             ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->pluck('u.id')->map(fn ($id) => (int) $id)->all();
         DB::transaction(function () use ($data, $validStudents, $examSubjectId, $request) {
             foreach ($data['marks'] as $row) {
@@ -204,7 +224,7 @@ class ExaminationController extends Controller
     {
         return DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $exam->school_id)->where('sa.academic_year_id', $exam->academic_year_id)
-            ->where('sa.standardLink_id', $exam->standard_id)->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->select('u.id');
+            ->whereExists(function ($query) use ($exam) { $query->selectRaw('1')->from('standards_link as sl')->whereColumn('sl.id', 'sa.standardLink_id')->where('sl.standard_id', $exam->standard_id)->whereNull('sl.deleted_at'); })->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->select('u.id');
     }
 
     private function event(int $examId, Request $request, string $event, ?string $from, ?string $to): void
