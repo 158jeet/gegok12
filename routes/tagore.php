@@ -113,6 +113,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/examinations/{examId}/subjects', [ExaminationController::class, 'addSubject'])->whereNumber('examId')->name('tagore.examinations.subjects.store');
     Route::get('/examinations/subjects/{examSubjectId}/marks', [ExaminationController::class, 'marksEntry'])->whereNumber('examSubjectId')->name('tagore.examinations.marks');
     Route::post('/examinations/subjects/{examSubjectId}/marks', [ExaminationController::class, 'marks'])->whereNumber('examSubjectId')->name('tagore.examinations.marks.save');
+    Route::post('/examinations/{examId}/grades', [ExaminationController::class, 'saveGradeScale'])->whereNumber('examId')->name('tagore.examinations.grades.save');
     Route::post('/examinations/{examId}/submit', [ExaminationController::class, 'submit'])->whereNumber('examId')->name('tagore.examinations.submit');
     Route::post('/examinations/{examId}/moderate', [ExaminationController::class, 'moderate'])->whereNumber('examId')->name('tagore.examinations.moderate');
     Route::post('/examinations/{examId}/publish', [ExaminationController::class, 'publish'])->whereNumber('examId')->name('tagore.examinations.publish');
