@@ -114,10 +114,10 @@ class AttendanceController extends Controller
 
             return $res;
         }
-        catch(Exception $e)
+        catch(\Throwable $e)
         {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
+            report($e);
+            throw $e;
         }
     }
 
