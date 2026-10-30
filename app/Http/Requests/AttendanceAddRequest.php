@@ -129,12 +129,12 @@ class AttendanceAddRequest extends FormRequest
             }
 
             $standardLinkId = (int) $this->input('standardLink_id');
-            $standardLinkExists = StandardLink::query()
+            $standardLink = StandardLink::query()
                 ->where('id', $standardLinkId)
                 ->where('school_id', $schoolId)
                 ->where('academic_year_id', $academicYear->id)
-                ->exists();
-            if (!$standardLinkExists) {
+                ->first();
+            if (!$standardLink) {
                 $validator->errors()->add('standardLink_id', 'Select a class or section belonging to your active school year.');
                 return;
             }
@@ -144,7 +144,7 @@ class AttendanceAddRequest extends FormRequest
                     ->where('school_id', $schoolId)
                     ->where('teacher_id', $user->id)
                     ->where('standardLink_id', $standardLinkId)
-                    ->exists();
+                    ->exists() || (int) ($standardLink->class_teacher_id ?? 0) === (int) $user->id;
                 if (!$assigned) {
                     $validator->errors()->add('standardLink_id', 'You can record attendance only for a class assigned to you.');
                     return;
