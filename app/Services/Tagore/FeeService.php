@@ -206,15 +206,76 @@ class FeeService
                 $obligation = DB::table('tagore_fee_obligations')->where('id', $obligationId)->lockForUpdate()->first();
                 if (!$obligation || (int) $obligation->student_id !== $studentId || (int) $obligation->institution_id !== $institutionId) throw ValidationException::withMessages(['allocations' => 'Invalid fee obligation allocation.']);
                 if ($allocate <= 0 || $allocate > ((float) $obligation->outstanding_amount + 0.009)) throw ValidationException::withMessages(['allocations' => 'Allocation exceeds the obligation outstanding amount.']);
-                DB::table('tagore_payment_allocations')->insert([
-                    'payment_id' => $paymentId, 'fee_obligation_id' => $obligationId,
-                    'fee_installment_id' => $allocation['fee_installment_id'] ?? null,
-                    'fee_obligation_item_id' => $allocation['fee_obligation_item_id'] ?? null,
-                    'amount' => $allocate, 'created_at' => $now, 'updated_at' => $now,
-                ]);
+                $itemId = isset($allocation['fee_obligation_item_id']) ? (int) $allocation['fee_obligation_item_id'] : null;
+                $itemRows = collect();
+                if ($itemId !== null) {
+                    $item = DB::table('tagore_fee_obligation_items')
+                        ->where('id', $itemId)
+                        ->where('fee_obligation_id', $obligationId)
+                        ->lockForUpdate()
+                        ->first();
+                    if (!$item || $allocate > ((float) $item->outstanding_amount + 0.009)) {
+                        throw ValidationException::withMessages(['allocations' => 'Allocation exceeds the selected fee line outstanding amount.']);
+                    }
+                    $itemRows = collect([$item]);
+                } else {
+                    $candidateItems = DB::table('tagore_fee_obligation_items')
+                        ->where('fee_obligation_id', $obligationId)
+                        ->where('outstanding_amount', '>', 0)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get();
+                    $itemOutstanding = round((float) $candidateItems->sum('outstanding_amount'), 2);
+                    // Distribute across item lines only when their outstanding total agrees with
+                    // the parent obligation. Legacy mismatches remain visible for reconciliation.
+                    if ($candidateItems->isNotEmpty()
+                        && abs($itemOutstanding - (float) $obligation->outstanding_amount) <= 0.009
+                        && $allocate <= $itemOutstanding + 0.009) {
+                        $itemRows = $candidateItems;
+                    }
+                }
+
+                if ($itemRows->isEmpty()) {
+                    DB::table('tagore_payment_allocations')->insert([
+                        'payment_id' => $paymentId, 'fee_obligation_id' => $obligationId,
+                        'fee_installment_id' => $allocation['fee_installment_id'] ?? null,
+                        'fee_obligation_item_id' => null,
+                        'amount' => $allocate, 'created_at' => $now, 'updated_at' => $now,
+                    ]);
+                } else {
+                    $remainingForItems = $allocate;
+                    foreach ($itemRows as $item) {
+                        if ($remainingForItems <= 0.009) break;
+                        $lineAllocate = min($remainingForItems, (float) $item->outstanding_amount);
+                        if ($lineAllocate <= 0) continue;
+                        DB::table('tagore_payment_allocations')->insert([
+                            'payment_id' => $paymentId, 'fee_obligation_id' => $obligationId,
+                            'fee_installment_id' => $allocation['fee_installment_id'] ?? null,
+                            'fee_obligation_item_id' => $item->id,
+                            'amount' => $lineAllocate, 'created_at' => $now, 'updated_at' => $now,
+                        ]);
+                        $itemPaid = round((float) $item->paid_amount + $lineAllocate, 2);
+                        $itemOutstanding = max(0, round((float) $item->net_amount - $itemPaid, 2));
+                        DB::table('tagore_fee_obligation_items')->where('id', $item->id)->update([
+                            'paid_amount' => $itemPaid,
+                            'outstanding_amount' => $itemOutstanding,
+                            'updated_at' => $now,
+                        ]);
+                        $remainingForItems = round($remainingForItems - $lineAllocate, 2);
+                    }
+                    if ($remainingForItems > 0.009) {
+                        throw ValidationException::withMessages(['allocations' => 'Payment could not be fully allocated across the fee lines.']);
+                    }
+                }
+
                 $paid = round((float) $obligation->paid_amount + $allocate, 2);
                 $outstanding = round((float) $obligation->net_amount - $paid, 2);
-                DB::table('tagore_fee_obligations')->where('id', $obligationId)->update(['paid_amount' => $paid, 'outstanding_amount' => max(0, $outstanding), 'status' => $outstanding <= 0.009 ? 'paid' : 'partial', 'updated_at' => $now]);
+                DB::table('tagore_fee_obligations')->where('id', $obligationId)->update([
+                    'paid_amount' => $paid,
+                    'outstanding_amount' => max(0, $outstanding),
+                    'status' => $outstanding <= 0.009 ? 'paid' : 'partial',
+                    'updated_at' => $now,
+                ]);
                 if (!empty($allocation['fee_installment_id'])) $this->refreshInstallment((int) $allocation['fee_installment_id']);
             }
 

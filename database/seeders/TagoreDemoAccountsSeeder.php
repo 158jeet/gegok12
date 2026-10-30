@@ -17,6 +17,21 @@ class TagoreDemoAccountsSeeder extends Seeder
         }
 
         $now = now();
+
+        // Give administrator acceptance a separate, unlinked synthetic school to attach.
+        // This fixture is created only in non-production environments and is idempotent.
+        if (app()->environment('testing') && !DB::table('schools')->where('slug', 'tagore-acceptance-unlinked-school')->exists()) {
+            DB::table('schools')->insert([
+                'name' => 'Tagore Acceptance Unlinked School',
+                'email' => 'acceptance-unlinked-school@tagore-demo.local',
+                'phone' => '9000000001',
+                'status' => 1,
+                'slug' => 'tagore-acceptance-unlinked-school',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
         $school = DB::table('schools')->whereNull('deleted_at')->orderBy('id')->first(['id','name']);
         if (!$school) return;
 

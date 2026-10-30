@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\SiteHelper;
 use App\Models\Attendance;
+use App\Models\AbsentReason;
+use App\Models\StandardLink;
+use App\Models\StudentAcademic;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class AttendanceAddRequest extends FormRequest
@@ -32,8 +36,9 @@ class AttendanceAddRequest extends FormRequest
         {   
             $academic_year  = SiteHelper::getAcademicYear(Auth::user()->school_id);
             $start_date = date('Y-m-d',strtotime($academic_year->start_date));
+            $end_date = $academic_year->end_date ? date('Y-m-d',strtotime($academic_year->end_date)) : date('Y-m-d');
 
-            if( ( request('date') <= date('Y-m-d') ) && ( request('date') >= $start_date ) )
+            if( ( request('date') <= date('Y-m-d') ) && ( request('date') >= $start_date ) && ( request('date') <= $end_date ))
             {
                 return true;
             }
@@ -64,7 +69,7 @@ class AttendanceAddRequest extends FormRequest
         Validator::extend('check_user',function($attribute,$value,$parameters,$validator)
         { 
           $count=0;
-          for($i=0 ; $i < Request('absentCount') ; $i++)
+          for($i=0 ; $i < min(max((int) Request('absentCount'), 0), 500) ; $i++)
           { 
             if($value==request('user_id'.$i))
             {
@@ -82,12 +87,14 @@ class AttendanceAddRequest extends FormRequest
         $rules =
         [
             //
-            'standardLink_id'   => 'required',
+            'standardLink_id'   => 'required|integer',
             'date'              => 'required|date|check_date',
-            'session'           => 'required|check_session',
+            'session'           => 'required|in:forenoon,afternoon|check_session',
+            'absentCount'       => 'required|integer|min:0|max:500',
+            'presentCount'      => 'required|integer|min:0|max:500',
         ];
 
-        for($i=0;$i<Request('absentCount');$i++)
+        for($i=0;$i<min(max((int) Request('absentCount'), 0), 500);$i++)
         {   
             Validator::extend('check_remarks',function($attribute,$value,$parameters,$validator)
             { 
@@ -98,8 +105,96 @@ class AttendanceAddRequest extends FormRequest
             $rules['reason_id'.$i]  = 'required';
             $rules['remarks'.$i]    = 'nullable|max:20|check_remarks';
         }
+        for($i=0;$i<min(max((int) Request('presentCount'), 0), 500);$i++)
+        {
+            $rules['present_id'.$i] = 'required|integer';
+        }
 
         return $rules;
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $user = $this->user();
+            $schoolId = (int) $user->school_id;
+            $academicYear = SiteHelper::getAcademicYear($schoolId);
+            if (!$academicYear) {
+                $validator->errors()->add('standardLink_id', 'No active academic year is configured for this school.');
+                return;
+            }
+
+            $standardLinkId = (int) $this->input('standardLink_id');
+            $standardLink = StandardLink::query()
+                ->where('id', $standardLinkId)
+                ->where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->first();
+            if (!$standardLink) {
+                $validator->errors()->add('standardLink_id', 'Select a class or section belonging to your active school year.');
+                return;
+            }
+
+            if ((int) $user->usergroup_id === 5) {
+                $assigned = DB::table('class_teacher_links')
+                    ->where('school_id', $schoolId)
+                    ->where('teacher_id', $user->id)
+                    ->where('standardLink_id', $standardLinkId)
+                    ->exists() || (int) ($standardLink->class_teacher_id ?? 0) === (int) $user->id;
+                if (!$assigned) {
+                    $validator->errors()->add('standardLink_id', 'You can record attendance only for a class assigned to you.');
+                    return;
+                }
+            }
+
+            $absentIds = [];
+            for ($i = 0; $i < (int) $this->input('absentCount'); $i++) {
+                $absentIds[] = (int) $this->input('user_id'.$i);
+            }
+            $presentIds = [];
+            for ($i = 0; $i < (int) $this->input('presentCount'); $i++) {
+                $presentIds[] = (int) $this->input('present_id'.$i);
+            }
+            $allIds = array_merge($absentIds, $presentIds);
+
+            if (!$allIds) {
+                $validator->errors()->add('presentCount', 'Select at least one student before saving attendance.');
+                return;
+            }
+            if (count($allIds) !== count(array_unique($allIds))) {
+                $validator->errors()->add('presentCount', 'A student can appear only once in an attendance session.');
+                return;
+            }
+
+            $enrolledIds = StudentAcademic::query()
+                ->where('school_id', $schoolId)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('standardLink_id', $standardLinkId)
+                ->whereIn('user_id', $allIds)
+                ->distinct()
+                ->pluck('user_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            if (count($enrolledIds) !== count($allIds)) {
+                $validator->errors()->add('standardLink_id', 'Attendance can be recorded only for students enrolled in the selected class and academic year.');
+                return;
+            }
+
+            if ($absentIds) {
+                $reasonIds = [];
+                for ($i = 0; $i < (int) $this->input('absentCount'); $i++) {
+                    $reasonIds[] = (int) $this->input('reason_id'.$i);
+                }
+                $activeReasonCount = AbsentReason::query()->where('status', 1)->whereIn('id', $reasonIds)->distinct()->count('id');
+                if ($activeReasonCount !== count(array_unique($reasonIds))) {
+                    $validator->errors()->add('reason_id0', 'Select a valid active absence reason for each absent student.');
+                }
+            }
+        });
     }
 
     public function messages()
@@ -114,7 +209,7 @@ class AttendanceAddRequest extends FormRequest
             'session.check_session'     =>  'Attendance already updated',
         ];
 
-        for($i=0 ; $i < Request('absentCount') ; $i++)
+        for($i=0 ; $i < min(max((int) Request('absentCount'), 0), 500) ; $i++)
         {
             $messages['user_id'.$i.'.required']         = 'Student is required';
             $messages['user_id'.$i.'.check_user']       = 'Student is already exists';

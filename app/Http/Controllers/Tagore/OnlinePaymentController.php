@@ -29,7 +29,7 @@ class OnlinePaymentController extends Controller
         $userId=(int)$request->user()->id;
         $roles=$this->roles($userId);
         $authorizedParent=(int)$order->parent_user_id===$userId && DB::table('tagore_parent_students')->where('parent_user_id',$userId)->where('student_id',$order->student_id)->where('status','active')->exists();
-        $authorizedStaff=$roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty();
+        $authorizedStaff=$roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty();
         abort_unless($authorizedParent || $authorizedStaff,403);
         $paymentId=$service->confirm($data);
         app(FeeReceiptMailer::class)->send($paymentId);

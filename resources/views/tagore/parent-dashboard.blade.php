@@ -28,7 +28,7 @@
 <div><div class="tg-kpi-label">Fee due</div><strong style="font-size:20px;display:block;margin-top:5px">₹{{ number_format($card->outstanding,0) }}</strong><div class="tg-kpi-meta">{{ $card->outstanding > 0 ? 'Payment required' : 'No outstanding balance' }}</div></div>
 <div><div class="tg-kpi-label">Latest result</div><strong style="font-size:20px;display:block;margin-top:5px">{{ $card->latest_result?->percentage === null ? '—' : $card->latest_result->percentage.'%' }}</strong><div class="tg-kpi-meta">{{ $card->latest_result?->exam_name ?: 'No published result' }}</div></div>
 </div>
-<div class="tg-actions" style="margin-top:17px"><a class="tg-btn primary" href="{{ route('tagore.child',$card->student_id) }}">Open child profile</a><a class="tg-btn" href="{{ route('tagore.fees.student',$card->student_id) }}">Fees</a></div>
+<div class="tg-actions" style="margin-top:17px"><a class="tg-btn primary" href="{{ route('tagore.child',$card->student_id) }}">Open child profile</a><a class="tg-btn" href="{{ route('tagore.fees.student',$card->student_id) }}">Fees</a><a class="tg-btn" href="{{ route('tagore.results.student',$card->student_id) }}">Results</a></div>
 </div>
 @endforeach
 </div>

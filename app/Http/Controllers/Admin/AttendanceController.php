@@ -105,7 +105,7 @@ class AttendanceController extends Controller
             $this->doActivityLog(
                 $attendance,
                 Auth::user(),
-                ['ip' => $ip, 'details' => $_SERVER['HTTP_USER_AGENT'] ],
+                ['ip' => $ip, 'details' => $request->userAgent() ],
                 LOGNAME_ADD_ATTENDANCE,
                 $message
             );
@@ -114,10 +114,10 @@ class AttendanceController extends Controller
 
             return $res;
         }
-        catch(Exception $e)
+        catch(\Throwable $e)
         {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
+            report($e);
+            throw $e;
         }
     }
 
