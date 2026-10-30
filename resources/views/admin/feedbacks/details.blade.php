@@ -5,7 +5,7 @@
                 @if ($message->feedback->parent_id == $message->user_id)
                     <p>{{ ucwords(str_replace('_', ' ', (str_replace('/', ' / ',$message->category)))) }}</p>
                     <p class="message-bubble-text-right bg-orange-100 rounded-full inline-block px-2 py-1 my-1 mb-2">
-                        <small class="mr-4"> {!! $message->message !!}</small> 
+                        <small class="mr-4"> {{ $message->message }}</small> 
                         <small>{{ $message->created_at->diffForHumans() }}</small>
                     </p>
                     <p class="flex flex-row">
