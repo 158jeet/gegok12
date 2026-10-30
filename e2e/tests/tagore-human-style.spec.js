@@ -281,6 +281,37 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileAudit.addButtonVisible).toBeTruthy();
   });
 
+  test('legacy attendance and feedback screens inherit the Tagore visual system', async ({ page }) => {
+    const screens = [
+      { role: 'owner', path: '/admin/attendance/add', label: 'admin attendance' },
+      { role: 'teacher', path: '/teacher/attendance/add', label: 'teacher attendance' },
+      { role: 'owner', path: '/admin/feedbacks', label: 'admin feedback' },
+    ];
+
+    for (const screen of screens) {
+      await authenticate(page, screen.role);
+      const response = await page.goto(screen.path, { waitUntil: 'domcontentloaded' });
+      expect(response && response.status(), screen.label + ' must render').toBe(200);
+      await expect(page.locator('body')).toHaveClass(/tagore-ui/);
+      await expect(page.locator('link[href*="tagore-erp.css"]')).toHaveCount(1);
+
+      const desktop = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth,
+        background: getComputedStyle(document.body).backgroundColor,
+      }));
+      expect(desktop.document, screen.label + ' desktop overflow').toBeLessThanOrEqual(desktop.viewport + 2);
+      expect(desktop.background).not.toBe('rgba(0, 0, 0, 0)');
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      const mobile = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth,
+      }));
+      expect(mobile.document, screen.label + ' mobile overflow').toBeLessThanOrEqual(mobile.viewport + 2);
+    }
+  });
+
   test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }, testInfo) => {
     await page.goto('/olympiad/register', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
