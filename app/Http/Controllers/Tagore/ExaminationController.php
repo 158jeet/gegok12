@@ -239,7 +239,7 @@ class ExaminationController extends Controller
                     $grade = $mark->is_absent ? 'AB' : ($gradeRule->grade ?? ($mark->marks_obtained >= $subject->pass_marks ? 'PASS' : 'FAIL'));
                     DB::table('tagore_results')->updateOrInsert(
                         ['exam_id' => $examId, 'student_id' => $mark->student_id, 'institution_id' => $exam->institution_id, 'academic_year_id' => $exam->academic_year_id, 'exam_name' => $exam->name, 'subject' => $subject->subject_name],
-                        ['marks' => $mark->marks_obtained ?? 0, 'max_marks' => $subject->max_marks, 'grade' => $grade, 'status' => 'published', 'published_at' => now(), 'updated_at' => now(), 'created_at' => now()]
+                        ['marks' => $mark->marks_obtained ?? 0, 'max_marks' => $subject->max_marks, 'grade' => $grade, 'grade_remark' => $gradeRule->remark ?? null, 'status' => 'published', 'published_at' => now(), 'updated_at' => now(), 'created_at' => now()]
                     );
                 }
             }
