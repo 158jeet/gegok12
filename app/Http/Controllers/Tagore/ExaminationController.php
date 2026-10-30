@@ -29,7 +29,9 @@ class ExaminationController extends Controller
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'school_id', 'display_name']);
         $academicYears = DB::table('academic_years')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->orderByDesc('start_date')->get(['id', 'school_id', 'name']);
         $standards = DB::table('standards')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->where('status', 1)->orderBy('order')->get(['id', 'school_id', 'name']);
-        return view('tagore.examinations.index', compact('exams', 'institutions', 'academicYears', 'standards', 'roles'));
+        $subjectOptions = DB::table('subjects')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->where('status', 1)->orderBy('name')->get(['id', 'school_id', 'academic_year_id', 'standard_id', 'name']);
+        $examSubjects = DB::table('tagore_exam_subjects')->join('tagore_exams', 'tagore_exams.id', '=', 'tagore_exam_subjects.exam_id')->orderBy('tagore_exam_subjects.exam_date')->get(['tagore_exam_subjects.*', 'tagore_exams.id as parent_exam_id'])->groupBy('parent_exam_id');
+        return view('tagore.examinations.index', compact('exams', 'institutions', 'academicYears', 'standards', 'subjectOptions', 'examSubjects', 'roles'));
     }
 
     public function store(Request $request)
@@ -113,7 +115,7 @@ class ExaminationController extends Controller
                 $studentId = (int) $row['student_id'];
                 abort_unless(in_array($studentId, $validStudents, true), 422, 'A student is outside this examination class or academic year.');
                 $absent = (bool) ($row['is_absent'] ?? false);
-                if (!$absent && !array_key_exists('marks_obtained', $row)) {
+                if (!$absent && (!array_key_exists('marks_obtained', $row) || $row['marks_obtained'] === null || $row['marks_obtained'] === '')) {
                     throw ValidationException::withMessages(['marks' => 'Enter marks or mark the student absent.']);
                 }
                 DB::table('tagore_exam_marks')->updateOrInsert(
