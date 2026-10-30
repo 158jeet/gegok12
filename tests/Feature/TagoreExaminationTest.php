@@ -21,7 +21,7 @@ class TagoreExaminationTest extends TestCase
         }
 
         $migration = file_get_contents(base_path('database/migrations/2026_10_30_090000_create_tagore_examination_engine.php'));
-        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'tagore_exam_mark_events', 'tagore_exam_grade_scales', 'standard_link_id', 'tagore_results', 'exam_id'] as $needle) {
+        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'tagore_exam_mark_events', 'tagore_exam_grade_scales', 'standard_link_id', 'tagore_results', 'grade_remark', 'exam_id'] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
 
@@ -34,7 +34,7 @@ class TagoreExaminationTest extends TestCase
         $this->assertStringNotContainsString('gego-k12/exam', $installer);
 
         $controller = file_get_contents(base_path('app/Http/Controllers/Tagore/ExaminationController.php'));
-        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'saveGradeScale', 'tagore_exam_grade_scales'] as $needle) {
+        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'saveGradeScale', 'tagore_exam_grade_scales', 'grade_remark'] as $needle) {
             $this->assertStringContainsString($needle, $controller);
         }
     }
