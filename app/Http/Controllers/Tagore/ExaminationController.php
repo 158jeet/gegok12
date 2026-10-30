@@ -94,7 +94,7 @@ class ExaminationController extends Controller
         abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
         $this->assertSubjectPermission($request, $roles, $subject);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
-        $students = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
+        $students = DB::table('student_academics as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $subject->school_id)->where('sa.academic_year_id', $subject->academic_year_id)
             ->where('sa.standardLink_id', $subject->standard_link_id)
             ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')
@@ -112,7 +112,7 @@ class ExaminationController extends Controller
         $this->assertSubjectPermission($request, $roles, $subject);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
         $data = $request->validate(['marks' => 'required|array|min:1', 'marks.*.student_id' => 'required|integer', 'marks.*.marks_obtained' => 'nullable|numeric|min:0|max:' . $subject->max_marks, 'marks.*.is_absent' => 'nullable|boolean', 'marks.*.remarks' => 'nullable|string|max:500']);
-        $validStudents = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
+        $validStudents = DB::table('student_academics as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $this->schoolIdForInstitution((int) $subject->institution_id))
             ->where('sa.academic_year_id', $subject->academic_year_id)->where('sa.standardLink_id', $subject->standard_link_id)
             ->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')->pluck('u.id')->map(fn ($id) => (int) $id)->all();
@@ -324,7 +324,7 @@ class ExaminationController extends Controller
 
     private function studentsForExam(object $exam)
     {
-        return DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
+        return DB::table('student_academics as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $exam->school_id)->where('sa.academic_year_id', $exam->academic_year_id)
             ->where('sa.standardLink_id', $exam->standard_link_id)->where('u.usergroup_id', 6)->whereNull('u.deleted_at')->whereNull('sa.deleted_at')->distinct()->select('u.id');
     }
