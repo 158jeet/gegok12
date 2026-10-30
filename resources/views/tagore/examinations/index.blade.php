@@ -16,7 +16,7 @@
 <section class="exam-card"><h2 style="font-size:18px;font-weight:750;margin:0 0 14px">Create examination</h2><form class="exam-form" method="post" action="{{ route('tagore.examinations.store') }}">@csrf
 <label>Institution<select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select></label>
 <label>Academic year<select name="academic_year_id" required>@foreach($academicYears as $y)<option value="{{ $y->id }}">{{ $y->name }}</option>@endforeach</select></label>
-<label>Class<select name="standard_id" required>@foreach($standards as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach</select></label>
+<label>Class<select name="standard_id" required>@foreach($standardLinks->where('school_id', $institutions->first()->school_id ?? 0) as $sl)<option value="{{ $sl->id }}">{{ $sl->standard_name }} · Section {{ $sl->section_name }}</option>@endforeach</select></label>
 <label>Examination name<input name="name" maxlength="120" required placeholder="e.g. Half Yearly Examination"></label>
 <label>Exam type<select name="exam_type"><option value="unit_test">Unit test</option><option value="half_yearly">Half yearly</option><option value="annual">Annual</option><option value="pre_board">Pre-board</option><option value="board">Board</option><option value="other">Other</option></select></label>
 <label>Start date<input type="date" name="start_date" required></label><label>End date<input type="date" name="end_date" required></label><button class="exam-btn">Create examination</button></form></section>
@@ -38,7 +38,7 @@
 @else<p class="exam-muted exam-small">No subjects scheduled yet.</p>@endif
 @if(in_array($exam->status,['draft','marks_entry']) && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','IT_ADMIN'])->isNotEmpty())
 <form class="exam-form" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end;margin-top:10px" method="post" action="{{ route('tagore.examinations.subjects.store',$exam->id) }}">@csrf
-<label>Subject<select name="subject_id" required><option value="">Select subject</option>@foreach($subjectOptions->where('school_id',$exam->school_id)->where('academic_year_id',$exam->academic_year_id)->where('standard_id',$exam->standard_id) as $option)<option value="{{ $option->id }}">{{ $option->name }}</option>@endforeach</select></label>
+<label>Subject<select name="subject_id" required><option value="">Select subject</option>@foreach($subjectOptions->where('school_id',$exam->school_id)->where('academic_year_id',$exam->academic_year_id)->where('standard_id',$exam->standard_id)->where('section_id', DB::table('standards_link')->where('id',$exam->standard_link_id)->value('section_id')) as $option)<option value="{{ $option->id }}">{{ $option->name }}</option>@endforeach</select></label>
 <label>Maximum marks<input type="number" name="max_marks" min="1" max="10000" step="0.01" value="100" required></label><label>Pass marks<input type="number" name="pass_marks" min="0" max="10000" step="0.01" value="33" required></label>
 <label>Exam date<input type="date" name="exam_date" min="{{ $exam->start_date }}" max="{{ $exam->end_date }}"></label><label>Start time<input type="time" name="start_time"></label><label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="600"></label><button class="exam-btn">Add subject</button></form>
 @endif
