@@ -122,10 +122,26 @@ class ExaminationController extends Controller
                 if (!$absent && (!array_key_exists('marks_obtained', $row) || $row['marks_obtained'] === null || $row['marks_obtained'] === '')) {
                     throw ValidationException::withMessages(['marks' => 'Enter marks or mark the student absent.']);
                 }
-                DB::table('tagore_exam_marks')->updateOrInsert(
-                    ['exam_subject_id' => $examSubjectId, 'student_id' => $studentId],
-                    ['marks_obtained' => $absent ? null : $row['marks_obtained'], 'is_absent' => $absent, 'remarks' => $row['remarks'] ?? null, 'entered_by' => $request->user()->id, 'updated_at' => now(), 'created_at' => now()]
-                );
+                $key = ['exam_subject_id' => $examSubjectId, 'student_id' => $studentId];
+                $newValues = ['marks_obtained' => $absent ? null : $row['marks_obtained'], 'is_absent' => $absent, 'remarks' => $row['remarks'] ?? null, 'entered_by' => $request->user()->id, 'updated_at' => now()];
+                $existing = DB::table('tagore_exam_marks')->where($key)->first();
+                if ($existing) {
+                    DB::table('tagore_exam_marks')->where('id', $existing->id)->update($newValues);
+                    $markId = (int) $existing->id;
+                    $oldValues = ['marks_obtained' => $existing->marks_obtained, 'is_absent' => (bool) $existing->is_absent, 'remarks' => $existing->remarks];
+                } else {
+                    $markId = DB::table('tagore_exam_marks')->insertGetId($key + $newValues + ['created_at' => now()]);
+                    $oldValues = null;
+                }
+                DB::table('tagore_exam_mark_events')->insert([
+                    'exam_mark_id' => $markId,
+                    'student_id' => $studentId,
+                    'changed_by' => $request->user()->id,
+                    'old_values_json' => $oldValues ? json_encode($oldValues) : null,
+                    'new_values_json' => json_encode(['marks_obtained' => $newValues['marks_obtained'], 'is_absent' => $absent, 'remarks' => $newValues['remarks']]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
         });
         DB::table('tagore_exams')->where('id', $subject->exam_id)->where('status', 'draft')->update(['status' => 'marks_entry', 'updated_at' => now()]);
