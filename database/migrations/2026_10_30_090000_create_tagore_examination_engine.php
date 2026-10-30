@@ -68,6 +68,19 @@ return new class extends Migration {
             $table->index(['student_id', 'exam_subject_id']);
         });
 
+        Schema::create('tagore_exam_mark_events', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('exam_mark_id')->constrained('tagore_exam_marks')->cascadeOnDelete();
+            $table->unsignedInteger('student_id');
+            $table->foreign('student_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->unsignedInteger('changed_by')->nullable();
+            $table->foreign('changed_by')->references('id')->on('users')->nullOnDelete();
+            $table->json('old_values_json')->nullable();
+            $table->json('new_values_json');
+            $table->timestamps();
+            $table->index(['exam_mark_id', 'created_at']);
+        });
+
         Schema::table('tagore_results', function (Blueprint $table) {
             $table->foreignId('exam_id')->nullable()->constrained('tagore_exams')->nullOnDelete();
             $table->index(['exam_id', 'student_id'], 'tagore_results_exam_student_idx');
@@ -94,6 +107,7 @@ return new class extends Migration {
             $table->dropConstrainedForeignId('exam_id');
         });
         Schema::dropIfExists('tagore_exam_events');
+        Schema::dropIfExists('tagore_exam_mark_events');
         Schema::dropIfExists('tagore_exam_marks');
         Schema::dropIfExists('tagore_exam_subjects');
         Schema::dropIfExists('tagore_exams');
