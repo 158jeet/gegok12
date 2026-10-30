@@ -20,11 +20,11 @@ class ExaminationController extends Controller
         $exams = DB::table('tagore_exams as e')
             ->join('tagore_institutions as i', 'i.id', '=', 'e.institution_id')
             ->join('academic_years as ay', 'ay.id', '=', 'e.academic_year_id')
-            ->join('standards as s', 's.id', '=', 'e.standard_id')
+            ->join('standards as s', 's.id', '=', 'e.standard_id')->join('standards_link as sl', 'sl.id', '=', 'e.standard_link_id')
             ->whereIn('e.institution_id', $institutionIds)
             ->orderByDesc('e.id')
             ->limit(100)
-            ->get(['e.*', 'i.school_id as school_id', 'i.display_name as institution_name', 'ay.name as academic_year_name', 's.name as standard_name']);
+            ->get(['e.*', 'i.school_id as school_id', 'i.display_name as institution_name', 'ay.name as academic_year_name', 's.name as standard_name', 'sl.section_id as section_id']);
 
         $institutions = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('status', 'active')->orderBy('display_name')->get(['id', 'school_id', 'display_name']);
         $academicYears = DB::table('academic_years')->whereIn('school_id', $institutions->pluck('school_id'))->whereNull('deleted_at')->orderByDesc('start_date')->get(['id', 'school_id', 'name']);
