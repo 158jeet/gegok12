@@ -164,7 +164,7 @@ class ExaminationController extends Controller
             'grades.*.remark' => 'nullable|string|max:120',
         ]);
         $ranges = collect($data['grades'])->map(fn ($row) => [
-            'grade' => trim($row['grade']),
+            'grade' => strtoupper(trim($row['grade'])),
             'min' => (float) $row['min_percentage'],
             'max' => (float) $row['max_percentage'],
             'remark' => $row['remark'] ?? null,
