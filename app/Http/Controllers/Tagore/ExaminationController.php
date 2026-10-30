@@ -199,6 +199,24 @@ class ExaminationController extends Controller
         return back()->with('success', 'Results withdrawn from parent and student portals.');
     }
 
+    public function studentResults(Request $request, int $studentId)
+    {
+        [$roles, $institutionIds] = $this->context($request);
+        $isSelf = (int) $request->user()->id === $studentId && $roles->contains('STUDENT');
+        $isParent = $roles->contains('PARENT') && DB::table('tagore_parent_students')->where('parent_user_id', $request->user()->id)->where('student_id', $studentId)->where('status', 'active')->exists();
+        $isManager = $roles->intersect(self::MANAGERS)->isNotEmpty();
+        abort_unless($isSelf || $isParent || ($isManager && DB::table('tagore_institutions')->whereIn('id', $institutionIds)->where('school_id', DB::table('users')->where('id', $studentId)->value('school_id'))->exists()), 403);
+        $student = DB::table('users')->where('id', $studentId)->where('usergroup_id', 6)->whereNull('deleted_at')->first(['id', 'name']);
+        abort_unless($student, 404);
+        $results = DB::table('tagore_results as r')
+            ->leftJoin('tagore_exams as e', 'e.id', '=', 'r.exam_id')
+            ->where('r.student_id', $studentId)->where('r.status', 'published')
+            ->orderByDesc('r.published_at')->orderBy('r.subject')
+            ->get(['r.exam_id', 'r.exam_name', 'r.subject', 'r.marks', 'r.max_marks', 'r.grade', 'r.published_at', 'e.exam_type', 'e.start_date', 'e.end_date']);
+        $examGroups = $results->groupBy(fn ($row) => $row->exam_id ?: $row->exam_name);
+        return view('tagore.examinations.student-results', compact('student', 'examGroups'));
+    }
+
     private function context(Request $request): array
     {
         $roles = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->where('ur.user_id', $request->user()->id)->where('ur.status', 'active')->pluck('r.code')->unique()->values();
