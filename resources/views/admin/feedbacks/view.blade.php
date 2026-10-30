@@ -29,15 +29,15 @@
                             </div>
                             <div class="flex items-center lg:justify-end">
                                 <div class="flex items-center text-gray-600">
-                                    @if($feedback->latestMessage->is_seen == '0')
+                                    @if($feedback->latestMessage && $feedback->latestMessage->is_seen == '0')
                                         <a href="#" class="no-underline text-white px-4 my-3 mx-1 flex items-center bg-orange-500 py-1 justify-center" onclick='update("{{ url('/admin/feedback/updateStatus/'.$feedback->latestMessage->id) }}","has_seen")'>
                                             <span class="mx-1 text-sm font-semibold">Mark As Seen</span>
                                         </a>
-                                    @elseif($feedback->latestMessage->is_seen == 'has_seen')
+                                    @elseif($feedback->latestMessage && $feedback->latestMessage->is_seen == 'has_seen')
                                         <a href="#" class="no-underline text-white px-4 my-3 mx-1 flex items-center bg-red-600 py-1 justify-center" onclick='update("{{ url('/admin/feedback/updateStatus/'.$feedback->latestMessage->id) }}","action_taken")'>
                                             <span class="mx-1 text-sm font-semibold">Take Action</span>
                                         </a>
-                                    @elseif($feedback->latestMessage->is_seen == 'action_taken')
+                                    @elseif($feedback->latestMessage && $feedback->latestMessage->is_seen == 'action_taken')
                                         <p class="no-underline text-white px-4 my-3 mx-1 flex items-center custom-green py-1 justify-center">
                                             <span class="mx-1 text-sm font-semibold">Action Taken</span>
                                         </p>
