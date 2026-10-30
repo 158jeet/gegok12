@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Console\\Commands\\Addon;
+namespace App\Console\Commands\Addon;
 
-use Illuminate\\Console\\Command;
-use Illuminate\\Support\\Facades\\Artisan;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 
 class InstallExamModule extends Command
 {
