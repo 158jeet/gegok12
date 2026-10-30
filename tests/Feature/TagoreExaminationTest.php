@@ -34,7 +34,7 @@ class TagoreExaminationTest extends TestCase
         $this->assertStringNotContainsString('gego-k12/exam', $installer);
 
         $controller = file_get_contents(base_path('app/Http/Controllers/Tagore/ExaminationController.php'));
-        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'saveGradeScale', 'tagore_exam_grade_scales', 'grade_remark'] as $needle) {
+        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'student_academics', 'studentResults', 'saveGradeScale', 'tagore_exam_grade_scales', 'grade_remark'] as $needle) {
             $this->assertStringContainsString($needle, $controller);
         }
     }
