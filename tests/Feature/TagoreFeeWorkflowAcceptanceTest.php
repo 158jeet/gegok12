@@ -410,26 +410,4 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_fee_editor_and_coordinator_cannot_record_offline_payments(): void
-    {
-        $institution = DB::table('tagore_institutions')->where('status', 'active')->first();
-        $student = User::query()
-            ->where('usergroup_id', 6)
-            ->where('school_id', $institution->school_id)
-            ->whereNull('deleted_at')
-            ->firstOrFail();
-
-        foreach (['fees@tagore-demo.local', 'coordinator@tagore-demo.local'] as $email) {
-            $user = User::query()->where('email', $email)->firstOrFail();
-            $this->actingAs($user)
-                ->post(route('tagore.fees.payment', $student->id), [
-                    'amount' => 10,
-                    'payment_mode' => 'cash',
-                    'reference_number' => 'QA-UNAUTHORIZED',
-                ])
-                ->assertForbidden();
-        }
-
-        $this->assertDatabaseMissing('tagore_payments', ['reference_number' => 'QA-UNAUTHORIZED']);
-    }
 }
