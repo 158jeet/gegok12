@@ -37,6 +37,18 @@ return new class extends Migration {
             $table->index(['institution_id', 'academic_year_id', 'standard_id', 'status'], 'tagore_exam_scope_status_idx');
         });
 
+        Schema::create('tagore_exam_grade_scales', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('exam_id')->constrained('tagore_exams')->cascadeOnDelete();
+            $table->string('grade', 12);
+            $table->decimal('min_percentage', 5, 2);
+            $table->decimal('max_percentage', 5, 2);
+            $table->string('remark', 120)->nullable();
+            $table->timestamps();
+            $table->unique(['exam_id', 'grade']);
+            $table->index(['exam_id', 'min_percentage', 'max_percentage'], 'tagore_exam_grade_range_idx');
+        });
+
         Schema::create('tagore_exam_subjects', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exam_id')->constrained('tagore_exams')->cascadeOnDelete();
@@ -107,6 +119,7 @@ return new class extends Migration {
             $table->dropConstrainedForeignId('exam_id');
         });
         Schema::dropIfExists('tagore_exam_events');
+        Schema::dropIfExists('tagore_exam_grade_scales');
         Schema::dropIfExists('tagore_exam_mark_events');
         Schema::dropIfExists('tagore_exam_marks');
         Schema::dropIfExists('tagore_exam_subjects');
