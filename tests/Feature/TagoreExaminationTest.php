@@ -26,6 +26,10 @@ class TagoreExaminationTest extends TestCase
         }
 
         $installer = file_get_contents(base_path('app/Console/Commands/Addon/InstallExamModule.php'));
+        $marksView = file_get_contents(base_path('resources/views/tagore/examinations/marks.blade.php'));
+        $this->assertStringContainsString('data-absent-toggle', $marksView);
+        $this->assertStringContainsString('data-marks-input', $marksView);
+
         $this->assertStringContainsString('2026_10_30_090000_create_tagore_examination_engine.php', $installer);
         $this->assertStringNotContainsString('gego-k12/exam', $installer);
 
