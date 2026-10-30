@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\User;
-use Tests\\TestCase;
+use App\Models\User;
+use Tests\TestCase;
 
 class TagoreExaminationTest extends TestCase
 {
