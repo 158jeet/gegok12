@@ -205,6 +205,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
   test('fee editor has a visible authorized entry point while coordinator fee management stays hidden', async ({ page }) => {
     await authenticate(page, 'fee-editor');
     await expect(page.locator('a[href$="/tagore/accounts/fees/editor"]:visible').first()).toBeVisible();
+    await expect(page.locator('a[href$="/tagore/accounts/fees"]:visible')).toHaveCount(0);
 
     await authenticate(page, 'coordinator');
     await expect(page.locator('a[href$="/tagore/accounts/fees/manage"]:visible')).toHaveCount(0);
@@ -279,6 +280,33 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     expect(mobileAudit.document).toBeLessThanOrEqual(mobileAudit.viewport + 2);
     expect(mobileAudit.feeHeadCount).toBe(2);
     expect(mobileAudit.addButtonVisible).toBeTruthy();
+  });
+
+  test('Tagore payroll workspace stays within the mobile viewport and keeps its table reachable', async ({ page }) => {
+    await authenticate(page, 'owner');
+    const response = await page.goto('/tagore/payroll', { waitUntil: 'domcontentloaded' });
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole('heading', { name: 'Payroll', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Generate payroll' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const metrics = await page.evaluate(() => {
+      const wrap = document.querySelector('.tg-table-wrap');
+      return {
+        viewport: document.documentElement.clientWidth,
+        document: document.documentElement.scrollWidth,
+        tableWrap: wrap ? {
+          clientWidth: wrap.clientWidth,
+          scrollWidth: wrap.scrollWidth,
+          overflowX: getComputedStyle(wrap).overflowX,
+        } : null,
+        formWidth: document.querySelector('.tg-form')?.getBoundingClientRect().width || 0,
+      };
+    });
+    expect(metrics.document, 'Payroll page must not overflow a 390px mobile viewport').toBeLessThanOrEqual(metrics.viewport + 2);
+    expect(metrics.tableWrap, 'Payroll table must remain inside a dedicated scroll container').toBeTruthy();
+    expect(['auto', 'scroll']).toContain(metrics.tableWrap.overflowX);
+    expect(metrics.tableWrap.scrollWidth).toBeGreaterThan(metrics.tableWrap.clientWidth);
+    expect(metrics.formWidth).toBeLessThanOrEqual(metrics.viewport + 2);
   });
 
   test('legacy attendance and feedback screens inherit the Tagore visual system', async ({ page }) => {
