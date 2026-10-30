@@ -662,6 +662,22 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     }
   });
 
+  test('examination workspace is manager-controlled and does not expose submission to teachers', async ({ page }) => {
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/examinations', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Examinations & results' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create examination' })).toBeVisible();
+
+    await authenticate(page, 'teacher');
+    await page.goto('/tagore/examinations', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Examinations & results' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Submit for moderation' })).toHaveCount(0);
+
+    await authenticate(page, 'parent');
+    const parentResponse = await page.goto('/tagore/examinations', { waitUntil: 'domcontentloaded' });
+    expect(parentResponse.status()).toBe(403);
+  });
+
   test('login form is keyboard-usable and visually consistent on desktop and mobile', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
