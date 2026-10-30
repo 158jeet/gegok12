@@ -413,3 +413,15 @@ body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field se
 
 /* When search removes every navigation result, let the main workspace reclaim the sidebar column. */
 .tg-app .tg-layout:has(> .tg-sidebar[data-search-empty="true"]){grid-template-columns:minmax(0,1fr)}
+
+/* Parent feedback inbox polish */
+.tg-eyebrow{margin:0 0 8px;color:#72d6a2;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.tg-table-primary{color:#edf5f0;font-weight:750;text-decoration:none}
+.tg-table-primary:hover{color:#8be0b3;text-decoration:underline}
+.tg-feedback-preview{max-width:420px;white-space:normal;color:#b8c5d3;line-height:1.55}
+.tg-pagination{display:flex;justify-content:flex-end;margin-top:16px;overflow-x:auto}
+.tg-pagination nav{display:flex;align-items:center;gap:5px}
+.tg-pagination nav a,.tg-pagination nav span{display:inline-flex;align-items:center;justify-content:center;min-width:34px;min-height:34px;padding:6px 10px;border:1px solid #344354;border-radius:9px;background:#1a2531;color:#dbe5ee;font-size:12px;text-decoration:none}
+.tg-pagination nav span[aria-current="page"] span{background:#285c46;border-color:#398361;color:#fff}
+.tg-feedback-table td{vertical-align:middle}
+@media(max-width:760px){.tg-feedback-preview{max-width:240px}.tg-pagination{justify-content:flex-start}}
