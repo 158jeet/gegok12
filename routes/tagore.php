@@ -108,6 +108,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
     Route::get('/examinations', [ExaminationController::class, 'index'])->name('tagore.examinations.index');
+    Route::get('/results/student/{studentId}', [ExaminationController::class, 'studentResults'])->whereNumber('studentId')->name('tagore.results.student');
     Route::post('/examinations', [ExaminationController::class, 'store'])->name('tagore.examinations.store');
     Route::post('/examinations/{examId}/subjects', [ExaminationController::class, 'addSubject'])->whereNumber('examId')->name('tagore.examinations.subjects.store');
     Route::get('/examinations/subjects/{examSubjectId}/marks', [ExaminationController::class, 'marksEntry'])->whereNumber('examSubjectId')->name('tagore.examinations.marks');
