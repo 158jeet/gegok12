@@ -16,7 +16,7 @@
 <section class="exam-card"><h2 style="font-size:18px;font-weight:750;margin:0 0 14px">Create examination</h2><form class="exam-form" method="post" action="{{ route('tagore.examinations.store') }}">@csrf
 <label>Institution<select name="institution_id" id="exam-institution" required>@foreach($institutions as $i)<option value="{{ $i->id }}" data-school-id="{{ $i->school_id }}">{{ $i->display_name }}</option>@endforeach</select></label>
 <label>Academic year<select name="academic_year_id" id="exam-year" required>@foreach($academicYears as $y)<option value="{{ $y->id }}" data-school-id="{{ $y->school_id }}">{{ $y->name }}</option>@endforeach</select></label>
-<label>Class<select name="standard_id" required>@foreach($standardLinks->where('school_id', $institutions->first()->school_id ?? 0) as $sl)<option value="{{ $sl->id }}">{{ $sl->standard_name }} · Section {{ $sl->section_name }}</option>@endforeach</select></label>
+<label>Class<select name="standard_link_id" id="exam-section" required>@foreach($standardLinks as $sl)<option value="{{ $sl->id }}" data-school-id="{{ $sl->school_id }}" data-year-id="{{ $sl->academic_year_id }}">{{ $sl->standard_name }} · Section {{ $sl->section_name }}</option>@endforeach</select></label>
 <label>Examination name<input name="name" maxlength="120" required placeholder="e.g. Half Yearly Examination"></label>
 <label>Exam type<select name="exam_type"><option value="unit_test">Unit test</option><option value="half_yearly">Half yearly</option><option value="annual">Annual</option><option value="pre_board">Pre-board</option><option value="board">Board</option><option value="other">Other</option></select></label>
 <label>Start date<input type="date" name="start_date" required></label><label>End date<input type="date" name="end_date" required></label><button class="exam-btn">Create examination</button></form></section>
@@ -44,4 +44,30 @@
 @endif
 </td></tr>@empty<tr><td colspan="7" class="exam-muted">No examinations have been created for your institution scope.</td></tr>@endforelse
 </tbody></table></div></section>
-</main></body></html>
+</main><script>
+(function(){
+ const institution=document.getElementById('exam-institution');
+ const year=document.getElementById('exam-year');
+ const section=document.getElementById('exam-section');
+ if(!institution||!year||!section)return;
+ function filter(select, predicate){
+  let first=null;
+  Array.from(select.options).forEach(option=>{
+   if(!option.value)return;
+   const visible=predicate(option);
+   option.hidden=!visible; option.disabled=!visible;
+   if(visible&&!first)first=option;
+  });
+  if(first&&select.selectedOptions[0]?.disabled)select.value=first.value;
+ }
+ function sync(){
+  const school=institution.selectedOptions[0]?.dataset.schoolId;
+  filter(year,option=>option.dataset.schoolId===school);
+  const yearId=year.value;
+  filter(section,option=>option.dataset.schoolId===school&&option.dataset.yearId===yearId);
+ }
+ institution.addEventListener('change',sync);
+ year.addEventListener('change',sync);
+ sync();
+})();
+</script></body></html>
