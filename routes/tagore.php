@@ -106,6 +106,15 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    Route::get('/examinations', [ExaminationController::class, 'index'])->name('tagore.examinations.index');
+    Route::post('/examinations', [ExaminationController::class, 'store'])->name('tagore.examinations.store');
+    Route::post('/examinations/{examId}/subjects', [ExaminationController::class, 'addSubject'])->whereNumber('examId')->name('tagore.examinations.subjects.store');
+    Route::get('/examinations/subjects/{examSubjectId}/marks', [ExaminationController::class, 'marksEntry'])->whereNumber('examSubjectId')->name('tagore.examinations.marks');
+    Route::post('/examinations/subjects/{examSubjectId}/marks', [ExaminationController::class, 'marks'])->whereNumber('examSubjectId')->name('tagore.examinations.marks.save');
+    Route::post('/examinations/{examId}/submit', [ExaminationController::class, 'submit'])->whereNumber('examId')->name('tagore.examinations.submit');
+    Route::post('/examinations/{examId}/moderate', [ExaminationController::class, 'moderate'])->whereNumber('examId')->name('tagore.examinations.moderate');
+    Route::post('/examinations/{examId}/publish', [ExaminationController::class, 'publish'])->whereNumber('examId')->name('tagore.examinations.publish');
+    Route::post('/examinations/{examId}/withdraw', [ExaminationController::class, 'withdraw'])->whereNumber('examId')->name('tagore.examinations.withdraw');
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
     Route::get('/platform/cctv/status', [PlatformController::class, 'cctvStatus'])->middleware('throttle:30,1')->name('tagore.platform.cctv.status');
