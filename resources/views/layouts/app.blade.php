@@ -15,8 +15,8 @@
         @if(request()->is('olympiad/*'))
         <link rel="stylesheet" href="{{ asset('css/olympiad-registration.css') . '?v=20261026-2' }}">
         @endif
-        @if(request()->is('tagore/*'))
-        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261026-ui7' }}">
+        @if(request()->is('tagore/*') || request()->is('admin/attendance*') || request()->is('teacher/attendance*') || request()->is('admin/feedback*'))
+        <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261030-core-ui1' }}">
         <link rel="stylesheet" href="{{ asset('tagore-inner-polish.css') . '?v=20261026-2' }}">
         @endif
         <style>
@@ -66,7 +66,7 @@
  <livewire:styles>
 
     </head>
-    <body class="font-primary antialiased min-h-screen overflow-x-hidden {{ request()->is('tagore/*') ? 'tagore-ui' : '' }} {{ request()->is('tagore/dashboard') ? 'tagore-dashboard' : (request()->is('tagore/*') ? 'tagore-inner' : '') }}">
+    <body class="font-primary antialiased min-h-screen overflow-x-hidden {{ (request()->is('tagore/*') || request()->is('admin/attendance*') || request()->is('teacher/attendance*') || request()->is('admin/feedback*')) ? 'tagore-ui' : '' }} {{ request()->is('tagore/dashboard') ? 'tagore-dashboard' : ((request()->is('tagore/*') || request()->is('admin/attendance*') || request()->is('teacher/attendance*') || request()->is('admin/feedback*')) ? 'tagore-inner' : '') }}">
         <div id="app">
             @yield('base-navigation')
             <main class="flex w-full h-full min-h-screen">
