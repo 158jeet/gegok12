@@ -296,7 +296,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       await expect(page.locator('link[href*="tagore-erp.css"]')).toHaveCount(1);
       if (screen.label === 'admin feedback') {
         await expect(page.getByRole('heading', { name: 'Parent feedback' })).toBeVisible();
-        await expect(page.getByRole('table', { name: '' })).toBeVisible();
+        await expect(page.locator('#messagelist')).toBeVisible();
         const feedbackSearch = page.getByRole('searchbox', { name: 'Search feedback' });
         await expect(feedbackSearch).toBeVisible();
       }
