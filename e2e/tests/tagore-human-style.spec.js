@@ -255,6 +255,32 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     });
   }
 
+  test('fee management has a consistent responsive workflow and dynamic fee-head controls', async ({ page }) => {
+    await authenticate(page, 'owner');
+    await page.goto('/tagore/accounts/fees/manage', { waitUntil: 'load' });
+    await expect(page.getByRole('heading', { name: 'Fee management' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1. Create fee structure' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '2. Assign to class / section' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '3. Preview and generate bulk demand' })).toBeVisible();
+    await expect(page.locator('input[name="heads[0][name]"]')).toBeVisible();
+    await page.getByRole('button', { name: /Add fee head/i }).click();
+    await expect(page.locator('input[name="heads[1][name]"]')).toBeVisible();
+    await expect(page.locator('input[name="heads[1][optional]"]')).toHaveCount(0);
+    const desktopHealth = await checkPageHealth(page, 'fee management desktop');
+    expect(desktopHealth).toEqual([]);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileAudit = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      document: document.documentElement.scrollWidth,
+      feeHeadCount: document.querySelectorAll('.fee-head-row').length,
+      addButtonVisible: !!document.querySelector('#add-fee-head') && getComputedStyle(document.querySelector('#add-fee-head')).display !== 'none',
+    }));
+    expect(mobileAudit.document).toBeLessThanOrEqual(mobileAudit.viewport + 2);
+    expect(mobileAudit.feeHeadCount).toBe(2);
+    expect(mobileAudit.addButtonVisible).toBeTruthy();
+  });
+
   test('Olympiad registration is mobile-first and marketing consent stays optional', async ({ page }, testInfo) => {
     await page.goto('/olympiad/register', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Join the Tagore Olympiad' })).toBeVisible();
