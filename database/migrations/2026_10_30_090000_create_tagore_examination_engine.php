@@ -66,6 +66,11 @@ return new class extends Migration {
             $table->index(['student_id', 'exam_subject_id']);
         });
 
+        Schema::table('tagore_results', function (Blueprint $table) {
+            $table->foreignId('exam_id')->nullable()->constrained('tagore_exams')->nullOnDelete();
+            $table->index(['exam_id', 'student_id'], 'tagore_results_exam_student_idx');
+        });
+
         Schema::create('tagore_exam_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exam_id')->constrained('tagore_exams')->cascadeOnDelete();
@@ -82,6 +87,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        Schema::table('tagore_results', function (Blueprint $table) {
+            $table->dropIndex('tagore_results_exam_student_idx');
+            $table->dropConstrainedForeignId('exam_id');
+        });
         Schema::dropIfExists('tagore_exam_events');
         Schema::dropIfExists('tagore_exam_marks');
         Schema::dropIfExists('tagore_exam_subjects');
