@@ -17,17 +17,17 @@
                     @include('partials.message')
                     <div class="w-full">
                         <div class="flex flex-row participant-box col-md-4">
-                            <div class="flex flex-col lg:w-3/4 lg:flex-row profile-section items-center">
-                                <div class="profile-image-section p-4">
+                            <div class="flex flex-col lg:flex-row items-center">
+                                <div class="tg-feedback-avatar">
                                     <img src="{{ asset('uploads/user/avatar/default-user.jpg') }}" width="60px" height="60px">
                                 </div>
-                                <div class="profile-data-section my-2">
-                                    <h3 class="profile-full-name text-sm">
+                                <div class="my-2">
+                                    <h3 class="tg-table-primary">
                                         <a href="{{ url('/admin/parent/show/'.$feedback->parent->name) }}">{{ $feedback->parent->FullName }}</a>
                                     </h3>
                                 </div>  
                             </div>
-                            <div class="flex items-center lg:w-1/4 lg:justify-end">
+                            <div class="flex items-center lg:justify-end">
                                 <div class="flex items-center text-gray-600">
                                     @if($feedback->latestMessage->is_seen == '0')
                                         <a href="#" class="no-underline text-white px-4 my-3 mx-1 flex items-center bg-orange-500 py-1 justify-center" onclick='update("{{ url('/admin/feedback/updateStatus/'.$feedback->latestMessage->id) }}","has_seen")'>
