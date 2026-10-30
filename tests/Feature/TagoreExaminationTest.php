@@ -14,13 +14,14 @@ class TagoreExaminationTest extends TestCase
             'app/Console/Commands/Addon/InstallExamModule.php',
             'resources/views/tagore/examinations/index.blade.php',
             'resources/views/tagore/examinations/marks.blade.php',
+            'resources/views/tagore/examinations/student-results.blade.php',
             'database/migrations/2026_10_30_090000_create_tagore_examination_engine.php',
         ] as $path) {
             $this->assertFileExists(base_path($path));
         }
 
         $migration = file_get_contents(base_path('database/migrations/2026_10_30_090000_create_tagore_examination_engine.php'));
-        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'standard_link_id', 'tagore_results', 'exam_id'] as $needle) {
+        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'tagore_exam_mark_events', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'exam_id'] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
 
@@ -32,6 +33,12 @@ class TagoreExaminationTest extends TestCase
         foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results'] as $needle) {
             $this->assertStringContainsString($needle, $controller);
         }
+    }
+
+    public function test_parent_cannot_open_staff_examination_workspace(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $this->actingAs($parent)->get(route('tagore.examinations.index'))->assertForbidden();
     }
 
     public function test_examination_routes_are_named_and_registered(): void
