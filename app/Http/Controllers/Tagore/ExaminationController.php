@@ -234,7 +234,7 @@ class ExaminationController extends Controller
                 $marks = DB::table('tagore_exam_marks')->where('exam_subject_id', $subject->id)->get();
                 foreach ($marks as $mark) {
                     $percentage = $subject->max_marks > 0 ? ((float) $mark->marks_obtained / (float) $subject->max_marks) * 100 : 0;
-                    $gradeRule = $mark->is_absent ? null : DB::table('tagore_exam_grade_scales')->where('exam_id', $examId)->where('min_percentage', '<=', $percentage)->where('max_percentage', '>=', $percentage)->first();
+                    $gradeRule = $mark->is_absent ? null : DB::table('tagore_exam_grade_scales')->where('exam_id', $examId)->where('min_percentage', '<=', $percentage)->where(function ($query) use ($percentage) { $query->where('max_percentage', '>', $percentage); if ($percentage >= 100) $query->orWhere('max_percentage', 100); })->orderByDesc('min_percentage')->first();
                     $grade = $mark->is_absent ? 'AB' : ($gradeRule->grade ?? ($mark->marks_obtained >= $subject->pass_marks ? 'PASS' : 'FAIL'));
                     DB::table('tagore_results')->updateOrInsert(
                         ['exam_id' => $examId, 'student_id' => $mark->student_id, 'institution_id' => $exam->institution_id, 'academic_year_id' => $exam->academic_year_id, 'exam_name' => $exam->name, 'subject' => $subject->subject_name],
