@@ -21,7 +21,7 @@ class TagoreExaminationTest extends TestCase
         }
 
         $migration = file_get_contents(base_path('database/migrations/2026_10_30_090000_create_tagore_examination_engine.php'));
-        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'tagore_exam_mark_events', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'exam_id'] as $needle) {
+        foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'tagore_exam_mark_events', 'tagore_exam_grade_scales', 'standard_link_id', 'tagore_results', 'exam_id'] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
 
@@ -30,7 +30,7 @@ class TagoreExaminationTest extends TestCase
         $this->assertStringNotContainsString('gego-k12/exam', $installer);
 
         $controller = file_get_contents(base_path('app/Http/Controllers/Tagore/ExaminationController.php'));
-        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results'] as $needle) {
+        foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results', 'class_teacher_links', 'studentResults', 'saveGradeScale', 'tagore_exam_grade_scales'] as $needle) {
             $this->assertStringContainsString($needle, $controller);
         }
     }
@@ -50,6 +50,7 @@ class TagoreExaminationTest extends TestCase
             'tagore.examinations.marks',
             'tagore.examinations.marks.save',
             'tagore.examinations.submit',
+            'tagore.examinations.grades.save',
             'tagore.examinations.moderate',
             'tagore.examinations.publish',
             'tagore.examinations.withdraw',
@@ -61,7 +62,7 @@ class TagoreExaminationTest extends TestCase
 
     public function test_owner_can_open_the_examination_workspace(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $this->actingAs($owner)->get(route('tagore.examinations.index'))->assertOk();
     }
 }
