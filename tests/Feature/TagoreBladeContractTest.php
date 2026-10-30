@@ -7,6 +7,16 @@ use Tests\TestCase;
 
 class TagoreBladeContractTest extends TestCase
 {
+    public function test_feedback_conversation_renders_both_parent_and_school_messages(): void
+    {
+        $details = File::get(resource_path('views/admin/feedbacks/details.blade.php'));
+
+        $this->assertStringContainsString('@foreach($messages as $message)', $details);
+        $this->assertStringContainsString('Tagore school team', $details);
+        $this->assertStringContainsString('Parent / guardian', $details);
+        $this->assertStringNotContainsString('@if ($message->feedback->parent_id == $message->user_id)', $details);
+    }
+
     public function test_admin_feedback_views_escape_user_submitted_message_content(): void
     {
         $list = File::get(resource_path('views/admin/feedbacks/list.blade.php'));
