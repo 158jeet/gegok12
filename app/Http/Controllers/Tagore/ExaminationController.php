@@ -49,9 +49,10 @@ class ExaminationController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date',
         ]);
         abort_unless(in_array((int) $data['institution_id'], $institutionIds, true), 403);
-        $institution = DB::table('tagore_institutions')->where('id', $data['institution_id'])->first();
+        $institution = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->whereNull('deleted_at')->first();
         abort_unless($institution, 404);
-        abort_unless(DB::table('academic_years')->where('id', $data['academic_year_id'])->where('school_id', $institution->school_id)->exists(), 422, 'Academic year does not belong to this institution.');
+        $academicYear = DB::table('academic_years')->where('id', $data['academic_year_id'])->where('school_id', $institution->school_id)->where('status', 1)->whereNull('deleted_at')->whereDate('start_date', '<=', $data['start_date'])->whereDate('end_date', '>=', $data['end_date'])->first();
+        abort_unless($academicYear, 422, 'Select an active academic year that contains the full examination date range.');
         $standardLink = DB::table('standards_link')->where('id', $data['standard_link_id'])->where('school_id', $institution->school_id)->where('academic_year_id', $data['academic_year_id'])->where('status', 1)->whereNull('deleted_at')->first();
         abort_unless($standardLink, 422, 'Class and section do not belong to this institution and academic year.');
         $data['standard_id'] = $standardLink->standard_id;
@@ -75,7 +76,7 @@ class ExaminationController extends Controller
             'start_time' => 'nullable|date_format:H:i',
             'duration_minutes' => 'nullable|integer|min:1|max:600',
         ]);
-        $subject = DB::table('subjects')->where('id', $data['subject_id'])->where('school_id', $exam->school_id)->where('academic_year_id', $exam->academic_year_id)->where('standard_id', $exam->standard_id)->where('section_id', DB::table('standards_link')->where('id', $exam->standard_link_id)->value('section_id'))->whereNull('deleted_at')->first();
+        $subject = DB::table('subjects')->where('id', $data['subject_id'])->where('school_id', $exam->school_id)->where('academic_year_id', $exam->academic_year_id)->where('standard_id', $exam->standard_id)->where('section_id', DB::table('standards_link')->where('id', $exam->standard_link_id)->value('section_id'))->where('status', 1)->whereNull('deleted_at')->first();
         abort_unless($subject, 422, 'Select a subject assigned to this class and academic year.');
         abort_unless(!DB::table('tagore_exam_subjects')->where('exam_id', $examId)->where('subject_id', $subject->id)->exists(), 409, 'This subject is already scheduled for the examination.');
         DB::table('tagore_exam_subjects')->insert($data + ['exam_id' => $examId, 'subject_name' => $subject->name, 'created_at' => now(), 'updated_at' => now()]);
