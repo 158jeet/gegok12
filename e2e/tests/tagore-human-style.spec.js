@@ -299,6 +299,13 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         await expect(page.locator('#messagelist')).toBeVisible();
         const feedbackSearch = page.getByRole('searchbox', { name: 'Search feedback' });
         await expect(feedbackSearch).toBeVisible();
+        const conversationLink = page.locator('a[href*="/admin/feedback/edit/"]').first();
+        if (await conversationLink.count()) {
+          await conversationLink.click();
+          await expect(page.locator('.tg-conversation')).toBeVisible();
+          await expect(page.locator('.tg-message').first()).toBeVisible();
+          await expect(page.locator('.tg-message-meta')).toContainText(/Parent \/ guardian|Tagore school team/);
+        }
       }
 
       const desktop = await page.evaluate(() => ({
