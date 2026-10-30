@@ -265,7 +265,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await expect(page.locator('input[name="heads[0][name]"]')).toBeVisible();
     await page.getByRole('button', { name: /Add fee head/i }).click();
     await expect(page.locator('input[name="heads[1][name]"]')).toBeVisible();
-    await expect(page.locator('input[name="heads[1][optional]"]')).toHaveCount(0);
+    await expect(page.locator('input[name="heads[1][optional]"]')).toBeVisible();
     const desktopHealth = await checkPageHealth(page, 'fee management desktop');
     expect(desktopHealth).toEqual([]);
 
