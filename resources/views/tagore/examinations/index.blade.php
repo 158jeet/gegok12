@@ -21,7 +21,7 @@
 <label>Exam type<select name="exam_type"><option value="unit_test">Unit test</option><option value="half_yearly">Half yearly</option><option value="annual">Annual</option><option value="pre_board">Pre-board</option><option value="board">Board</option><option value="other">Other</option></select></label>
 <label>Start date<input type="date" name="start_date" required></label><label>End date<input type="date" name="end_date" required></label><button class="exam-btn">Create examination</button></form></section>
 @endif
-<section class="exam-card"><h2 style="font-size:18px;font-weight:750;margin:0 0 8px">Workflow & controls</h2><p class="exam-muted exam-small">Draft → Marks entry → Submitted → Moderated → Published. Only an authorised Principal/Owner can moderate and publish. Publishing updates the existing student/parent result feed. Withdrawals are recorded and hide the result from portals.</p><p class="exam-muted exam-small">Subject scheduling and bulk marks-entry screens are the next implementation slice; the underlying scoped records and lifecycle controls are being added here first.</p></section>
+<section class="exam-card"><h2 style="font-size:18px;font-weight:750;margin:0 0 8px">Workflow & controls</h2><p class="exam-muted exam-small">Draft → Marks entry → Submitted → Moderated → Published. Only an authorised Principal/Owner can moderate and publish. Publishing updates the existing student/parent result feed. Withdrawals are recorded and hide the result from portals.</p><p class="exam-muted exam-small">Build the subject schedule and enter marks for every enrolled student before submitting results. All changes are restricted to your assigned institution.</p></section>
 </div>
 <section class="exam-card" style="margin-top:18px"><h2 style="font-size:18px;font-weight:750;margin:0 0 8px">Examination register</h2><div class="exam-table-wrap"><table class="exam-table"><thead><tr><th>Examination</th><th>Institution</th><th>Academic year</th><th>Class</th><th>Dates</th><th>Status</th><th>Workflow</th></tr></thead><tbody>
 @forelse($exams as $exam)<tr><td><strong>{{ $exam->name }}</strong><div class="exam-muted exam-small">{{ ucfirst(str_replace('_',' ',$exam->exam_type)) }}</div></td><td>{{ $exam->institution_name }}</td><td>{{ $exam->academic_year_name }}</td><td>{{ $exam->standard_name }}</td><td>{{ $exam->start_date }} – {{ $exam->end_date }}</td><td><span class="exam-status">{{ ucfirst(str_replace('_',' ',$exam->status)) }}</span></td><td><div class="exam-actions">
@@ -29,6 +29,19 @@
 @if($exam->status==='submitted' && $roles->intersect(['OWNER','PRINCIPAL','IT_ADMIN'])->isNotEmpty())<form method="post" action="{{ route('tagore.examinations.moderate',$exam->id) }}">@csrf<button class="exam-btn">Moderate</button></form>@endif
 @if($exam->status==='moderated' && $roles->intersect(['OWNER','PRINCIPAL','IT_ADMIN'])->isNotEmpty())<form method="post" action="{{ route('tagore.examinations.publish',$exam->id) }}">@csrf<button class="exam-btn">Publish results</button></form>@endif
 @if($exam->status==='published' && $roles->intersect(['OWNER','PRINCIPAL','IT_ADMIN'])->isNotEmpty())<form method="post" action="{{ route('tagore.examinations.withdraw',$exam->id) }}">@csrf<button class="exam-btn" style="background:#991b1b">Withdraw</button></form>@endif
-</div></td></tr>@empty<tr><td colspan="7" class="exam-muted">No examinations have been created for your institution scope.</td></tr>@endforelse
+</div></td></tr>
+<tr><td colspan="7" style="background:rgba(15,23,42,.35)">
+<strong>Subject schedule & marks</strong>
+@php($scheduledSubjects = $examSubjects->get($exam->id, collect()))
+@if($scheduledSubjects->isNotEmpty())
+<div class="exam-actions" style="margin:10px 0">@foreach($scheduledSubjects as $scheduled)<span class="exam-status">{{ $scheduled->subject_name }} · {{ $scheduled->max_marks }} marks @if(in_array($exam->status,['draft','marks_entry']))<a style="color:#93c5fd;margin-left:8px" href="{{ route('tagore.examinations.marks',$scheduled->id) }}">Enter marks</a>@endif</span>@endforeach</div>
+@else<p class="exam-muted exam-small">No subjects scheduled yet.</p>@endif
+@if(in_array($exam->status,['draft','marks_entry']) && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','IT_ADMIN'])->isNotEmpty())
+<form class="exam-form" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));align-items:end;margin-top:10px" method="post" action="{{ route('tagore.examinations.subjects.store',$exam->id) }}">@csrf
+<label>Subject<select name="subject_id" required><option value="">Select subject</option>@foreach($subjectOptions->where('school_id',$exam->school_id)->where('academic_year_id',$exam->academic_year_id)->where('standard_id',$exam->standard_id) as $option)<option value="{{ $option->id }}">{{ $option->name }}</option>@endforeach</select></label>
+<label>Maximum marks<input type="number" name="max_marks" min="1" max="10000" step="0.01" value="100" required></label><label>Pass marks<input type="number" name="pass_marks" min="0" max="10000" step="0.01" value="33" required></label>
+<label>Exam date<input type="date" name="exam_date" min="{{ $exam->start_date }}" max="{{ $exam->end_date }}"></label><label>Start time<input type="time" name="start_time"></label><label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="600"></label><button class="exam-btn">Add subject</button></form>
+@endif
+</td></tr>@empty<tr><td colspan="7" class="exam-muted">No examinations have been created for your institution scope.</td></tr>@endforelse
 </tbody></table></div></section>
 </main></body></html>
