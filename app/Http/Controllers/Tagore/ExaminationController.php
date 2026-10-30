@@ -90,6 +90,7 @@ class ExaminationController extends Controller
             ->where('es.id', $examSubjectId)
             ->first(['es.*', 'e.id as exam_id', 'e.name as exam_name', 'e.institution_id', 'e.academic_year_id', 'e.standard_id', 'e.standard_link_id', 'e.status', 'i.school_id']);
         abort_unless($subject && $this->canAccessInstitution($request, (int) $subject->institution_id), 404);
+        $this->assertSubjectPermission($request, $roles, $subject);
         abort_unless(in_array($subject->status, ['draft', 'marks_entry'], true), 409, 'Marks are locked after submission for moderation.');
         $students = DB::table('student_academic as sa')->join('users as u', 'u.id', '=', 'sa.user_id')
             ->where('u.school_id', $subject->school_id)->where('sa.academic_year_id', $subject->academic_year_id)
@@ -204,6 +205,20 @@ class ExaminationController extends Controller
             ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles')->where('user_id', $request->user()->id)->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         return [$roles, $ids];
+    }
+
+    private function assertSubjectPermission(Request $request, $roles, object $subject): void
+    {
+        if ($roles->contains('TEACHER') && $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'IT_ADMIN'])->isEmpty()) {
+            abort_unless(DB::table('class_teacher_links')
+                ->where('teacher_id', $request->user()->id)
+                ->where('subject_id', $subject->subject_id)
+                ->where('standardLink_id', $subject->standard_link_id)
+                ->where('academic_year_id', $subject->academic_year_id)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->exists(), 403, 'You are not assigned to this subject and class.');
+        }
     }
 
     private function canAccessInstitution(Request $request, int $institutionId): bool
