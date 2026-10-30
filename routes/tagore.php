@@ -22,6 +22,7 @@ use App\Http\Controllers\Tagore\CommunicationController;
 use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
+use App\Http\Controllers\Tagore\ExaminationController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
