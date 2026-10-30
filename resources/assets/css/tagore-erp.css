@@ -425,3 +425,21 @@ body.tg-fee-editor .tg-field input:focus-visible,body.tg-fee-editor .tg-field se
 .tg-pagination nav span[aria-current="page"] span{background:#285c46;border-color:#398361;color:#fff}
 .tg-feedback-table td{vertical-align:middle}
 @media(max-width:760px){.tg-feedback-preview{max-width:240px}.tg-pagination{justify-content:flex-start}}
+
+/* Parent feedback conversation */
+.tg-feedback-participant{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid #344354}
+.tg-feedback-avatar{width:46px;height:46px;display:grid;place-items:center;overflow:hidden;border-radius:50%;background:#253443}
+.tg-feedback-avatar img{width:100%;height:100%;object-fit:cover}
+.tg-feedback-parent{display:flex;flex:1;min-width:160px;flex-direction:column;gap:4px}
+.tg-feedback-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tg-conversation{display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto;padding:6px 2px}
+.tg-message{width:min(88%,760px);padding:14px 16px;border:1px solid #344354;border-radius:14px;background:#1a2531;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.tg-message.from-parent{align-self:flex-start;border-top-left-radius:5px}
+.tg-message.from-school{align-self:flex-end;border-color:#285c46;background:#1b3029;border-top-right-radius:5px}
+.tg-message-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#e6edf4;font-size:11px}
+.tg-message-meta time{color:#91a2b4;font-size:10px}
+.tg-message-category{display:inline-block;margin-top:8px;color:#7ed9a9;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.tg-message-body{margin:8px 0 0;color:#e0e8f0;font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.tg-message-attachments{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.tg-message-attachments img{width:100px;height:100px;object-fit:cover;border:1px solid #3b4b5c;border-radius:10px}
+@media(max-width:760px){.tg-message{width:96%}.tg-feedback-actions{width:100%;margin-left:0}}
