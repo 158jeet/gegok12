@@ -203,7 +203,7 @@ class ExaminationController extends Controller
         $subjects = DB::table('tagore_exam_subjects')->where('exam_id', $examId)->get();
         abort_if($subjects->isEmpty(), 422, 'Add at least one subject before submission.');
         foreach ($subjects as $subject) {
-            $expected = $this->studentsForExam($exam)->count();
+            $expected = $this->studentsForExam($exam)->get()->count();
             $entered = DB::table('tagore_exam_marks')->where('exam_subject_id', $subject->id)->count();
             abort_if($expected === 0 || $entered !== $expected, 422, 'Complete marks entry for every enrolled student in every subject.');
         }
