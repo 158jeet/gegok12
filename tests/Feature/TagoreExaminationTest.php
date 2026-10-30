@@ -54,6 +54,13 @@ class TagoreExaminationTest extends TestCase
             ->get(route('tagore.results.student', $student->id))
             ->assertOk()
             ->assertSee('Published report card');
+
+        $unlinkedStudent = User::query()->where('usergroup_id', 6)->where('id', '<>', $student->id)
+            ->whereNotIn('id', DB::table('tagore_parent_students')->where('parent_user_id', $parent->id)->where('status', 'active')->select('student_id'))
+            ->first();
+        if ($unlinkedStudent) {
+            $this->get(route('tagore.results.student', $unlinkedStudent->id))->assertForbidden();
+        }
     }
 
     public function test_student_can_view_own_published_report_card(): void
