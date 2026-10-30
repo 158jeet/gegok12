@@ -42,6 +42,22 @@
 <label>Maximum marks<input type="number" name="max_marks" min="1" max="10000" step="0.01" value="100" required></label><label>Pass marks<input type="number" name="pass_marks" min="0" max="10000" step="0.01" value="33" required></label>
 <label>Exam date<input type="date" name="exam_date" min="{{ $exam->start_date }}" max="{{ $exam->end_date }}"></label><label>Start time<input type="time" name="start_time"></label><label>Duration (minutes)<input type="number" name="duration_minutes" min="1" max="600"></label><button class="exam-btn">Add subject</button></form>
 @endif
+@if(in_array($exam->status,['draft','marks_entry']) && $roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','IT_ADMIN'])->isNotEmpty())
+<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">Configure grading scale</summary>
+<p class="exam-muted exam-small">Ranges are percentage-based, continuous and non-overlapping. Maximum boundaries are exclusive except 100%, which is included.</p>
+<form method="post" action="{{ route('tagore.examinations.grades.save',$exam->id) }}" class="exam-form" style="grid-template-columns:repeat(auto-fit,minmax(115px,1fr));align-items:end;margin-top:10px">@csrf
+@php($existingGrades = $gradeScales->get($exam->id, collect()))
+@if($existingGrades->isNotEmpty())
+@foreach($existingGrades as $gradeRow)
+<label>Grade<input name="grades[{{ $loop->index }}][grade]" maxlength="12" value="{{ $gradeRow->grade }}" required></label><label>From %<input type="number" name="grades[{{ $loop->index }}][min_percentage]" min="0" max="100" step="0.01" value="{{ $gradeRow->min_percentage }}" required></label><label>To %<input type="number" name="grades[{{ $loop->index }}][max_percentage]" min="0" max="100" step="0.01" value="{{ $gradeRow->max_percentage }}" required></label><label>Remark<input name="grades[{{ $loop->index }}][remark]" maxlength="120" value="{{ $gradeRow->remark }}"></label>
+@endforeach
+@else
+@foreach([['A','80','100'],['B','60','80'],['C','45','60'],['D','33','45'],['E','0','33']] as $defaultGrade)
+<label>Grade<input name="grades[{{ $loop->index }}][grade]" maxlength="12" value="{{ $defaultGrade[0] }}" required></label><label>From %<input type="number" name="grades[{{ $loop->index }}][min_percentage]" min="0" max="100" step="0.01" value="{{ $defaultGrade[1] }}" required></label><label>To %<input type="number" name="grades[{{ $loop->index }}][max_percentage]" min="0" max="100" step="0.01" value="{{ $defaultGrade[2] }}" required></label><label>Remark<input name="grades[{{ $loop->index }}][remark]" maxlength="120"></label>
+@endforeach
+@endif
+<button class="exam-btn">Save grading scale</button></form></details>
+@endif
 </td></tr>@empty<tr><td colspan="7" class="exam-muted">No examinations have been created for your institution scope.</td></tr>@endforelse
 </tbody></table></div></section>
 </main><script>
