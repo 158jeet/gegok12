@@ -77,6 +77,7 @@ class ExaminationController extends Controller
         ]);
         $subject = DB::table('subjects')->where('id', $data['subject_id'])->where('school_id', $exam->school_id)->where('academic_year_id', $exam->academic_year_id)->where('standard_id', $exam->standard_id)->where('section_id', DB::table('standards_link')->where('id', $exam->standard_link_id)->value('section_id'))->whereNull('deleted_at')->first();
         abort_unless($subject, 422, 'Select a subject assigned to this class and academic year.');
+        abort_unless(!DB::table('tagore_exam_subjects')->where('exam_id', $examId)->where('subject_id', $subject->id)->exists(), 409, 'This subject is already scheduled for the examination.');
         DB::table('tagore_exam_subjects')->insert($data + ['exam_id' => $examId, 'subject_name' => $subject->name, 'created_at' => now(), 'updated_at' => now()]);
         return back()->with('success', 'Subject added to the examination.');
     }
