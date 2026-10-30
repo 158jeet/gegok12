@@ -69,7 +69,7 @@ class AttendanceAddRequest extends FormRequest
         Validator::extend('check_user',function($attribute,$value,$parameters,$validator)
         { 
           $count=0;
-          for($i=0 ; $i < Request('absentCount') ; $i++)
+          for($i=0 ; $i < min(max((int) Request('absentCount'), 0), 500) ; $i++)
           { 
             if($value==request('user_id'.$i))
             {
@@ -94,7 +94,7 @@ class AttendanceAddRequest extends FormRequest
             'presentCount'      => 'required|integer|min:0|max:500',
         ];
 
-        for($i=0;$i<Request('absentCount');$i++)
+        for($i=0;$i<min(max((int) Request('absentCount'), 0), 500);$i++)
         {   
             Validator::extend('check_remarks',function($attribute,$value,$parameters,$validator)
             { 
@@ -105,7 +105,7 @@ class AttendanceAddRequest extends FormRequest
             $rules['reason_id'.$i]  = 'required';
             $rules['remarks'.$i]    = 'nullable|max:20|check_remarks';
         }
-        for($i=0;$i<Request('presentCount');$i++)
+        for($i=0;$i<min(max((int) Request('presentCount'), 0), 500);$i++)
         {
             $rules['present_id'.$i] = 'required|integer';
         }
@@ -209,7 +209,7 @@ class AttendanceAddRequest extends FormRequest
             'session.check_session'     =>  'Attendance already updated',
         ];
 
-        for($i=0 ; $i < Request('absentCount') ; $i++)
+        for($i=0 ; $i < min(max((int) Request('absentCount'), 0), 500) ; $i++)
         {
             $messages['user_id'.$i.'.required']         = 'Student is required';
             $messages['user_id'.$i.'.check_user']       = 'Student is already exists';
