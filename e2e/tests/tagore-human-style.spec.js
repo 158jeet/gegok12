@@ -294,6 +294,12 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
       expect(response && response.status(), screen.label + ' must render').toBe(200);
       await expect(page.locator('body')).toHaveClass(/tagore-ui/);
       await expect(page.locator('link[href*="tagore-erp.css"]')).toHaveCount(1);
+      if (screen.label === 'admin feedback') {
+        await expect(page.getByRole('heading', { name: 'Parent feedback' })).toBeVisible();
+        await expect(page.getByRole('table', { name: '' })).toBeVisible();
+        const feedbackSearch = page.getByRole('searchbox', { name: 'Search feedback' });
+        await expect(feedbackSearch).toBeVisible();
+      }
 
       const desktop = await page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,
