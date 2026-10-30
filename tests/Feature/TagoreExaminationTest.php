@@ -11,6 +11,7 @@ class TagoreExaminationTest extends TestCase
     {
         foreach ([
             'app/Http/Controllers/Tagore/ExaminationController.php',
+            'app/Console/Commands/Addon/InstallExamModule.php',
             'resources/views/tagore/examinations/index.blade.php',
             'resources/views/tagore/examinations/marks.blade.php',
             'database/migrations/2026_10_30_090000_create_tagore_examination_engine.php',
@@ -22,6 +23,10 @@ class TagoreExaminationTest extends TestCase
         foreach (['tagore_exams', 'tagore_exam_subjects', 'tagore_exam_marks', 'tagore_exam_events', 'standard_link_id', 'tagore_results', 'exam_id'] as $needle) {
             $this->assertStringContainsString($needle, $migration);
         }
+
+        $installer = file_get_contents(base_path('app/Console/Commands/Addon/InstallExamModule.php'));
+        $this->assertStringContainsString('2026_10_30_090000_create_tagore_examination_engine.php', $installer);
+        $this->assertStringNotContainsString('gego-k12/exam', $installer);
 
         $controller = file_get_contents(base_path('app/Http/Controllers/Tagore/ExaminationController.php'));
         foreach (['MANAGERS', 'MARKS_ROLES', 'submitted', 'moderated', 'published', 'withdrawn', 'standard_link_id', 'tagore_results'] as $needle) {
@@ -41,6 +46,7 @@ class TagoreExaminationTest extends TestCase
             'tagore.examinations.moderate',
             'tagore.examinations.publish',
             'tagore.examinations.withdraw',
+            'tagore.results.student',
         ] as $name) {
             $this->assertNotNull(app('router')->getRoutes()->getByName($name), "Missing route: {$name}");
         }
