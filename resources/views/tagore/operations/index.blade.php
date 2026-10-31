@@ -182,31 +182,38 @@
 @push('scripts')
 <script>
 (() => {
-  // This view is rendered inside the Vue-mounted #app root. Attach after
-  // the legacy Vue root has mounted so its DOM replacement cannot discard
-  // the filtering listeners bound to the initial Blade markup.
-  const search = document.getElementById('tg-operations-search');
-  const status = document.getElementById('tg-operations-status');
-  const rows = [...document.querySelectorAll('.tg-operations-record')];
-  const count = document.getElementById('tg-operations-count');
-  const empty = document.getElementById('tg-operations-empty');
+  // Delegate events from document so filtering remains active even if the
+  // legacy Vue root replaces the Operations markup after initial render.
   const apply = () => {
-    const query = (search?.value || '').trim().toLocaleLowerCase();
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    const rows = [...document.querySelectorAll('.tg-operations-record')];
+    const count = document.getElementById('tg-operations-count');
+    const empty = document.getElementById('tg-operations-empty');
+    if (!search || !count) return;
+
+    const query = search.value.trim().toLocaleLowerCase();
     const wantedStatus = status?.value || '';
     let visible = 0;
     rows.forEach(row => {
-      const matchesText = !query || row.innerText.toLocaleLowerCase().includes(query);
+      const matchesText = !query || (row.textContent || '').toLocaleLowerCase().includes(query);
       const matchesStatus = !wantedStatus || row.dataset.status === wantedStatus;
       const show = matchesText && matchesStatus;
       row.hidden = !show;
       if (show) visible++;
     });
-    if (count) count.textContent = visible + ' of ' + rows.length + ' records';
+    count.textContent = visible + ' of ' + rows.length + ' records';
     if (empty) empty.style.display = rows.length && visible === 0 ? 'block' : 'none';
   };
-  search?.addEventListener('input', apply);
-  status?.addEventListener('change', apply);
+
+  document.addEventListener('input', event => {
+    if (event.target?.id === 'tg-operations-search') apply();
+  });
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'tg-operations-status') apply();
+  });
   document.addEventListener('keydown', event => {
+    const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault(); search?.focus();
     }
