@@ -214,7 +214,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
   });
 
   for (const role of roles) {
-    test(role + ' — dashboard search filters visible items and restores them when cleared', async ({ page }) => {
+    test(role + ' — dashboard search filters visible items and restores them when cleared', async ({ page }, testInfo) => {
       await authenticate(page, role);
       const search = page.getByRole('searchbox', { name: 'Search dashboard modules and visible items' });
       await expect(search).toBeVisible();
@@ -230,7 +230,11 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         await search.press('Escape');
         await expect(search).toHaveValue('');
         await expect(page.locator('#tg-search-status')).toBeHidden();
-        await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Portal/ })).toBeVisible();
+        if (testInfo.project.name === 'mobile') {
+          await expect(page.locator('.tg-mobile-nav').getByRole('link', { name: /Portal/ })).toBeVisible();
+        } else {
+          await expect(page.locator('a[href$="/student/dashboard"]').first()).toBeVisible();
+        }
       } else {
         const primaryLabel = role === 'parent' ? 'My children' : 'Students';
         const secondaryLabel = role === 'parent' ? 'Fee items due' : 'Fee outstanding';
@@ -539,13 +543,13 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
     await page.locator('#tg-operations-module').selectOption('expense');
     await Promise.all([
-      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'expense'),
+      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'expense', { waitUntil: 'commit' }),
       page.getByRole('button', { name: 'Open module' }).click(),
     ]);
     await expect(page.getByRole('heading', { name: 'Expenses & Purchases', exact: true })).toBeVisible();
     await page.locator('#tg-operations-module').selectOption('inventory');
     await Promise.all([
-      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'inventory'),
+      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'inventory', { waitUntil: 'commit' }),
       page.getByRole('button', { name: 'Open module' }).click(),
     ]);
     await expect(page.getByRole('heading', { name: 'Inventory & Assets', exact: true })).toBeVisible();
