@@ -108,8 +108,8 @@
     <section class="tg-card">
       <div class="tg-section-head"><div><h2>Records</h2><p>Latest {{ $rows->count() }} records for your permitted institutions.</p></div><span class="tg-status success">{{ $moduleTitle }}</span></div>
       <div class="tg-operations-tools">
-        <input id="tg-operations-search" type="search" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
-        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
+        <input id="tg-operations-search" type="search" oninput="window.tagoreOperationsFilter && window.tagoreOperationsFilter()" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
+        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" onchange="window.tagoreOperationsFilter && window.tagoreOperationsFilter()"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
         <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} records</span>
       </div>
       <div class="tg-table-wrap">
@@ -204,6 +204,31 @@
     count.textContent = visible + ' of ' + rows.length + ' records';
     if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
+
+  // Expose a direct handler for the native controls. This remains reliable
+  // when legacy Vue code stops delegated events or replaces portions of the DOM.
+  window.tagoreOperationsFilter = () => {
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    apply(search?.value ?? '', status?.value ?? '');
+  };
+
+  // Rebind direct listeners whenever Vue replaces the search controls.
+  const bindControls = () => {
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    if (search && !search.dataset.operationsFilterBound) {
+      search.dataset.operationsFilterBound = '1';
+      search.addEventListener('input', () => window.tagoreOperationsFilter());
+    }
+    if (status && !status.dataset.operationsFilterBound) {
+      status.dataset.operationsFilterBound = '1';
+      status.addEventListener('change', () => window.tagoreOperationsFilter());
+    }
+  };
+  bindControls();
+  const observer = new MutationObserver(() => bindControls());
+  observer.observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
 
   document.addEventListener('input', event => {
     if (event.target && event.target.id === 'tg-operations-search') {
