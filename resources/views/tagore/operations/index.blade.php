@@ -205,18 +205,22 @@
       const matchesText = query === '' || text.includes(query);
       const matchesStatus = currentStatus === '' || row.dataset.status === currentStatus;
       const show = matchesText && matchesStatus;
-      row.hidden = !show;
+      if (row.hidden !== !show) row.hidden = !show;
       if (show) visible += 1;
     });
-    count.textContent = visible + ' of ' + rows.length + ' records';
-    if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
+    const countText = visible + ' of ' + rows.length + ' records';
+    if (count.textContent !== countText) count.textContent = countText;
+    if (empty) {
+      const display = rows.length > 0 && visible === 0 ? 'block' : 'none';
+      if (empty.style.display !== display) empty.style.display = display;
+    }
   };
 
   // Capture before Vue's own input/change handlers can remount the controls.
   document.addEventListener('input', event => {
     if (event.target?.id === 'tg-operations-search') {
       currentQuery = event.target.value;
-      queueMicrotask(apply);
+      window.setTimeout(apply, 0);
     }
   }, true);
 
@@ -239,9 +243,9 @@
     }
   }, true);
 
-  const root = document.getElementById('app') || document.body;
-  const observer = new MutationObserver(() => apply());
-  observer.observe(root, { childList: true, subtree: true });
+  // Do not observe DOM mutations here: apply() itself updates row visibility
+  // and the count, which would retrigger an observer indefinitely. Delegated
+  // document events already survive Vue replacing the controls.
   apply();
 })();
 </script>
