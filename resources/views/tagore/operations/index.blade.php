@@ -182,21 +182,28 @@
 @push('scripts')
 <script>
 (() => {
-  const apply = (searchValue, statusValue) => {
+  // Preserve filter state outside Vue-managed DOM. Vue can replace the input
+  // after handling an event, so reading only the current DOM value loses it.
+  let currentQuery = document.getElementById('tg-operations-search')?.value ?? '';
+  let currentStatus = document.getElementById('tg-operations-status')?.value ?? '';
+
+  const apply = () => {
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
     const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
     const count = document.getElementById('tg-operations-count');
     const empty = document.getElementById('tg-operations-empty');
-    if (!search || !count) return;
+    if (!count) return;
 
-    const query = String(searchValue ?? search.value ?? '').trim().toLowerCase();
-    const wantedStatus = String(statusValue ?? status?.value ?? '');
+    if (search && search.value !== currentQuery) search.value = currentQuery;
+    if (status && status.value !== currentStatus) status.value = currentStatus;
+
+    const query = currentQuery.trim().toLowerCase();
     let visible = 0;
     rows.forEach(row => {
       const text = (row.innerText || row.textContent || '').toLowerCase();
       const matchesText = query === '' || text.includes(query);
-      const matchesStatus = wantedStatus === '' || row.dataset.status === wantedStatus;
+      const matchesStatus = currentStatus === '' || row.dataset.status === currentStatus;
       const show = matchesText && matchesStatus;
       row.hidden = !show;
       if (show) visible += 1;
@@ -205,63 +212,37 @@
     if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
-  // Expose a direct handler for the native controls. This remains reliable
-  // when legacy Vue code stops delegated events or replaces portions of the DOM.
-  window.tagoreOperationsFilter = () => {
-    const search = document.getElementById('tg-operations-search');
-    const status = document.getElementById('tg-operations-status');
-    apply(search?.value ?? '', status?.value ?? '');
-  };
-
-  // Track actual DOM node identity. Vue may clone data-* attributes while
-  // replacing controls, but cloned nodes do not retain native listeners.
-  const boundControls = new WeakSet();
-  const bindControls = () => {
-    const search = document.getElementById('tg-operations-search');
-    const status = document.getElementById('tg-operations-status');
-    if (search && !boundControls.has(search)) {
-      boundControls.add(search);
-      search.addEventListener('input', () => window.tagoreOperationsFilter());
-    }
-    if (status && !boundControls.has(status)) {
-      boundControls.add(status);
-      status.addEventListener('change', () => window.tagoreOperationsFilter());
-    }
-  };
-  bindControls();
-  const observer = new MutationObserver(() => bindControls());
-  observer.observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
-
+  // Capture before Vue's own input/change handlers can remount the controls.
   document.addEventListener('input', event => {
-    if (event.target && event.target.id === 'tg-operations-search') {
-      const value = event.target.value;
-      Promise.resolve().then(() => apply(value, undefined));
+    if (event.target?.id === 'tg-operations-search') {
+      currentQuery = event.target.value;
+      queueMicrotask(apply);
     }
   }, true);
 
   document.addEventListener('change', event => {
-    if (event.target && event.target.id === 'tg-operations-status') {
-      const value = event.target.value;
-      Promise.resolve().then(() => apply(undefined, value));
+    if (event.target?.id === 'tg-operations-status') {
+      currentStatus = event.target.value;
+      queueMicrotask(apply);
     }
   }, true);
 
   document.addEventListener('keydown', event => {
     const search = document.getElementById('tg-operations-search');
-    const status = document.getElementById('tg-operations-status');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
       search?.focus();
     }
-    if (event.key === 'Escape' && document.activeElement === search && search) {
-      search.value = '';
-      apply('', status?.value ?? '');
+    if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
+      currentQuery = '';
+      queueMicrotask(apply);
     }
   }, true);
 
-  const initialSearch = document.getElementById('tg-operations-search');
-  const initialStatus = document.getElementById('tg-operations-status');
-  apply(initialSearch?.value ?? '', initialStatus?.value ?? '');
+  const root = document.getElementById('app') || document.body;
+  const observer = new MutationObserver(() => apply());
+  observer.observe(root, { childList: true, subtree: true });
+  apply();
 })();
 </script>
 @endpush
