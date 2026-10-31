@@ -179,8 +179,12 @@
   </div>
 </div>
 
+@push('scripts')
 <script>
 (() => {
+  // This view is rendered inside the Vue-mounted #app root. Attach after
+  // the legacy Vue root has mounted so its DOM replacement cannot discard
+  // the filtering listeners bound to the initial Blade markup.
   const search = document.getElementById('tg-operations-search');
   const status = document.getElementById('tg-operations-status');
   const rows = [...document.querySelectorAll('.tg-operations-record')];
@@ -213,6 +217,7 @@
   apply();
 })();
 </script>
+@endpush
 @endsection
 
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
