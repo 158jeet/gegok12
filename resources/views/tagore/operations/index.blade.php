@@ -184,7 +184,7 @@
 (() => {
   // Delegate events from document so filtering remains active even if the
   // legacy Vue root replaces the Operations markup after initial render.
-  const apply = () => {
+  const apply = (searchValue, statusValue) => {
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
     const rows = [...document.querySelectorAll('.tg-operations-record')];
@@ -192,11 +192,11 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!search || !count) return;
 
-    const query = search.value.trim().toLocaleLowerCase();
-    const wantedStatus = status?.value || '';
+    const query = (searchValue ?? search.value).trim().toLocaleLowerCase();
+    const wantedStatus = statusValue ?? status?.value ?? '';
     let visible = 0;
     rows.forEach(row => {
-      const matchesText = !query || (row.textContent || '').toLocaleLowerCase().includes(query);
+      const matchesText = !query || (row.innerText || row.textContent || '').toLocaleLowerCase().includes(query);
       const matchesStatus = !wantedStatus || row.dataset.status === wantedStatus;
       const show = matchesText && matchesStatus;
       row.hidden = !show;
@@ -207,10 +207,16 @@
   };
 
   document.addEventListener('input', event => {
-    if (event.target?.id === 'tg-operations-search') apply();
+    if (event.target?.id === 'tg-operations-search') {
+      const value = event.target.value;
+      queueMicrotask(() => apply(value));
+    }
   }, true);
   document.addEventListener('change', event => {
-    if (event.target?.id === 'tg-operations-status') apply();
+    if (event.target?.id === 'tg-operations-status') {
+      const value = event.target.value;
+      queueMicrotask(() => apply(undefined, value));
+    }
   }, true);
   document.addEventListener('keydown', event => {
     const search = document.getElementById('tg-operations-search');
@@ -218,10 +224,10 @@
       event.preventDefault(); search?.focus();
     }
     if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; apply();
+      search.value = ''; apply('', status?.value || '');
     }
   });
-  apply();
+  apply(search?.value || '', status?.value || '');
 })();
 </script>
 @endpush
