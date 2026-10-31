@@ -534,33 +534,33 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
 
   test('operations records support typed status filters and live search', async ({ page }) => {
     await authenticate(page, 'owner');
-    await page.goto('/tagore/operations', { waitUntil: 'domcontentloaded' });
-    await page.locator('#tg-operations-module').selectOption('inventory');
-    await page.getByRole('button', { name: 'Open module' }).click();
+    await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Inventory & Assets', exact: true })).toBeVisible();
     await expect(page.locator('#tg-operations-search')).toBeVisible();
     await expect(page.locator('#tg-operations-status')).toBeVisible();
 
-    await page.locator('#tg-operations-module').selectOption('expense');
-    await Promise.all([
-      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'expense', { waitUntil: 'commit' }),
-      page.getByRole('button', { name: 'Open module' }).click(),
-    ]);
+    const moduleSelect = page.locator('#tg-operations-module');
+    await moduleSelect.selectOption('expense');
+    await expect(moduleSelect).toHaveValue('expense');
+    await page.getByRole('button', { name: 'Open module' }).click();
+    await expect(page).toHaveURL(/module=expense/);
     await expect(page.getByRole('heading', { name: 'Expenses & Purchases', exact: true })).toBeVisible();
-    await page.locator('#tg-operations-module').selectOption('inventory');
-    await Promise.all([
-      page.waitForURL(url => url.pathname === '/tagore/operations' && url.searchParams.get('module') === 'inventory', { waitUntil: 'commit' }),
-      page.getByRole('button', { name: 'Open module' }).click(),
-    ]);
+
+    // Reload inventory independently before the CRUD checks.
+    await page.goto('/tagore/operations?module=inventory', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Inventory & Assets', exact: true })).toBeVisible();
 
     const itemName = 'QA searchable inventory ' + Date.now();
+    const sku = 'QA-' + Date.now();
     const form = page.locator('form[action*="/tagore/operations/inventory"]').first();
-    await form.locator('input[name="item_name"]').fill(itemName);
     await form.locator('input[name="category"]').fill('Acceptance QA');
-    await form.locator('input[name="sku"]').fill('QA-' + Date.now());
+    await form.locator('input[name="sku"]').fill(sku);
     await form.locator('select[name="status"]').selectOption('active');
+    const itemNameInput = form.locator('input[name="item_name"]');
+    await itemNameInput.fill(itemName);
+    await expect(itemNameInput).toHaveValue(itemName);
     await form.getByRole('button', { name: 'Create Inventory & Assets record' }).click();
+    await expect(page.locator('.tg-alert.danger')).toHaveCount(0);
 
     let row = page.locator('tr.tg-operations-record').filter({ hasText: itemName });
     await expect(row).toBeVisible();
