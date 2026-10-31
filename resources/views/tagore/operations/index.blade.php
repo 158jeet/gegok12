@@ -208,10 +208,10 @@
 
   document.addEventListener('input', event => {
     if (event.target?.id === 'tg-operations-search') apply();
-  });
+  }, true);
   document.addEventListener('change', event => {
     if (event.target?.id === 'tg-operations-status') apply();
-  });
+  }, true);
   document.addEventListener('keydown', event => {
     const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
