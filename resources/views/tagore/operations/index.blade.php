@@ -182,52 +182,59 @@
 @push('scripts')
 <script>
 (() => {
-  // Delegate events from document so filtering remains active even if the
-  // legacy Vue root replaces the Operations markup after initial render.
   const apply = (searchValue, statusValue) => {
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
-    const rows = [...document.querySelectorAll('.tg-operations-record')];
+    const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
     const count = document.getElementById('tg-operations-count');
     const empty = document.getElementById('tg-operations-empty');
     if (!search || !count) return;
 
-    const query = (searchValue ?? search.value).trim().toLocaleLowerCase();
-    const wantedStatus = statusValue ?? status?.value ?? '';
+    const query = String(searchValue ?? search.value ?? '').trim().toLowerCase();
+    const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const matchesText = !query || (row.innerText || row.textContent || '').toLocaleLowerCase().includes(query);
-      const matchesStatus = !wantedStatus || row.dataset.status === wantedStatus;
+      const text = (row.innerText || row.textContent || '').toLowerCase();
+      const matchesText = query === '' || text.includes(query);
+      const matchesStatus = wantedStatus === '' || row.dataset.status === wantedStatus;
       const show = matchesText && matchesStatus;
       row.hidden = !show;
-      if (show) visible++;
+      if (show) visible += 1;
     });
     count.textContent = visible + ' of ' + rows.length + ' records';
-    if (empty) empty.style.display = rows.length && visible === 0 ? 'block' : 'none';
+    if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
   document.addEventListener('input', event => {
-    if (event.target?.id === 'tg-operations-search') {
+    if (event.target && event.target.id === 'tg-operations-search') {
       const value = event.target.value;
-      queueMicrotask(() => apply(value));
+      Promise.resolve().then(() => apply(value, undefined));
     }
   }, true);
+
   document.addEventListener('change', event => {
-    if (event.target?.id === 'tg-operations-status') {
+    if (event.target && event.target.id === 'tg-operations-status') {
       const value = event.target.value;
-      queueMicrotask(() => apply(undefined, value));
+      Promise.resolve().then(() => apply(undefined, value));
     }
   }, true);
+
   document.addEventListener('keydown', event => {
     const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
-      event.preventDefault(); search?.focus();
+      event.preventDefault();
+      search?.focus();
     }
-    if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; apply('', status?.value || '');
+    if (event.key === 'Escape' && document.activeElement === search && search) {
+      search.value = '';
+      apply('', status?.value ?? '');
     }
-  });
-  apply(search?.value || '', status?.value || '');
+  }, true);
+
+  const initialSearch = document.getElementById('tg-operations-search');
+  const initialStatus = document.getElementById('tg-operations-status');
+  apply(initialSearch?.value ?? '', initialStatus?.value ?? '');
 })();
 </script>
 @endpush
