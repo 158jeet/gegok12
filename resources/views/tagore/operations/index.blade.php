@@ -179,40 +179,77 @@
   </div>
 </div>
 
+@push('scripts')
 <script>
 (() => {
-  const search = document.getElementById('tg-operations-search');
-  const status = document.getElementById('tg-operations-status');
-  const rows = [...document.querySelectorAll('.tg-operations-record')];
-  const count = document.getElementById('tg-operations-count');
-  const empty = document.getElementById('tg-operations-empty');
+  // Preserve filter state outside Vue-managed DOM. Vue can replace the input
+  // after handling an event, so reading only the current DOM value loses it.
+  let currentQuery = document.getElementById('tg-operations-search')?.value ?? '';
+  let currentStatus = document.getElementById('tg-operations-status')?.value ?? '';
+
   const apply = () => {
-    const query = (search?.value || '').trim().toLocaleLowerCase();
-    const wantedStatus = status?.value || '';
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
+    const count = document.getElementById('tg-operations-count');
+    const empty = document.getElementById('tg-operations-empty');
+    if (!count) return;
+
+    if (search && search.value !== currentQuery) search.value = currentQuery;
+    if (status && status.value !== currentStatus) status.value = currentStatus;
+
+    const query = currentQuery.trim().toLowerCase();
     let visible = 0;
     rows.forEach(row => {
-      const matchesText = !query || row.innerText.toLocaleLowerCase().includes(query);
-      const matchesStatus = !wantedStatus || row.dataset.status === wantedStatus;
+      const text = (row.innerText || row.textContent || '').toLowerCase();
+      const matchesText = query === '' || text.includes(query);
+      const matchesStatus = currentStatus === '' || row.dataset.status === currentStatus;
       const show = matchesText && matchesStatus;
-      row.hidden = !show;
-      if (show) visible++;
+      if (row.hidden !== !show) row.hidden = !show;
+      if (show) visible += 1;
     });
-    if (count) count.textContent = visible + ' of ' + rows.length + ' records';
-    if (empty) empty.style.display = rows.length && visible === 0 ? 'block' : 'none';
+    const countText = visible + ' of ' + rows.length + ' records';
+    if (count.textContent !== countText) count.textContent = countText;
+    if (empty) {
+      const display = rows.length > 0 && visible === 0 ? 'block' : 'none';
+      if (empty.style.display !== display) empty.style.display = display;
+    }
   };
-  search?.addEventListener('input', apply);
-  status?.addEventListener('change', apply);
+
+  // Capture before Vue's own input/change handlers can remount the controls.
+  document.addEventListener('input', event => {
+    if (event.target?.id === 'tg-operations-search') {
+      currentQuery = event.target.value;
+      window.setTimeout(apply, 0);
+    }
+  }, true);
+
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'tg-operations-status') {
+      currentStatus = event.target.value;
+      queueMicrotask(apply);
+    }
+  }, true);
+
   document.addEventListener('keydown', event => {
+    const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
-      event.preventDefault(); search?.focus();
+      event.preventDefault();
+      search?.focus();
     }
-    if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; apply();
+    if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
+      currentQuery = '';
+      queueMicrotask(apply);
     }
-  });
+  }, true);
+
+  // Do not observe DOM mutations here: apply() itself updates row visibility
+  // and the count, which would retrigger an observer indefinitely. Delegated
+  // document events already survive Vue replacing the controls.
   apply();
 })();
 </script>
+@endpush
 @endsection
 
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]

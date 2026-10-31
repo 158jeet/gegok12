@@ -114,6 +114,16 @@ jobs:
           E2E_BASE_URL: http://127.0.0.1:8000
         run: npx playwright test tests/admin-acceptance --project=desktop --workers=1
 
+      - name: Focused Operations search and status acceptance (desktop and mobile)
+        working-directory: e2e
+        timeout-minutes: 10
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: >-
+          npx playwright test tests/tagore-human-style.spec.js
+          --grep "operations records support typed status filters and live search"
+          --project=desktop --project=mobile --workers=1 --retries=0 --timeout=45000
+
       - name: Run full authenticated browser suite on desktop and mobile
         id: full_e2e
         working-directory: e2e
@@ -122,7 +132,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js tests/tagore-interaction-audit.spec.js --reporter=json > full-e2e-report.json
+          PLAYWRIGHT_JSON_OUTPUT_NAME=full-e2e-report.json npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js tests/tagore-interaction-audit.spec.js --reporter=list,json
           test_exit=$?
           set -e
           export TEST_EXIT_CODE="$test_exit"

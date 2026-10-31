@@ -249,6 +249,27 @@ class OperationsController extends Controller
         }
 
         $validated = Validator::make($input, $rules)->validate();
+
+        // HTML number inputs submit an empty value as null. The operations tables
+        // define zero defaults for these counters, but an explicit NULL bypasses
+        // the database default and causes inserts to fail on NOT NULL columns.
+        $numericDefaults = [
+            'quantity' => 0,
+            'reorder_level' => 0,
+            'capacity' => 0,
+            'stock' => 0,
+            'version' => 0,
+            'sent_count' => 0,
+            'failed_count' => 0,
+        ];
+        foreach ($numericDefaults as $column => $default) {
+            if (in_array($column, self::COLUMNS[$module], true)
+                && array_key_exists($column, $validated)
+                && $validated[$column] === null) {
+                $validated[$column] = $default;
+            }
+        }
+
         foreach (self::COLUMNS[$module] as $column) {
             if (str_ends_with($column, '_json') && isset($validated[$column]) && is_array($validated[$column])) {
                 $validated[$column] = json_encode($validated[$column], JSON_THROW_ON_ERROR);
