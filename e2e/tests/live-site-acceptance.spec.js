@@ -42,7 +42,6 @@ test.describe('Tagore live-site acceptance', () => {
 
   for (const role of requiredRoles) {
     test(role + ': sign in, dashboard and render visible navigation pages', async ({ browser }, testInfo) => {
-      test.skip(testInfo.project.name !== 'desktop', 'Authenticated route sweep runs once per role on desktop; mobile project checks responsive login.');
       test.setTimeout(150000);
       const accounts = getAccounts();
       test.skip(!accounts[role] || !accounts[role].email || !accounts[role].password,
@@ -50,7 +49,7 @@ test.describe('Tagore live-site acceptance', () => {
 
       const context = await browser.newContext({
         baseURL: process.env.E2E_BASE_URL,
-        viewport: { width: 1440, height: 900 },
+        viewport: testInfo.project.name === 'mobile' ? { width: 390, height: 844 } : { width: 1440, height: 900 },
         ignoreHTTPSErrors: false,
       });
       const page = await context.newPage();
@@ -73,7 +72,34 @@ test.describe('Tagore live-site acceptance', () => {
         expect(dashboardOverflow, role + ' dashboard must not horizontally overflow').toBeFalsy();
         const brokenImages = await page.locator('img').evaluateAll(images => images.filter(img => img.complete && img.naturalWidth === 0).map(img => img.src));
         expect(brokenImages, role + ' dashboard broken images').toEqual([]);
-        await page.screenshot({ path: 'test-results/live-' + role + '-dashboard.png', fullPage: true });
+        await page.screenshot({ path: 'test-results/live-' + role + '-dashboard-' + testInfo.project.name + '.png', fullPage: true });
+
+        if (testInfo.project.name === 'mobile') {
+          const mobileNav = page.locator('.tg-mobile-nav');
+          await expect(mobileNav, role + ' mobile navigation should be visible').toBeVisible();
+          const mobileLinks = await mobileNav.locator('a[href]').evaluateAll(anchors => [...new Set(anchors
+            .map(a => a.href)
+            .filter(href => {
+              try {
+                const url = new URL(href);
+                return url.origin === location.origin && url.pathname.startsWith('/tagore/') && !/[{}]/.test(url.pathname);
+              } catch { return false; }
+            }))]);
+          expect(mobileLinks.length, role + ' should expose usable mobile navigation').toBeGreaterThan(0);
+          for (const href of mobileLinks) {
+            const response = await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
+            const status = response ? response.status() : 0;
+            expect(status, role + ' mobile navigation route HTTP response for ' + href).toBeGreaterThanOrEqual(200);
+            expect(status, role + ' mobile navigation route must not return 401/403/404/5xx for ' + href).toBeLessThan(400);
+            const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+            expect(mobileOverflow, role + ' mobile route horizontally overflows: ' + href).toBeFalsy();
+            assertHealthyBody(await page.locator('body').innerText(), role + ' mobile route ' + href);
+          }
+          expect(serverErrors, role + ' mobile browser requests with 5xx responses').toEqual([]);
+          expect(consoleErrors, role + ' mobile browser console errors').toEqual([]);
+          console.log(JSON.stringify({ environment: process.env.TAGORE_LIVE_ENVIRONMENT || 'unspecified', role, project: 'mobile', dashboard: 'passed', mobileRoutesChecked: mobileLinks.length }, null, 2));
+          return;
+        }
 
         const links = await page.locator('a[href]').evaluateAll(anchors => [...new Set(anchors
           .map(a => a.href)
