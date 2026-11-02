@@ -184,12 +184,7 @@
 @push('scripts')
 <script>
 (() => {
-  // Preserve filter state outside Vue-managed DOM. Vue can replace the input
-  // after handling an event, so reading only the current DOM value loses it.
-  let currentQuery = document.getElementById('tg-operations-search')?.value ?? '';
-  let currentStatus = document.getElementById('tg-operations-status')?.value ?? '';
-
-  const apply = () => {
+  const apply = (queryValue, statusValue) => {
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
     const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
@@ -197,65 +192,49 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!count) return;
 
-    // Event capture updates these values before framework handlers run.
-    // Keep them outside the DOM so a Vue remount cannot erase an in-flight
-    // search or status selection on mobile.
-    const query = String(currentQuery).trim().toLowerCase();
+    const query = String(queryValue ?? search?.value ?? '').trim().toLowerCase();
+    const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const text = (row.innerText || row.textContent || '').toLowerCase();
-      const matchesText = query === '' || text.includes(query);
-      const matchesStatus = currentStatus === '' || row.dataset.status === currentStatus;
-      const show = matchesText && matchesStatus;
-      if (row.hidden !== !show) row.hidden = !show;
+      const rowText = (row.innerText || row.textContent || '').toLowerCase();
+      const show = (!query || rowText.includes(query)) &&
+        (!wantedStatus || row.dataset.status === wantedStatus);
+      row.hidden = !show;
       if (show) visible += 1;
     });
-    const countText = visible + ' of ' + rows.length + ' records';
-    if (count.textContent !== countText) count.textContent = countText;
-    if (empty) {
-      const display = rows.length > 0 && visible === 0 ? 'block' : 'none';
-      if (empty.style.display !== display) empty.style.display = display;
-    }
+    count.textContent = visible + ' of ' + rows.length + ' records';
+    if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
-  // Native inline handlers are retained in server-rendered replacements and
-  // execute even when framework-level delegated listeners are interrupted.
-  window.tagoreOperationsFilter = (queryValue, statusValue) => {
-    if (queryValue !== null && queryValue !== undefined) currentQuery = String(queryValue);
-    if (statusValue !== null && statusValue !== undefined) currentStatus = String(statusValue);
-    window.setTimeout(apply, 0);
-  };
+  // Inline native handlers pass the exact value being edited. Delegated
+  // capture handlers cover keyboard/search events and survive control remounts.
+  window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
 
-  // Capture before Vue's own input/change handlers can remount the controls.
   document.addEventListener('input', event => {
     if (event.target?.id === 'tg-operations-search') {
-      currentQuery = event.target.value;
-      window.setTimeout(apply, 0);
+      const value = event.target.value;
+      window.setTimeout(() => apply(value, undefined), 0);
     }
   }, true);
 
   document.addEventListener('change', event => {
     if (event.target?.id === 'tg-operations-status') {
-      currentStatus = event.target.value;
-      queueMicrotask(apply);
+      const value = event.target.value;
+      window.setTimeout(() => apply(undefined, value), 0);
     }
   }, true);
 
   document.addEventListener('keydown', event => {
-    const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
-      search?.focus();
+      document.getElementById('tg-operations-search')?.focus();
     }
     if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
-      currentQuery = '';
-      queueMicrotask(apply);
+      event.target.value = '';
+      apply('', undefined);
     }
   }, true);
 
-  // Do not observe DOM mutations here: apply() itself updates row visibility
-  // and the count, which would retrigger an observer indefinitely. Delegated
-  // document events already survive Vue replacing the controls.
   apply();
 })();
 </script>
