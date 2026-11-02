@@ -132,7 +132,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          PLAYWRIGHT_JSON_OUTPUT_NAME=full-e2e-report.json npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js tests/tagore-interaction-audit.spec.js --reporter=list,json
+          PLAYWRIGHT_JSON_OUTPUT_NAME=full-e2e-report.json npx playwright test tests/tagore-human-style.spec.js tests/tagore-daily-diary.spec.js tests/tagore-interaction-audit.spec.js --reporter=list,json --workers=1 --retries=0
           test_exit=$?
           set -e
           export TEST_EXIT_CODE="$test_exit"
