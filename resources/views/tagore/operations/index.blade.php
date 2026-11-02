@@ -179,6 +179,8 @@
   </div>
 </div>
 
+@endsection
+
 @push('scripts')
 <script>
 (() => {
@@ -258,6 +260,5 @@
 })();
 </script>
 @endpush
-@endsection
 
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
