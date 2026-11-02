@@ -108,8 +108,8 @@
     <section class="tg-card">
       <div class="tg-section-head"><div><h2>Records</h2><p>Latest {{ $rows->count() }} records for your permitted institutions.</p></div><span class="tg-status success">{{ $moduleTitle }}</span></div>
       <div class="tg-operations-tools">
-        <input id="tg-operations-search" type="search" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
-        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
+        <input id="tg-operations-search" type="search" oninput="window.tagoreOperationsFilter(this.value, null)" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
+        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" onchange="window.tagoreOperationsFilter(null, this.value)"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
         <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} records</span>
       </div>
       <div class="tg-table-wrap">
@@ -214,6 +214,14 @@
       const display = rows.length > 0 && visible === 0 ? 'block' : 'none';
       if (empty.style.display !== display) empty.style.display = display;
     }
+  };
+
+  // Native inline handlers are retained in server-rendered replacements and
+  // execute even when framework-level delegated listeners are interrupted.
+  window.tagoreOperationsFilter = (queryValue, statusValue) => {
+    if (queryValue !== null && queryValue !== undefined) currentQuery = String(queryValue);
+    if (statusValue !== null && statusValue !== undefined) currentStatus = String(statusValue);
+    window.setTimeout(apply, 0);
   };
 
   // Capture before Vue's own input/change handlers can remount the controls.
