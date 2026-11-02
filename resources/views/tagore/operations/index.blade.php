@@ -108,8 +108,8 @@
     <section class="tg-card">
       <div class="tg-section-head"><div><h2>Records</h2><p>Latest {{ $rows->count() }} records for your permitted institutions.</p></div><span class="tg-status success">{{ $moduleTitle }}</span></div>
       <div class="tg-operations-tools">
-        <input id="tg-operations-search" type="search" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
-        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
+        <input id="tg-operations-search" type="search" oninput="window.tagoreOperationsFilter(this.value, null)" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
+        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" onchange="window.tagoreOperationsFilter(null, this.value)"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
         <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} records</span>
       </div>
       <div class="tg-table-wrap">
@@ -179,40 +179,65 @@
   </div>
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
 (() => {
-  const search = document.getElementById('tg-operations-search');
-  const status = document.getElementById('tg-operations-status');
-  const rows = [...document.querySelectorAll('.tg-operations-record')];
-  const count = document.getElementById('tg-operations-count');
-  const empty = document.getElementById('tg-operations-empty');
-  const apply = () => {
-    const query = (search?.value || '').trim().toLocaleLowerCase();
-    const wantedStatus = status?.value || '';
+  const apply = (queryValue, statusValue) => {
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
+    const count = document.getElementById('tg-operations-count');
+    const empty = document.getElementById('tg-operations-empty');
+    if (!count) return;
+
+    const query = String(queryValue ?? search?.value ?? '').trim().toLowerCase();
+    const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const matchesText = !query || row.innerText.toLocaleLowerCase().includes(query);
-      const matchesStatus = !wantedStatus || row.dataset.status === wantedStatus;
-      const show = matchesText && matchesStatus;
+      const rowText = (row.innerText || row.textContent || '').toLowerCase();
+      const show = (!query || rowText.includes(query)) &&
+        (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
-      if (show) visible++;
+      if (show) visible += 1;
     });
-    if (count) count.textContent = visible + ' of ' + rows.length + ' records';
-    if (empty) empty.style.display = rows.length && visible === 0 ? 'block' : 'none';
+    count.textContent = visible + ' of ' + rows.length + ' records';
+    if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
-  search?.addEventListener('input', apply);
-  status?.addEventListener('change', apply);
+
+  // Inline native handlers pass the exact value being edited. Delegated
+  // capture handlers cover keyboard/search events and survive control remounts.
+  window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
+
+  document.addEventListener('input', event => {
+    if (event.target?.id === 'tg-operations-search') {
+      const value = event.target.value;
+      window.setTimeout(() => apply(value, undefined), 0);
+    }
+  }, true);
+
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'tg-operations-status') {
+      const value = event.target.value;
+      window.setTimeout(() => apply(undefined, value), 0);
+    }
+  }, true);
+
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
-      event.preventDefault(); search?.focus();
+      event.preventDefault();
+      document.getElementById('tg-operations-search')?.focus();
     }
-    if (event.key === 'Escape' && document.activeElement === search) {
-      search.value = ''; apply();
+    if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
+      event.target.value = '';
+      apply('', undefined);
     }
-  });
+  }, true);
+
   apply();
 })();
 </script>
-@endsection
+@endpush
 
 [executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
