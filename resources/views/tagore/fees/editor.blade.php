@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fee Editor · TagoreK12</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261024-ui6' }}"></head>
-<body><main class="tg-shell">
-<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Fee administration</span></div></div><div class="tg-user">Controlled Editor</div></header>
-<nav class="tg-nav"><a href="{{ route('tagore.dashboard') }}">ERP Home</a><a href="{{ route('tagore.fees.accounts') }}">Accounts</a><a href="{{ route('tagore.fees.manage') }}">Fee Management</a><a href="{{ route('tagore.fees.editor') }}">Fee Editor</a></nav>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><title>Fee Editor · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui9' }}"></head>
+<body class="tg-fee-editor"><main class="tg-shell">
+<header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Fee administration</span></div></a><div class="tg-user">Controlled Editor</div></header>
+<nav class="tg-nav"><a href="{{ route('tagore.dashboard') }}">ERP Home</a>@if($roles->contains('OWNER') || $roles->contains('PRINCIPAL') || $roles->contains('ACCOUNTS'))<a href="{{ route('tagore.fees.accounts') }}">Accounts</a><a href="{{ route('tagore.fees.manage') }}">Fee Management</a>@endif<a href="{{ route('tagore.fees.editor') }}" aria-current="page">Fee Editor</a></nav>
 <section class="tg-hero"><h1>Fee Editor</h1><p>Make controlled fee adjustments without touching opening balances or the original archived financial record.</p></section>
 @if(session('success'))<div class="tg-alert" style="margin-bottom:16px">{{ session('success') }}</div>@endif
 <section class="card" style="padding:22px"><div class="tg-section-head"><h2>Bulk fee adjustment</h2><span class="tg-kpi-label">Audited · opening balances protected</span></div>
@@ -17,6 +17,7 @@
 </form>
 <div class="tg-alert warning" style="margin-top:16px"><strong>How the range works:</strong> if you enter 30–40%, every eligible fee record receives its own independently generated percentage inside that range. The exact percentage and before/after amounts are written to the audit trail. Opening-balance records are always excluded.</div>
 </section>
+@if($roles->contains('OWNER'))
 <section class="card" style="padding:22px;margin-top:18px"><div class="tg-section-head"><h2>Close an academic year</h2><span class="tg-kpi-label">Owner only</span></div>
 <form method="post" action="{{ route('tagore.fees.editor.close-year') }}" class="tg-form">@csrf
 <div class="tg-field"><label>Institution ID</label><input name="institution_id" type="number" min="1" required></div>
@@ -25,4 +26,5 @@
 </form>
 <p class="tg-kpi-label" style="margin-top:13px">The archive is encrypted in private application storage, hashed for integrity, and separated from normal ERP editing. It is not shown to parents or ordinary staff.</p>
 </section>
+@endif
 </main></body></html>

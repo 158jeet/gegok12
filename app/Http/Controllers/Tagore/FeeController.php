@@ -125,7 +125,7 @@ class FeeController extends Controller
     {
         $userId = (int) $request->user()->id;
         $roles = $this->roles($userId);
-        $this->authorizeAccounts($roles);
+        $this->authorizePaymentRecording($roles);
         $student = DB::table('users as u')->join('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')->where('u.id', $studentId)->first(['u.id', 'i.id as institution_id']);
         abort_unless($student, 404);
         $this->authorizeInstitution($userId, $student->institution_id, $roles);
@@ -216,7 +216,13 @@ class FeeController extends Controller
 
     private function authorizeAccounts($roles): void
     {
+        // Coordinators may view the Accounts workspace but cannot record financial transactions.
         abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+    }
+
+    private function authorizePaymentRecording($roles): void
+    {
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void

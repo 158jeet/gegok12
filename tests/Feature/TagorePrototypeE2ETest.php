@@ -99,6 +99,91 @@ class TagorePrototypeE2ETest extends TestCase
         }
     }
 
+    public function test_parent_fee_statement_hides_payment_history_even_when_a_successful_payment_exists(): void
+    {
+        DB::beginTransaction();
+        try {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $childId = DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('status', 'active')
+            ->value('student_id');
+        $this->assertNotNull($childId, 'Parent privacy acceptance requires a linked child.');
+
+        $child = User::query()->findOrFail($childId);
+        $institution = DB::table('tagore_institutions')
+            ->where('school_id', $child->school_id)
+            ->where('status', 'active')
+            ->first();
+        $this->assertNotNull($institution, 'Linked child must have an active institution.');
+
+        $obligation = DB::table('tagore_fee_obligations')
+            ->where('student_id', $childId)
+            ->where('institution_id', $institution->id)
+            ->where('outstanding_amount', '>', 0)
+            ->orderBy('due_date')
+            ->first();
+
+        if (!$obligation) {
+            $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+            $obligationId = app(\App\Services\Tagore\FeeService::class)->createObligation(
+                (int) $childId,
+                (int) $institution->id,
+                [
+                    'due_date' => now()->toDateString(),
+                    'gross_amount' => 10.00,
+                    'items' => [[
+                        'fee_head' => 'Privacy acceptance tuition',
+                        'code' => 'QA-PARENT-PRIVACY',
+                        'gross_amount' => 10.00,
+                    ]],
+                ],
+                (int) $owner->id,
+            );
+            $obligation = DB::table('tagore_fee_obligations')->where('id', $obligationId)->first();
+        }
+
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $amount = min(1.00, (float) $obligation->outstanding_amount);
+        $reference = 'QA-PARENT-PRIVATE-' . bin2hex(random_bytes(4));
+        $paymentId = app(\App\Services\Tagore\FeeService::class)->recordOfflinePayment(
+            (int) $childId,
+            (int) $institution->id,
+            $amount,
+            null,
+            (int) $owner->id,
+            $reference,
+            [],
+            'cash',
+        );
+        $payment = DB::table('tagore_payments')->where('id', $paymentId)->firstOrFail();
+        $this->assertSame('success', $payment->status);
+
+        // Use the isolated array mailer in CI: this proves the receipt PDF and
+        // delivery ledger work without sending a message to a real mailbox.
+        $delivered = app(\App\Services\Tagore\FeeReceiptMailer::class)->send($paymentId);
+        $this->assertTrue($delivered, 'A linked parent with an email address should receive a recorded receipt delivery.');
+        $this->assertDatabaseHas('tagore_fee_receipt_deliveries', [
+            'payment_id' => $paymentId,
+            'channel' => 'email',
+            'status' => 'sent',
+            'recipient_email' => $parent->email,
+        ]);
+
+        $this->actingAs($parent)
+            ->get(route('tagore.fees.student', ['studentId' => $childId]))
+            ->assertOk()
+            ->assertSee('Fee Statement')
+            ->assertDontSee('Payment history')
+            ->assertDontSee($reference)
+            ->assertDontSee($payment->receipt_no);
+        } finally {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+        }
+    }
+
     public function test_owner_can_view_accounts_and_seeded_fee_data_exists(): void
     {
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
@@ -163,20 +248,60 @@ class TagorePrototypeE2ETest extends TestCase
     public function test_fee_service_rejects_cross_institution_student_obligation(): void
     {
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
-        $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->first();
+        $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $otherInstitution = DB::table('tagore_institutions')->where('school_id', '!=', $student->school_id)->first();
 
+        $createdOtherSchoolId = null;
+        $createdOtherInstitutionId = null;
+
+        // Build an isolated second-institution fixture when the legacy seed has only one
+        // school. Cross-institution fee validation is required coverage, not a skippable case.
         if (!$otherInstitution) {
-            $this->markTestSkipped('Prototype seed currently has one institution; cross-institution fixture unavailable.');
+            $sourceInstitution = DB::table('tagore_institutions')->where('school_id', $student->school_id)->firstOrFail();
+            $now = now();
+            $otherSchoolId = DB::table('schools')->insertGetId([
+                'name' => 'QA Cross-Institution School',
+                'email' => 'qa-cross-institution@example.test',
+                'phone' => '9000000099',
+                'status' => 1,
+                'slug' => 'qa-cross-institution-school',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $createdOtherSchoolId = $otherSchoolId;
+            $otherInstitutionId = DB::table('tagore_institutions')->insertGetId([
+                'tagore_group_id' => $sourceInstitution->tagore_group_id,
+                'school_id' => $otherSchoolId,
+                'code' => 'QA-CROSS-INSTITUTION',
+                'display_name' => 'QA Cross-Institution School',
+                'type' => 'school',
+                'status' => 'active',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $createdOtherInstitutionId = $otherInstitutionId;
+            $otherInstitution = DB::table('tagore_institutions')->where('id', $otherInstitutionId)->first();
         }
 
+        $this->assertNotSame((int) $student->school_id, (int) $otherInstitution->school_id);
+
         $this->expectException(\Illuminate\Validation\ValidationException::class);
-        app(\App\Services\Tagore\FeeService::class)->createObligation(
-            (int) $student->id,
-            (int) $otherInstitution->id,
-            ['items' => [['fee_head' => 'QA', 'gross_amount' => 100]]],
-            (int) $owner->id
-        );
+        try {
+            app(\App\Services\Tagore\FeeService::class)->createObligation(
+                (int) $student->id,
+                (int) $otherInstitution->id,
+                ['items' => [['fee_head' => 'QA', 'gross_amount' => 100]]],
+                (int) $owner->id
+            );
+        } finally {
+            // Keep the shared disposable CI database clean for subsequent tests.
+            if ($createdOtherInstitutionId) {
+                DB::table('tagore_institutions')->where('id', $createdOtherInstitutionId)->delete();
+            }
+            if ($createdOtherSchoolId) {
+                DB::table('schools')->where('id', $createdOtherSchoolId)->delete();
+            }
+        }
     }
 
     public function test_online_payment_confirmation_requires_order_owner_or_authorized_staff(): void
@@ -191,9 +316,12 @@ class TagorePrototypeE2ETest extends TestCase
             'gateway_order_id'=>'order_QA_AUTH','expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now(),
         ]);
 
-        $this->actingAs($teacher)->post(route('tagore.payments.confirm'), [
-            'razorpay_order_id'=>'order_QA_AUTH','razorpay_payment_id'=>'pay_QA_AUTH','razorpay_signature'=>'invalid',
-        ])->assertForbidden();
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->firstOrFail();
+        foreach ([$teacher, $coordinator] as $unauthorizedUser) {
+            $this->actingAs($unauthorizedUser)->post(route('tagore.payments.confirm'), [
+                'razorpay_order_id'=>'order_QA_AUTH','razorpay_payment_id'=>'pay_QA_AUTH','razorpay_signature'=>'invalid',
+            ])->assertForbidden();
+        }
 
         $this->assertDatabaseHas('tagore_payment_orders', ['id'=>$orderId,'status'=>'payment_initiated']);
     }

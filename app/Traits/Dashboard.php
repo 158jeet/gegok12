@@ -194,64 +194,75 @@ trait Dashboard
      */
     public function studentDashboard($school_id,$user_id,$standardLink_id,$subject,$exam,$mark,$exam_date)
     {
-        $array = [];
+        $academic_year = SiteHelper::getAcademicYear($school_id);
+        $total = Attendance::where('user_id',$user_id->id)->count();
+        $present = Attendance::where([['user_id',$user_id->id],['status',1]])->count();
+        $absent = Attendance::where([['user_id',$user_id->id],['status',0]])->count();
+        $date = date('Y-m-d H:i:s');
 
-        $academic_year      =   SiteHelper::getAcademicYear($school_id);
-        $total              =   Attendance::where('user_id',$user_id->id)->count();
-        $present            =   Attendance::where([['user_id',$user_id->id],['status',1]])->count();
-        $absent             =   Attendance::where([['user_id',$user_id->id],['status',0]])->count();
+        $array = [
+            'presentPercentage' => $total > 0 ? round(($present / $total) * 100) : 0,
+            'absentPercentage' => $total > 0 ? round(($absent / $total) * 100) : 0,
+            'presentDay' => $present / 2,
+            'absentDay' => $absent / 2,
+            'noticeboard' => collect(),
+            'upcomingeventCount' => 0,
+            'upcomingholidayCount' => 0,
+            'marks' => collect(),
+        ];
 
-        $date=date('Y-m-d H:i:s');
-        
-        if(class_exists('Gegok12\Exam\Models\Mark'))
-        {
-
-            $marks              =   \Gegok12\Exam\Models\Mark::where([['school_id',$school_id],['academic_year_id',$academic_year->id],['user_id',$user_id->id]]);
-
-            
-            if($mark != '')
-            { 
-                $marks = $marks->where(function ($query) use($mark)
-                { 
-                    $query->where('obtained_marks',$mark);
-
-                });
+        // Apply school scope before the class-specific OR so a coincidentally matching
+        // standardLink ID in another school cannot expose its noticeboard entries.
+        $noticeboardQuery = NoticeBoard::where('school_id',$school_id)
+            ->where('type','!=','teacher');
+        if ($academic_year) {
+            $noticeboardQuery->where('academic_year_id',$academic_year->id);
+        }
+        $noticeboardQuery->where(function ($query) use ($standardLink_id) {
+            $query->whereNull('standardLink_id');
+            if ($standardLink_id) {
+                $query->orWhere('standardLink_id',$standardLink_id);
             }
-            if($subject != '')
-            {
-                $marks = $marks->whereHas('subject',function ($query) use($subject)
-                { 
+        });
+        $array['noticeboard'] = $noticeboardQuery->orderBy('created_at','DESC')->take(5)->get();
+
+        $array['upcomingholidayCount'] = Events::where([
+            ['school_id',$school_id],
+            ['end_date','>=',$date],
+            ['category','=','holidays'],
+        ])->count();
+
+        if ($standardLink_id && $academic_year) {
+            $array['upcomingeventCount'] = Events::where([
+                ['school_id',$school_id],
+                ['standard_id',$standardLink_id],
+                ['end_date','>',$date],
+                ['category','!=','holidays'],
+            ])->count();
+        }
+
+        if (class_exists('Gegok12\\Exam\\Models\\Mark') && $academic_year) {
+            $marks = \Gegok12\Exam\Models\Mark::where([
+                ['school_id',$school_id],
+                ['academic_year_id',$academic_year->id],
+                ['user_id',$user_id->id],
+            ]);
+
+            if ($mark !== null && $mark !== '') {
+                $marks = $marks->where('obtained_marks',$mark);
+            }
+            if ($subject !== null && $subject !== '') {
+                $marks = $marks->whereHas('subject', function ($query) use ($subject) {
                     $query->where('name','LIKE','%'.$subject.'%');
                 });
             }
-            if($exam != '')
-            {
-                $marks = $marks->whereHas('exam',function ($query) use($exam)
-                {
+            if ($exam !== null && $exam !== '') {
+                $marks = $marks->whereHas('exam', function ($query) use ($exam) {
                     $query->where('name','LIKE','%'.$exam.'%');
                 });
             }
+            $array['marks'] = $marks->take(5)->get();
         }
-   
-        if($present != 0)
-        {
-            $array['presentPercentage'] = $present=='' ? 0:number_format((float)( $present / $total )*100);
-        }
-        if($absent != 0)
-        {
-            $array['absentPercentage']  = number_format((float)( $absent / $total )*100);
-        }
-        $array['presentDay']        = $present/2;
-        $array['absentDay']         = $absent/2;
-        $array['noticeboard']       = NoticeBoard::where([['school_id',$school_id],['academic_year_id',$academic_year->id],['type','!=','teacher']])->orWhere('standardLink_id',$standardLink_id)->orderBy('created_at','DESC')->take(5)->get();
-        $array['upcomingeventCount']  = Events::where([['school_id',$school_id],['standard_id',$standardLink_id],['end_date','>',$date],['category','!=','holidays']])->count();
-        $array['upcomingholidayCount']  = Events::where([['school_id',$school_id],['end_date','>=',$date],['category','=','holidays']])->count();
-
-        if(class_exists('Gegok12\Exam\Models\Mark'))
-        {
-            $array['marks']             = $marks->take(5)->get();
-        }
-        
 
         return $array;
     }

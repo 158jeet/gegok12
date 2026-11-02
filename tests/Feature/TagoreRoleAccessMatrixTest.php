@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
@@ -97,6 +98,25 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 ->pluck('role_id');
 
             $this->assertCount(1, $roles, "{$email} must have exactly one active Tagore role.");
+        }
+    }
+
+    public function test_fee_management_route_matches_the_declared_role_permission_matrix(): void
+    {
+        $expected = [
+            'owner@tagore-demo.local' => 200,
+            'principal@tagore-demo.local' => 200,
+            'coordinator@tagore-demo.local' => 403,
+            'teacher@tagore-demo.local' => 403,
+            'accounts@tagore-demo.local' => 200,
+            'fees@tagore-demo.local' => 403,
+            'parent@tagore-demo.local' => 403,
+            'student@tagore-demo.local' => 403,
+        ];
+
+        foreach ($expected as $email => $status) {
+            $user = User::query()->where('email', $email)->whereNull('deleted_at')->firstOrFail();
+            $this->actingAs($user)->get('/tagore/accounts/fees/manage')->assertStatus($status);
         }
     }
 }

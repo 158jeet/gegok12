@@ -1,0 +1,39 @@
+const { test, expect } = require('@playwright/test');
+
+function unique(prefix) {
+  return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+}
+
+async function signInAsOwner(page) {
+  // CI uses a disposable SQLite database seeded with synthetic demo identities.
+  // This route exists only in APP_ENV=testing and is never registered in production.
+  const baseUrl = process.env.E2E_BASE_URL || '';
+  const localTestRun = process.env.APP_ENV === 'testing'
+    && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseUrl);
+  if (localTestRun) {
+    test.skip(test.info().project.name !== 'desktop', 'Mutating admin acceptance runs once on desktop against disposable CI data.');
+    await page.goto('/__e2e/session/owner');
+    await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/);
+  } else {
+    if (process.env.TAGORE_ADMIN_MUTATION_ENABLED !== 'true' || (process.env.TAGORE_LIVE_ENVIRONMENT || '').toLowerCase() !== 'staging') {
+      test.skip(true, 'Mutating admin acceptance runs only in disposable CI or explicitly enabled staging.');
+    }
+    const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}');
+    const owner = accounts.owner;
+    if (!owner?.email || !owner?.password) throw new Error('Dedicated staging owner account is missing.');
+    await page.goto('/login');
+    await page.locator('#email').fill(owner.email);
+    await page.locator('#password').fill(owner.password);
+    await page.getByRole('button', { name: 'Sign in to Tagore ERP' }).click();
+    await expect(page).toHaveURL(/\/tagore\/dashboard(?:[/?#]|$)/);
+  }
+  await page.goto('/tagore/admin');
+  await expect(page.getByRole('heading', { name: 'Tagore Administration' })).toBeVisible();
+}
+
+async function submitAndAssertSuccess(page, form, successText) {
+  await form.getByRole('button').click();
+  await expect(page.locator('body')).toContainText(successText, { timeout: 15000 });
+}
+
+module.exports = { expect, unique, signInAsOwner, submitAndAssertSuccess };

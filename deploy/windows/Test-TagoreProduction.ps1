@@ -168,6 +168,24 @@ try {
     } else { Add-Result "Certificate renewal task" "FAIL" "State: $($task.State); Action: $actionText" }
 } catch { Add-Result "Certificate renewal task" "FAIL" $_.Exception.Message }
 
+# Laravel scheduler task must be installed and have completed at least one successful run.
+try {
+    $schedulerTask = Get-ScheduledTask -TaskName "Tagore ERP - Laravel Scheduler" -ErrorAction Stop
+    $schedulerActionText = ($schedulerTask.Actions | ForEach-Object { $_.Arguments }) -join " "
+    $expectedSchedulerScript = Join-Path $Root 'deploy\windows\Run-TagoreScheduler.ps1'
+    if ($schedulerTask.State -notin @("Ready","Running") -or $schedulerActionText -notlike "*$expectedSchedulerScript*") {
+        throw "Scheduler task is not Ready/Running or points to the wrong script. State: $($schedulerTask.State); Action: $schedulerActionText"
+    }
+    $schedulerInfo = Get-ScheduledTaskInfo -TaskName "Tagore ERP - Laravel Scheduler" -ErrorAction Stop
+    if ($schedulerInfo.LastRunTime.Year -lt 2020) {
+        Add-Result "Laravel scheduler task" "FAIL" "Task is registered but has not recorded a real execution yet"
+    } elseif ($schedulerInfo.LastTaskResult -eq 0) {
+        Add-Result "Laravel scheduler task" "PASS" "Last run succeeded at $($schedulerInfo.LastRunTime)"
+    } else {
+        Add-Result "Laravel scheduler task" "FAIL" "Last run result $($schedulerInfo.LastTaskResult) at $($schedulerInfo.LastRunTime)"
+    }
+} catch { Add-Result "Laravel scheduler task" "FAIL" $_.Exception.Message }
+
 # PHPUnit must run in CI/staging with an isolated SQLite database, never against production config.
 Add-Result "Automated PHPUnit suite" "INFO" "Skipped in production; run in isolated CI/staging database"
 

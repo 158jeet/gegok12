@@ -1,7 +1,7 @@
 @extends('layouts.admin.layout') 
 
 @section('content')
-    <div class="w-full lg:mx-2">
+    <div class="tg-main">
         <h1 class="admin-h1 my-3 flex items-center">
             <a href="{{ url('admin/feedbacks') }}" title="Back" class="rounded-full bg-gray-100 p-2">
                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 492 492" xml:space="preserve" width="512px" height="512px" class="w-3 h-3 fill-current text-gray-700"><g><g><g><path d="M464.344,207.418l0.768,0.168H135.888l103.496-103.724c5.068-5.064,7.848-11.924,7.848-19.124 c0-7.2-2.78-14.012-7.848-19.088L223.28,49.538c-5.064-5.064-11.812-7.864-19.008-7.864c-7.2,0-13.952,2.78-19.016,7.844 L7.844,226.914C2.76,231.998-0.02,238.77,0,245.974c-0.02,7.244,2.76,14.02,7.844,19.096l177.412,177.412 c5.064,5.06,11.812,7.844,19.016,7.844c7.196,0,13.944-2.788,19.008-7.844l16.104-16.112c5.068-5.056,7.848-11.808,7.848-19.008 c0-7.196-2.78-13.592-7.848-18.652L134.72,284.406h329.992c14.828,0,27.288-12.78,27.288-27.6v-22.788    C492,219.198,479.172,207.418,464.344,207.418z" data-original="#000000" fill="" class="active-path"></path></g></g></g></svg>
@@ -11,33 +11,33 @@
     </div>
 
     <div class="w-full lg:mx-2">
-        <div class="card bg-white shadow my-5">
-            <div class="panel panel-default px-3 py-3">
-                <div class="panel-body">  
+        <div class="tg-card my-5">
+            <div class="tg-feedback-panel">
+                <div class="tg-feedback-panel-body">  
                     @include('partials.message')
                     <div class="w-full">
-                        <div class="flex flex-row participant-box col-md-4">
-                            <div class="flex flex-col lg:w-3/4 lg:flex-row profile-section items-center">
-                                <div class="profile-image-section p-4">
+                        <div class="flex flex-row tg-feedback-participant">
+                            <div class="flex flex-col lg:flex-row items-center">
+                                <div class="tg-feedback-avatar">
                                     <img src="{{ asset('uploads/user/avatar/default-user.jpg') }}" width="60px" height="60px">
                                 </div>
-                                <div class="profile-data-section my-2">
-                                    <h3 class="profile-full-name text-sm">
+                                <div class="my-2">
+                                    <h3 class="tg-table-primary">
                                         <a href="{{ url('/admin/parent/show/'.$feedback->parent->name) }}">{{ $feedback->parent->FullName }}</a>
                                     </h3>
                                 </div>  
                             </div>
-                            <div class="flex items-center lg:w-1/4 lg:justify-end">
+                            <div class="flex items-center lg:justify-end">
                                 <div class="flex items-center text-gray-600">
-                                    @if($feedback->latestMessage->is_seen == '0')
+                                    @if($feedback->latestMessage && $feedback->latestMessage->is_seen == '0')
                                         <a href="#" class="no-underline text-white px-4 my-3 mx-1 flex items-center bg-orange-500 py-1 justify-center" onclick='update("{{ url('/admin/feedback/updateStatus/'.$feedback->latestMessage->id) }}","has_seen")'>
                                             <span class="mx-1 text-sm font-semibold">Mark As Seen</span>
                                         </a>
-                                    @elseif($feedback->latestMessage->is_seen == 'has_seen')
+                                    @elseif($feedback->latestMessage && $feedback->latestMessage->is_seen == 'has_seen')
                                         <a href="#" class="no-underline text-white px-4 my-3 mx-1 flex items-center bg-red-600 py-1 justify-center" onclick='update("{{ url('/admin/feedback/updateStatus/'.$feedback->latestMessage->id) }}","action_taken")'>
                                             <span class="mx-1 text-sm font-semibold">Take Action</span>
                                         </a>
-                                    @elseif($feedback->latestMessage->is_seen == 'action_taken')
+                                    @elseif($feedback->latestMessage && $feedback->latestMessage->is_seen == 'action_taken')
                                         <p class="no-underline text-white px-4 my-3 mx-1 flex items-center custom-green py-1 justify-center">
                                             <span class="mx-1 text-sm font-semibold">Action Taken</span>
                                         </p>
