@@ -197,10 +197,12 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!count) return;
 
-    if (search && search.value !== currentQuery) search.value = currentQuery;
-    if (status && status.value !== currentStatus) status.value = currentStatus;
-
-    const query = currentQuery.trim().toLowerCase();
+    // The live controls are the source of truth. Never write the stored
+    // value back into them during filtering: a mobile viewport remount can
+    // otherwise replace a freshly typed value with stale state.
+    if (search) currentQuery = search.value;
+    if (status) currentStatus = status.value;
+    const query = String(search?.value ?? currentQuery).trim().toLowerCase();
     let visible = 0;
     rows.forEach(row => {
       const text = (row.innerText || row.textContent || '').toLowerCase();
