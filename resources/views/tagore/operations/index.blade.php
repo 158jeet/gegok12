@@ -197,12 +197,10 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!count) return;
 
-    // The live controls are the source of truth. Never write the stored
-    // value back into them during filtering: a mobile viewport remount can
-    // otherwise replace a freshly typed value with stale state.
-    if (search) currentQuery = search.value;
-    if (status) currentStatus = status.value;
-    const query = String(search?.value ?? currentQuery).trim().toLowerCase();
+    // Event capture updates these values before framework handlers run.
+    // Keep them outside the DOM so a Vue remount cannot erase an in-flight
+    // search or status selection on mobile.
+    const query = String(currentQuery).trim().toLowerCase();
     let visible = 0;
     rows.forEach(row => {
       const text = (row.innerText || row.textContent || '').toLowerCase();
