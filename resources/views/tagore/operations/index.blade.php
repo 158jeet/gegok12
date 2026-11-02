@@ -196,7 +196,7 @@
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const rowText = String(row.textContent || row.innerText || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const rowText = String(row.textContent || row.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
