@@ -1,4 +1,4 @@
-name: Tagore Live Acceptance — Validation (Live Tests Require Dispatch)
+name: Tagore Live Acceptance — Automated Read-Only Production Sweep
 
 on:
   pull_request:
@@ -7,6 +7,8 @@ on:
       - '.github/workflows/live-acceptance.yml'
       - 'e2e/**'
       - 'docs/ACCEPTANCE_SYSTEM.md'
+  push:
+    branches: [main, 'work/**']
   workflow_dispatch:
     inputs:
       base_url:
@@ -60,13 +62,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   live-browser-acceptance:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     name: Live browser acceptance (read-only)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      E2E_BASE_URL: ${{ inputs.base_url }}
-      TAGORE_LIVE_ENVIRONMENT: ${{ inputs.environment_label }}
+      E2E_BASE_URL: ${{ inputs.base_url || 'https://59.90.66.12' }}
+      TAGORE_LIVE_ENVIRONMENT: ${{ inputs.environment_label || 'production' }}
       TAGORE_LIVE_ACCEPTANCE_ENABLED: 'true'
       TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON: ${{ secrets.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON }}
       CI: 'true'
