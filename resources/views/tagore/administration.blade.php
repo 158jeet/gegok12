@@ -33,8 +33,8 @@
       </form>
     </section>
     <section class="card wide"><h2>Account access & password management</h2><div class="table-responsive"><table><thead><tr><th>User</th><th>ID</th><th>Role</th><th>Institution</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-      @forelse($assignments as $a)<tr><td>{{ $a->name }}<br><span class="muted">{{ $a->email }}</span></td><td>{{ $a->user_id }}</td><td>{{ $a->role_name }}</td><td>{{ $a->institution ?? 'Group-wide' }}</td><td>{{ $a->is_activated ? 'Active' : 'Disabled' }}</td><td>
-      <form method="post" action="{{ route('tagore.admin.users.password',$a->user_id) }}">@csrf<button>Reset password</button></form><form method="post" action="{{ route('tagore.admin.users.status',$a->user_id) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $a->is_activated ? 'disabled' : 'active' }}"><button>{{ $a->is_activated ? 'Disable' : 'Enable' }}</button></form>
+      @forelse($assignments as $a)<tr><td>{{ $a->name }}<br><span class="muted">{{ $a->email }}</span></td><td>{{ $a->user_id }}</td><td>{{ $a->role_name }}</td><td>{{ $a->institution ?? 'Group-wide' }}</td><td>{{ $a->status === 'active' ? 'Active' : 'Disabled' }}</td><td>
+      <form method="post" action="{{ route('tagore.admin.users.password',$a->user_id) }}">@csrf<button>Reset password</button></form><form method="post" action="{{ route('tagore.admin.users.status',$a->user_id) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $a->status === 'active' ? 'disabled' : 'active' }}"><button>{{ $a->status === 'active' ? 'Disable' : 'Enable' }}</button></form>
       </td></tr>@empty<tr><td colspan="6">No accounts with role assignments.</td></tr>@endforelse
     </tbody></table></div></section>
     <div class="grid">
