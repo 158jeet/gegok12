@@ -192,11 +192,11 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!count) return;
 
-    const query = String(queryValue ?? search?.value ?? '').trim().toLowerCase();
+    const query = String(queryValue ?? search?.value ?? '').normalize('NFKC').trim().toLocaleLowerCase();
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const rowText = String(row.textContent || row.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      const rowText = String(row.textContent || row.innerText || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
