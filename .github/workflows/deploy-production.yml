@@ -1,0 +1,120 @@
+name: Tagore Production Deploy (backup-first, Windows self-hosted)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-production.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tagore-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Backup, deploy and verify production on the school server
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    steps:
+      - name: Verify server checkout and deployment prerequisites
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
+          if (-not (Test-Path (Join-Path $root '.env.school'))) { throw 'Production .env.school is missing.' }
+          if (-not (Test-Path 'G:\TagoreSecrets\nginx-certs\59.90.66.12\fullchain.pem')) { throw 'Production TLS certificate export is missing.' }
+          if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is unavailable.' }
+          docker compose version
+          if ($LASTEXITCODE -ne 0) { throw 'Docker Compose is unavailable.' }
+          $status = git -C $root status --porcelain
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production checkout.' }
+          if ($status) { throw "Production checkout has local changes; refusing to overwrite them: $status" }
+          "Production checkout and prerequisites verified."
+
+      - name: Create and verify pre-deployment database and uploads backups
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backup = "G:\TagoreBackups\predeploy-$stamp"
+          New-Item -ItemType Directory -Force -Path $backup | Out-Null
+          Push-Location $root
+          try {
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --events tagore_erp > /tmp/tagore-predeploy.sql'
+            if ($LASTEXITCODE -ne 0) { throw 'MySQL dump command failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml cp db:/tmp/tagore-predeploy.sql "$backup\tagore_erp.sql"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not copy database backup from container.' }
+            if ((Get-Item "$backup\tagore_erp.sql").Length -lt 1024) { throw 'Database dump is unexpectedly small; refusing deployment.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app tar -czf /tmp/tagore-storage-predeploy.tar.gz -C /var/www/html/storage .
+            if ($LASTEXITCODE -ne 0) { throw 'Application storage archive failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml cp app:/tmp/tagore-storage-predeploy.tar.gz "$backup\app-storage.tar.gz"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not copy application storage backup from container.' }
+            if ((Get-Item "$backup\app-storage.tar.gz").Length -lt 100) { throw 'Application storage backup is unexpectedly small.' }
+            tar.exe -tzf "$backup\app-storage.tar.gz" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Application storage backup archive failed validation.' }
+            Get-FileHash "$backup\tagore_erp.sql","$backup\app-storage.tar.gz" -Algorithm SHA256 | Format-Table -AutoSize | Out-String | Set-Content "$backup\SHA256.txt"
+            "BACKUP_VERIFIED=$backup" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Write-Host "Verified pre-deployment backup: $backup"
+          } finally { Pop-Location }
+
+      - name: Update production checkout to the tested main commit
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          git -C $root fetch origin main
+          if ($LASTEXITCODE -ne 0) { throw 'Git fetch failed.' }
+          git -C $root reset --hard $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Could not update production checkout to the tested commit.' }
+          $actual = (git -C $root rev-parse HEAD).Trim()
+          if ($actual -ne $env:GITHUB_SHA) { throw "Checkout SHA mismatch: $actual" }
+
+      - name: Build production images and apply database migrations
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          Push-Location $root
+          try {
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build app web
+            if ($LASTEXITCODE -ne 0) { throw 'Production image build failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm app php artisan migrate --force
+            if ($LASTEXITCODE -ne 0) { throw 'Database migration failed. Preserve the verified backup for recovery.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm app php artisan optimize:clear
+            if ($LASTEXITCODE -ne 0) { throw 'Laravel cache clear failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d app worker web
+            if ($LASTEXITCODE -ne 0) { throw 'Production services failed to start.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache
+            if ($LASTEXITCODE -ne 0) { throw 'Config cache failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache
+            if ($LASTEXITCODE -ne 0) { throw 'Route cache failed.' }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache
+            if ($LASTEXITCODE -ne 0) { throw 'View cache failed.' }
+          } finally { Pop-Location }
+
+      - name: Run production health and web smoke tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          Push-Location $root
+          try {
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps
+            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production services.' }
+            $running = docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps --services --filter status=running
+            foreach ($svc in @('app','web','worker','db','redis')) {
+              if ($running -notcontains $svc) { throw "Required service $svc is not running." }
+            }
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan about
+            if ($LASTEXITCODE -ne 0) { throw 'Laravel health check failed.' }
+            $status = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://127.0.0.1/login
+            if ($LASTEXITCODE -ne 0 -or $status -ne '200') { throw "Local HTTPS login smoke test failed: HTTP $status" }
+            $publicStatus = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://59.90.66.12/login
+            if ($LASTEXITCODE -ne 0 -or $publicStatus -ne '200') { throw "Public HTTPS login smoke test failed: HTTP $publicStatus" }
+            Write-Host 'Production deployment smoke tests passed.'
+          } finally { Pop-Location }
