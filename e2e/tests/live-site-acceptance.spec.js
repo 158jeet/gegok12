@@ -33,9 +33,17 @@ test.describe('Tagore live-site acceptance', () => {
     expect(overflow, 'login page must not horizontally overflow ' + testInfo.project.name).toBeFalsy();
     const logo = page.locator('img.tg-login-logo');
     if (await logo.count()) {
-      await expect(logo).toBeVisible();
-      const imageLoaded = await logo.evaluate(img => img.complete && img.naturalWidth > 0);
-      expect(imageLoaded, 'Tagore login logo must load').toBeTruthy();
+      // The mobile login layout intentionally hides the brand mark to preserve
+      // space for the sign-in form; verify the asset loads without requiring
+      // desktop-only visibility at narrow viewports.
+      const imageState = await logo.evaluate(img => ({
+        loaded: img.complete && img.naturalWidth > 0,
+        visible: !!(img.offsetWidth || img.offsetHeight || img.getClientRects().length),
+      }));
+      expect(imageState.loaded, 'Tagore login logo asset must load').toBeTruthy();
+      if (testInfo.project.name !== 'mobile') {
+        expect(imageState.visible, 'Tagore login logo must be visible on desktop').toBeTruthy();
+      }
     }
     await page.screenshot({ path: 'test-results/live-login-' + testInfo.project.name + '.png', fullPage: true });
   });
