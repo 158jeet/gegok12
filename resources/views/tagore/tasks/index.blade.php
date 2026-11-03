@@ -41,7 +41,25 @@ body.tg-app .shell a{font-weight:650}
 .task-alert-error{background:#4a1d22;color:#fecaca;border-color:#7f1d1d}
 @media(max-width:900px){body.tg-app .cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:600px){body.tg-app .shell{padding:18px 14px 64px!important;overflow-x:clip}body.tg-app .cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}body.tg-app .cards>.card{padding:13px!important}body.tg-app .shell>.card{padding:15px!important;min-width:0;max-width:100%}body.tg-app .shell form[method=get]{display:grid;grid-template-columns:1fr}body.tg-app .shell table td form{min-width:240px}body.tg-app .shell .task-table-wrap,body.tg-app .shell div[style*="overflow:auto"]{width:100%;max-width:100%;min-width:0;overflow-x:auto;box-sizing:border-box}}
-@media(max-width:760px){html,body.tg-app{width:100%;max-width:100%;overflow-x:hidden}body.tg-app .shell,body.tg-app .shell>* ,body.tg-app .task-queue,body.tg-app .task-section-heading,body.tg-app .shell>.card{box-sizing:border-box;min-width:0;max-width:100%}body.tg-app .task-hero>div,body.tg-app .task-hero-actions{min-width:0;max-width:100%}body.tg-app .task-hero-actions{width:100%}body.tg-app .task-table-wrap{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto!important}body.tg-app .task-table-wrap>table{width:max-content!important;min-width:100%!important;max-width:none!important}body.tg-app .task-section-heading{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px}body.tg-app .task-section-heading>*{min-width:0;max-width:100%}}</style><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui8' }}"></head><body class="tg-app"><div class="shell">
+@media(max-width:760px){html,body.tg-app{width:100%;max-width:100%;overflow-x:hidden}body.tg-app .shell,body.tg-app .shell>* ,body.tg-app .task-queue,body.tg-app .task-section-heading,body.tg-app .shell>.card{box-sizing:border-box;min-width:0;max-width:100%}body.tg-app .task-hero>div,body.tg-app .task-hero-actions{min-width:0;max-width:100%}body.tg-app .task-hero-actions{width:100%}body.tg-app .task-table-wrap{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto!important}body.tg-app .task-table-wrap>table{width:max-content!important;min-width:100%!important;max-width:none!important}body.tg-app .task-section-heading{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px}body.tg-app .task-section-heading>*{min-width:0;max-width:100%}}
+/* Keep wide task tables inside the mobile viewport; scroll within the table, not the page. */
+@media(max-width:760px){
+  html,body.tg-app{max-width:100%;overflow-x:hidden!important}
+  body.tg-app .shell>table,
+  body.tg-app .shell>table:last-of-type{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    box-sizing:border-box!important;
+  }
+  body.tg-app .shell>table thead,
+  body.tg-app .shell>table tbody{white-space:nowrap}
+  body.tg-app .shell>table th,
+  body.tg-app .shell>table td{max-width:70vw}
+}
+</style><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui8' }}"></head><body class="tg-app"><div class="shell">
 <header class="task-hero">
   <div>
     <a class="task-back" href="{{ route('tagore.dashboard') }}">Back to dashboard</a>
