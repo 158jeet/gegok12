@@ -48,7 +48,7 @@ class AdministrationController extends Controller
             ->where('ur.status', 'active')
             ->orderBy('u.name')
             ->limit(250)
-            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'u.is_activated', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
+            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
         return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
     }
@@ -63,7 +63,7 @@ class AdministrationController extends Controller
         abort_unless($institution,422);
         $group=match($role->code){'PRINCIPAL'=>4,'TEACHER','COORDINATOR','FEE_EDITOR'=>5,'PARENT'=>7,'STUDENT'=>6,'ACCOUNTS'=>11,default=>13};
         $password='Tg!'.\Illuminate\Support\Str::random(5).'-'.\Illuminate\Support\Str::random(8);
-        $id=DB::table('users')->insertGetId(['school_id'=>$institution->school_id,'usergroup_id'=>$group,'name'=>trim($data['name']),'email'=>strtolower(trim($data['email'])),'mobile_no'=>$data['mobile_no']??null,'password'=>\Illuminate\Support\Facades\Hash::make($password),'is_activated'=>1,'email_verified'=>1,'email_verified_at'=>now(),'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
+        $id=DB::table('users')->insertGetId(['school_id'=>$institution->school_id,'usergroup_id'=>$group,'name'=>trim($data['name']),'email'=>strtolower(trim($data['email'])),'mobile_no'=>$data['mobile_no']??null,'password'=>\Illuminate\Support\Facades\Hash::make($password),'email_verified'=>1,'email_verified_at'=>now(),'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
         DB::table('tagore_user_roles')->insert(['user_id'=>$id,'role_id'=>$role->id,'institution_id'=>$institution->id,'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
         DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$id,'action'=>'created','metadata'=>json_encode(['role'=>$role->code,'institution_id'=>$institution->id]),'created_at'=>now()]);
         return back()->with('issued_credentials',['name'=>$data['name'],'email'=>$data['email'],'password'=>$password,'message'=>'Copy this generated password now; it will not be shown again.']);
@@ -87,7 +87,7 @@ class AdministrationController extends Controller
         $data=$request->validate(['status'=>['required','in:active,disabled']]);
         abort_if((int)$userId===(int)$request->user()->id,422,'You cannot disable your own account.');
         abort_unless(DB::table('users')->where('id',$userId)->whereNull('deleted_at')->exists(),404);
-        DB::table('users')->where('id',$userId)->update(['is_activated'=>$data['status']==='active'?1:0,'status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
+        DB::table('users')->where('id',$userId)->update(['status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
         DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
         return back()->with('success','User account status updated.');
     }
