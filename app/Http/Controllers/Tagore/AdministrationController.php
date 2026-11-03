@@ -48,9 +48,48 @@ class AdministrationController extends Controller
             ->where('ur.status', 'active')
             ->orderBy('u.name')
             ->limit(250)
-            ->get(['ur.id', 'u.id as user_id', 'u.name', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
+            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
         return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $this->owner($request);
+        $data = $request->validate(['name'=>['required','string','max:150'],'email'=>['required','email','max:190','unique:users,email'],'mobile_no'=>['nullable','string','max:30'],'role_id'=>['required','integer','exists:tagore_roles,id'],'institution_id'=>['required','integer','exists:tagore_institutions,id']]);
+        $role=DB::table('tagore_roles')->where('id',$data['role_id'])->where('status','active')->first(['id','code']);
+        abort_unless($role && $role->code !== 'OWNER',422,'Additional owner accounts require separate approval.');
+        $institution=DB::table('tagore_institutions')->where('id',$data['institution_id'])->where('status','active')->first(['id','school_id']);
+        abort_unless($institution,422);
+        $group=match($role->code){'PRINCIPAL'=>4,'TEACHER','COORDINATOR','FEE_EDITOR'=>5,'PARENT'=>7,'STUDENT'=>6,'ACCOUNTS'=>11,default=>13};
+        $password='Tg!'.\Illuminate\Support\Str::random(5).'-'.\Illuminate\Support\Str::random(8);
+        $id=DB::table('users')->insertGetId(['school_id'=>$institution->school_id,'usergroup_id'=>$group,'name'=>trim($data['name']),'email'=>strtolower(trim($data['email'])),'mobile_no'=>$data['mobile_no']??null,'password'=>\Illuminate\Support\Facades\Hash::make($password),'email_verified'=>1,'email_verified_at'=>now(),'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
+        DB::table('tagore_user_roles')->insert(['user_id'=>$id,'role_id'=>$role->id,'institution_id'=>$institution->id,'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
+        DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$id,'action'=>'created','metadata'=>json_encode(['role'=>$role->code,'institution_id'=>$institution->id]),'created_at'=>now()]);
+        return back()->with('issued_credentials',['name'=>$data['name'],'email'=>$data['email'],'password'=>$password,'message'=>'Copy this generated password now; it will not be shown again.']);
+    }
+
+    public function resetUserPassword(Request $request, int $userId)
+    {
+        $this->owner($request);
+        $user=DB::table('users')->where('id',$userId)->whereNull('deleted_at')->first(['id','name','email']);
+        abort_unless($user,404);
+        abort_if((int)$userId===(int)$request->user()->id,422,'Use your own account security settings.');
+        $password='Tg!'.\Illuminate\Support\Str::random(5).'-'.\Illuminate\Support\Str::random(8);
+        DB::table('users')->where('id',$userId)->update(['password'=>\Illuminate\Support\Facades\Hash::make($password),'remember_token'=>null,'updated_at'=>now()]);
+        DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>'password_reset','metadata'=>null,'created_at'=>now()]);
+        return back()->with('issued_credentials',['name'=>$user->name,'email'=>$user->email,'password'=>$password,'message'=>'New password generated. Share securely and ask the user to change it after signing in.']);
+    }
+
+    public function updateUserStatus(Request $request, int $userId)
+    {
+        $this->owner($request);
+        $data=$request->validate(['status'=>['required','in:active,disabled']]);
+        abort_if((int)$userId===(int)$request->user()->id,422,'You cannot disable your own account.');
+        abort_unless(DB::table('users')->where('id',$userId)->whereNull('deleted_at')->exists(),404);
+        DB::table('users')->where('id',$userId)->update(['status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
+        DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
+        return back()->with('success','User account status updated.');
     }
 
     public function storeInstitution(Request $request)

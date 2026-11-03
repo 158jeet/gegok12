@@ -22,6 +22,21 @@
     @if(session('success'))<div class="msg">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="msg">{{ $errors->first() }}</div>@endif
 
+    @if(session('issued_credentials'))
+      <section class="card wide" style="border:2px solid #19b77a"><h2>Generated credentials — copy now</h2><p>{{ session('issued_credentials.message') }}</p><p><b>{{ session('issued_credentials.name') }}</b> · {{ session('issued_credentials.email') }}</p><p style="font-size:20px;font-weight:800;word-break:break-all">{{ session('issued_credentials.password') }}</p><button type="button" onclick="navigator.clipboard.writeText(@js(session('issued_credentials.email').' / '.session('issued_credentials.password'))).then(()=>this.textContent='Copied')">Copy credentials</button></section>
+    @endif
+    <section class="card wide"><h2>Create user account</h2><p class="muted">Owner-only. Creates a login, assigns one role and institution, and generates a one-time password.</p>
+      <form method="post" action="{{ route('tagore.admin.users.store') }}">@csrf
+        <label>Full name</label><input name="name" required maxlength="150"><label>Email / login ID</label><input type="email" name="email" required><label>Mobile</label><input name="mobile_no">
+        <label>Role</label><select name="role_id" required>@foreach($rolesList->where('code','!=','OWNER') as $r)<option value="{{ $r->id }}">{{ $r->name }}</option>@endforeach</select>
+        <label>Institution</label><select name="institution_id" required>@foreach($institutions as $i)<option value="{{ $i->id }}">{{ $i->display_name }}</option>@endforeach</select><button>Create account & generate password</button>
+      </form>
+    </section>
+    <section class="card wide"><h2>Account access & password management</h2><div class="table-responsive"><table><thead><tr><th>User</th><th>ID</th><th>Role</th><th>Institution</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      @forelse($assignments as $a)<tr><td>{{ $a->name }}<br><span class="muted">{{ $a->email }}</span></td><td>{{ $a->user_id }}</td><td>{{ $a->role_name }}</td><td>{{ $a->institution ?? 'Group-wide' }}</td><td>{{ $a->status === 'active' ? 'Active' : 'Disabled' }}</td><td>
+      <form method="post" action="{{ route('tagore.admin.users.password',$a->user_id) }}">@csrf<button>Reset password</button></form><form method="post" action="{{ route('tagore.admin.users.status',$a->user_id) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $a->status === 'active' ? 'disabled' : 'active' }}"><button>{{ $a->status === 'active' ? 'Disable' : 'Enable' }}</button></form>
+      </td></tr>@empty<tr><td colspan="6">No accounts with role assignments.</td></tr>@endforelse
+    </tbody></table></div></section>
     <div class="grid">
         <section class="card">
             <h2>Tagore Group</h2>
