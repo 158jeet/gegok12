@@ -208,7 +208,7 @@
 
   // Always read the live controls at the time of filtering. This avoids stale
   // event values across mobile keyboards and native type=search clear events.
-  window.tagoreOperationsFilter = () => apply();
+  window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
 
   const refreshFromControls = () => apply();
   ['input', 'search', 'keyup'].forEach(type => {
