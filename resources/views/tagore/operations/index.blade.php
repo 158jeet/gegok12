@@ -196,7 +196,7 @@
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const rowText = (row.innerText || row.textContent || '').toLowerCase();
+      const rowText = String(row.textContent || row.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
@@ -206,22 +206,19 @@
     if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
-  // Inline native handlers pass the exact value being edited. Delegated
-  // capture handlers cover keyboard/search events and survive control remounts.
-  window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
+  // Always read the live controls at the time of filtering. This avoids stale
+  // event values across mobile keyboards and native type=search clear events.
+  window.tagoreOperationsFilter = () => apply();
 
-  document.addEventListener('input', event => {
-    if (event.target?.id === 'tg-operations-search') {
-      const value = event.target.value;
-      window.setTimeout(() => apply(value, undefined), 0);
-    }
-  }, true);
+  const refreshFromControls = () => apply();
+  ['input', 'search', 'keyup'].forEach(type => {
+    document.addEventListener(type, event => {
+      if (event.target?.id === 'tg-operations-search') refreshFromControls();
+    }, true);
+  });
 
   document.addEventListener('change', event => {
-    if (event.target?.id === 'tg-operations-status') {
-      const value = event.target.value;
-      window.setTimeout(() => apply(undefined, value), 0);
-    }
+    if (event.target?.id === 'tg-operations-status') refreshFromControls();
   }, true);
 
   document.addEventListener('keydown', event => {
