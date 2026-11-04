@@ -30,7 +30,7 @@ jobs:
           if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is unavailable.' }
           docker compose version
           if ($LASTEXITCODE -ne 0) { throw 'Docker Compose is unavailable.' }
-          $status = git -C $root status --porcelain
+          $status = git -c "safe.directory=$root" -C $root status --porcelain
           if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production checkout.' }
           if ($status) { throw "Production checkout has local changes; refusing to overwrite them: $status" }
           "Production checkout and prerequisites verified."
@@ -67,11 +67,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root = 'C:\server\gegok12-main-new'
-          git -C $root fetch origin main
+          git -c "safe.directory=$root" -C $root fetch origin main
           if ($LASTEXITCODE -ne 0) { throw 'Git fetch failed.' }
-          git -C $root reset --hard $env:GITHUB_SHA
+          git -c "safe.directory=$root" -C $root reset --hard $env:GITHUB_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Could not update production checkout to the tested commit.' }
-          $actual = (git -C $root rev-parse HEAD).Trim()
+          $actual = (git -c "safe.directory=$root" -C $root rev-parse HEAD).Trim()
           if ($actual -ne $env:GITHUB_SHA) { throw "Checkout SHA mismatch: $actual" }
 
       - name: Build production images and apply database migrations
