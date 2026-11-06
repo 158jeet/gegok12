@@ -1,0 +1,106 @@
+name: Recover preserved server source changes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recover-server-delta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: tagore-server-source-recovery
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture preserved production checkout changes (read-only)
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Capture source-only delta without modifying production
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          if (-not (Test-Path (Join-Path $root '.git'))) {
+            throw "Production checkout not found: $root"
+          }
+
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $out = Join-Path $env:RUNNER_TEMP "tagore-server-recovery-$stamp"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          $status = & git -c "safe.directory=$root" -C $root status --porcelain=v1 -uall 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "Could not inspect production checkout: $status" }
+          $status | Set-Content -Encoding UTF8 (Join-Path $out 'server-status.txt')
+
+          $head = & git -c "safe.directory=$root" -C $root rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read production checkout HEAD.' }
+          "HEAD=$head" | Set-Content -Encoding UTF8 (Join-Path $out 'server-head.txt')
+
+          & git -c "safe.directory=$root" -C $root diff --binary HEAD -- . ':!mobile/parent' |
+            Set-Content -Encoding UTF8 (Join-Path $out 'tracked-server-changes.patch')
+          if ($LASTEXITCODE -ne 0) { throw 'Could not export tracked source changes.' }
+
+          $untracked = & git -c "safe.directory=$root" -C $root ls-files --others --exclude-standard
+          if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate untracked files.' }
+          $manifest = New-Object System.Collections.Generic.List[string]
+          foreach ($relative in $untracked) {
+            if ([string]::IsNullOrWhiteSpace($relative)) { continue }
+            $normalized = $relative.Replace('\','/')
+            if ($normalized -match '(^|/)(\.env[^/]*|vendor|node_modules|storage|\.git|secrets?)(/|$)' -or
+                $normalized -match '\.(pem|key|p12|pfx|sql|sqlite|db)$') {
+              continue
+            }
+            $source = Join-Path $root $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+            $destination = Join-Path (Join-Path $out 'untracked') $relative
+            $parent = Split-Path -Parent $destination
+            New-Item -ItemType Directory -Force -Path $parent | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination
+            $manifest.Add($normalized)
+          }
+          $manifest | Set-Content -Encoding UTF8 (Join-Path $out 'untracked-manifest.txt')
+
+          $submodule = Join-Path $root 'mobile\parent'
+          if (Test-Path (Join-Path $submodule '.git')) {
+            $subStatus = & git -C $submodule status --porcelain=v1 -uall 2>&1
+            $subStatus | Set-Content -Encoding UTF8 (Join-Path $out 'parent-submodule-status.txt')
+            & git -C $submodule diff --binary HEAD |
+              Set-Content -Encoding UTF8 (Join-Path $out 'parent-submodule-changes.patch')
+            if ($LASTEXITCODE -ne 0) { throw 'Could not export parent submodule changes.' }
+            $subUntracked = & git -C $submodule ls-files --others --exclude-standard
+            foreach ($relative in $subUntracked) {
+              if ([string]::IsNullOrWhiteSpace($relative)) { continue }
+              $normalized = $relative.Replace('\','/')
+              if ($normalized -match '(^|/)(\.env[^/]*|node_modules|vendor|\.git)(/|$)' -or
+                  $normalized -match '\.(pem|key|p12|pfx)$') { continue }
+              $source = Join-Path $submodule $relative
+              if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+              $destination = Join-Path (Join-Path $out 'parent-submodule-untracked') $relative
+              New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+              Copy-Item -LiteralPath $source -Destination $destination
+            }
+          }
+
+          $stat = & git -c "safe.directory=$root" -C $root diff --stat HEAD
+          $stat | Set-Content -Encoding UTF8 (Join-Path $out 'tracked-diff-stat.txt')
+          $zip = Join-Path $env:RUNNER_TEMP "tagore-server-source-recovery-$stamp.zip"
+          Compress-Archive -Path (Join-Path $out '*') -DestinationPath $zip -Force
+          if (-not (Test-Path $zip) -or (Get-Item $zip).Length -lt 100) {
+            throw 'Recovery archive is missing or unexpectedly small.'
+          }
+          "Recovery archive created: $zip"
+          "Archive size: $((Get-Item $zip).Length) bytes"
+
+      - name: Upload recovered source delta
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagore-server-source-recovery
+          path: ${{ runner.temp }}/tagore-server-source-recovery-*.zip
+          if-no-files-found: error
+          retention-days: 14
