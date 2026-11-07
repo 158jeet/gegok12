@@ -86,6 +86,17 @@ jobs:
             }
           }
 
+          $changedTracked = & git -c "safe.directory=$root" -C $root diff --name-only HEAD -- . ':!mobile/parent'
+          $trackedRoot = Join-Path $out 'tracked-current'
+          foreach ($relative in $changedTracked) {
+            if ([string]::IsNullOrWhiteSpace($relative)) { continue }
+            $source = Join-Path $root $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+            $destination = Join-Path $trackedRoot $relative
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+          }
+
           $stat = & git -c "safe.directory=$root" -C $root diff --stat HEAD
           $stat | Set-Content -Encoding UTF8 (Join-Path $out 'tracked-diff-stat.txt')
           $zip = Join-Path $env:RUNNER_TEMP "tagore-server-source-recovery-$stamp.zip"
@@ -125,8 +136,17 @@ jobs:
               [IO.File]::WriteAllBytes($patch, $bytes[3..($bytes.Length-1)])
             }
             if ((Get-Item $patch).Length -gt 0) {
-              git -C $repoDir apply --binary $patch
-              if ($LASTEXITCODE -ne 0) { throw 'Tracked server changes do not apply cleanly to current main; preserving archive only.' }
+              git -C $repoDir apply --binary --3way $patch
+              if ($LASTEXITCODE -ne 0) {
+                git -C $repoDir apply --reverse --binary --3way $patch 2>$null
+                # Keep the complete source snapshots and patch for safe manual reconciliation on the recovery branch.
+                $trackedSnapshots = Join-Path $out.FullName 'tracked-current'
+                if (Test-Path $trackedSnapshots) {
+                  New-Item -ItemType Directory -Force -Path (Join-Path $repoDir 'recovery/server-capture/tracked-current') | Out-Null
+                  Copy-Item (Join-Path $trackedSnapshots '*') (Join-Path $repoDir 'recovery/server-capture/tracked-current') -Recurse -Force
+                }
+                Copy-Item $patch (Join-Path $repoDir 'recovery/server-capture/tracked-server-changes.patch') -Force
+              }
             }
           }
 
