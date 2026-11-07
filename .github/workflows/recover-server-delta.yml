@@ -19,7 +19,7 @@ jobs:
   capture:
     name: Capture preserved production checkout changes (read-only)
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Capture source-only delta without modifying production
         shell: powershell
@@ -104,3 +104,5 @@ jobs:
           path: ${{ runner.temp }}/tagore-server-source-recovery-*.zip
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
+          overwrite: true
