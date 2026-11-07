@@ -18,7 +18,7 @@ jobs:
   capture:
     name: Capture preserved production checkout changes (read-only)
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 35
+    timeout-minutes: 25
     steps:
       - name: Capture source-only delta without modifying production
         shell: powershell
@@ -122,10 +122,8 @@ jobs:
           $branch = "recovery/server-source-$stamp"
           $repoDir = Join-Path $env:RUNNER_TEMP "tagore-recovery-git-$stamp"
           $basic = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN"))
-          git -c "http.extraheader=AUTHORIZATION: basic $basic" clone --no-checkout https://github.com/158jeet/gegok12.git $repoDir
+          git -c "http.extraheader=AUTHORIZATION: basic $basic" clone --depth 1 --single-branch --branch main --filter=blob:none https://github.com/158jeet/gegok12.git $repoDir
           if ($LASTEXITCODE -ne 0) { throw 'Could not clone the Git repository for recovery.' }
-          git -C $repoDir checkout main
-          if ($LASTEXITCODE -ne 0) { throw 'Could not check out main.' }
           git -C $repoDir checkout -b $branch
           if ($LASTEXITCODE -ne 0) { throw 'Could not create recovery branch.' }
 
