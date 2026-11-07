@@ -121,31 +121,23 @@ jobs:
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $branch = "recovery/server-source-$stamp"
           $repoDir = Join-Path $env:RUNNER_TEMP "tagore-recovery-git-$stamp"
-          $basic = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN"))
-          git -c "http.extraheader=AUTHORIZATION: basic $basic" clone --depth 1 --single-branch --branch main --filter=blob:none https://github.com/158jeet/gegok12.git $repoDir
-          if ($LASTEXITCODE -ne 0) { throw 'Could not clone the Git repository for recovery.' }
-          git -C $repoDir checkout -b $branch
-          if ($LASTEXITCODE -ne 0) { throw 'Could not create recovery branch.' }
+          New-Item -ItemType Directory -Force -Path $repoDir | Out-Null
+          git -C $repoDir init
+          if ($LASTEXITCODE -ne 0) { throw 'Could not initialize isolated recovery repository.' }
+          git -C $repoDir checkout --orphan $branch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create orphan recovery branch.' }
+          git -C $repoDir remote add origin https://github.com/158jeet/gegok12.git
+          if ($LASTEXITCODE -ne 0) { throw 'Could not configure recovery remote.' }
 
+          # Preserve exact current server versions as snapshots, without overwriting newer main files.
+          $trackedSnapshots = Join-Path $out.FullName 'tracked-current'
+          if (Test-Path $trackedSnapshots) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $repoDir 'recovery/server-capture/tracked-current') | Out-Null
+            Copy-Item (Join-Path $trackedSnapshots '*') (Join-Path $repoDir 'recovery/server-capture/tracked-current') -Recurse -Force
+          }
           $patch = Join-Path $out.FullName 'tracked-server-changes.patch'
           if (Test-Path $patch) {
-            $bytes = [IO.File]::ReadAllBytes($patch)
-            if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) {
-              [IO.File]::WriteAllBytes($patch, $bytes[3..($bytes.Length-1)])
-            }
-            if ((Get-Item $patch).Length -gt 0) {
-              git -C $repoDir apply --binary --3way $patch
-              if ($LASTEXITCODE -ne 0) {
-                git -C $repoDir apply --reverse --binary --3way $patch 2>$null
-                # Keep the complete source snapshots and patch for safe manual reconciliation on the recovery branch.
-                $trackedSnapshots = Join-Path $out.FullName 'tracked-current'
-                if (Test-Path $trackedSnapshots) {
-                  New-Item -ItemType Directory -Force -Path (Join-Path $repoDir 'recovery/server-capture/tracked-current') | Out-Null
-                  Copy-Item (Join-Path $trackedSnapshots '*') (Join-Path $repoDir 'recovery/server-capture/tracked-current') -Recurse -Force
-                }
-                Copy-Item $patch (Join-Path $repoDir 'recovery/server-capture/tracked-server-changes.patch') -Force
-              }
-            }
+            Copy-Item $patch (Join-Path $repoDir 'recovery/server-capture/tracked-server-changes.patch') -Force
           }
 
           $manifestPath = Join-Path $out.FullName 'untracked-manifest.txt'
@@ -161,7 +153,6 @@ jobs:
             }
           }
 
-          # Keep the parent-app submodule delta intact as a separately reviewable recovery payload.
           $parentRecovery = Join-Path $repoDir 'recovery/server-capture/parent-submodule'
           New-Item -ItemType Directory -Force -Path $parentRecovery | Out-Null
           foreach ($name in @('parent-submodule-status.txt','parent-submodule-changes.patch')) {
@@ -169,24 +160,23 @@ jobs:
             if (Test-Path $source) { Copy-Item $source (Join-Path $parentRecovery $name) -Force }
           }
           $parentFiles = Join-Path $out.FullName 'parent-submodule-untracked'
-          if (Test-Path $parentFiles) {
-            Copy-Item $parentFiles (Join-Path $parentRecovery 'untracked') -Recurse -Force
-          }
-          Copy-Item (Join-Path $out.FullName 'server-status.txt') (Join-Path $repoDir 'recovery/server-capture/server-status.txt') -Force
-          Copy-Item (Join-Path $out.FullName 'server-head.txt') (Join-Path $repoDir 'recovery/server-capture/server-head.txt') -Force
-          Copy-Item (Join-Path $out.FullName 'tracked-diff-stat.txt') (Join-Path $repoDir 'recovery/server-capture/tracked-diff-stat.txt') -Force
+          if (Test-Path $parentFiles) { Copy-Item $parentFiles (Join-Path $parentRecovery 'untracked') -Recurse -Force }
 
+          foreach ($name in @('server-status.txt','server-head.txt','tracked-diff-stat.txt')) {
+            $source = Join-Path $out.FullName $name
+            if (Test-Path $source) { Copy-Item $source (Join-Path $repoDir "recovery/server-capture/$name") -Force }
+          }
           $archive = Get-ChildItem $env:RUNNER_TEMP -File -Filter 'tagore-server-source-recovery-*.zip' |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if ($archive) {
-            New-Item -ItemType Directory -Force -Path (Join-Path $repoDir 'recovery/server-capture') | Out-Null
             Copy-Item $archive.FullName (Join-Path $repoDir 'recovery/server-capture/server-source-recovery.zip') -Force
           }
 
           git -C $repoDir add -A
+          if ($LASTEXITCODE -ne 0) { throw 'Could not stage recovered source.' }
           git -C $repoDir -c user.name='Tagore Recovery Bot' -c user.email='actions@users.noreply.github.com' commit -m "Recover preserved production server source changes"
-          if ($LASTEXITCODE -ne 0) { throw 'No recoverable changes were committed.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit recovered source.' }
           git -c "http.extraheader=AUTHORIZATION: basic $basic" -C $repoDir push origin $branch
           if ($LASTEXITCODE -ne 0) { throw 'Could not push the recovery branch to GitHub.' }
           "RECOVERY_BRANCH=$branch"
-          "RECOVERY_COMMIT=$(git -C $repoDir rev-parse HEAD)"
+          "RECOVERY_COMMIT=$(git -C $repoDir rev-parse HEAD)"rse HEAD)"
