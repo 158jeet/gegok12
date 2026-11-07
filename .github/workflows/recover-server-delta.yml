@@ -76,8 +76,8 @@ jobs:
             $subUntracked = & git -c "safe.directory=$submodule" -C $submodule ls-files --others --exclude-standard
             foreach ($relative in $subUntracked) {
               if ([string]::IsNullOrWhiteSpace($relative)) { continue }
-              $normalized = $relative.Replace('\','/')
-              if ($normalized -match '(^|/)(\.env[^/]*|node_modules|vendor|\.git)(/|$)' -or
+              if ($normalized -match '(^|/)(\.env[^/]*|node_modules|vendor|\.git|build|\.gradle|\.dart_tool|Pods|DerivedData|\.idea|\.vscode|\.expo|\.next|dist|coverage)(/|$)' -or
+                  $normalized -match '\.(pem|key|p12|pfx|class|jar|apk|aab|dex|bin|lockb)$') { continue }
                   $normalized -match '\.(pem|key|p12|pfx)$') { continue }
               $source = Join-Path $submodule $relative
               if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
