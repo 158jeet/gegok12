@@ -68,12 +68,12 @@ jobs:
 
           $submodule = Join-Path $root 'mobile\parent'
           if (Test-Path (Join-Path $submodule '.git')) {
-            $subStatus = & git -C $submodule status --porcelain=v1 -uall 2>&1
+            $subStatus = & git -c "safe.directory=$submodule" -C $submodule status --porcelain=v1 -uall 2>&1
             $subStatus | Set-Content -Encoding UTF8 (Join-Path $out 'parent-submodule-status.txt')
-            & git -C $submodule diff --binary HEAD |
+            & git -c "safe.directory=$submodule" -C $submodule diff --binary HEAD |
               Set-Content -Encoding UTF8 (Join-Path $out 'parent-submodule-changes.patch')
             if ($LASTEXITCODE -ne 0) { throw 'Could not export parent submodule changes.' }
-            $subUntracked = & git -C $submodule ls-files --others --exclude-standard
+            $subUntracked = & git -c "safe.directory=$submodule" -C $submodule ls-files --others --exclude-standard
             foreach ($relative in $subUntracked) {
               if ([string]::IsNullOrWhiteSpace($relative)) { continue }
               $normalized = $relative.Replace('\','/')
