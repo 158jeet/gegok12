@@ -114,6 +114,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) { throw 'GitHub token is unavailable.' }
+          $basic = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN"))
           $out = Get-ChildItem $env:RUNNER_TEMP -Directory -Filter 'tagore-server-recovery-*' |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $out) { throw 'Captured recovery directory was not found.' }
