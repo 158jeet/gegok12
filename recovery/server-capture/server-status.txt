@@ -1,0 +1,54 @@
+﻿ M .dockerignore
+ M app/Http/Controllers/Tagore/TaskController.php
+ M database/migrations/2026_10_13_000001_add_olympiad_intake_fields_to_tagore_admission_leads.php
+ M deploy/windows/Test-TagoreProduction.ps1
+ M mobile/parent
+ M public/css/app.css
+ M public/mix-manifest.json
+ M public/tagore-erp.css
+ M resources/assets/css/tagore-erp.css
+ M resources/assets/js/bootstrap.js
+ M resources/assets/js/components/assignment/student/Attachment.vue
+ M resources/assets/js/components/classwall/post/Create.vue
+ M resources/assets/js/components/classwall/post/Edit.vue
+ M resources/assets/js/components/feed/Create.vue
+ M resources/assets/js/components/homework/student/Attachment.vue
+ M resources/views/admin/dashboard/dashboard.blade.php
+ M resources/views/layouts/admission.blade.php
+ M resources/views/layouts/app.blade.php
+ M resources/views/layouts/main.blade.php
+ M resources/views/layouts/minimal.blade.php
+ M resources/views/tagore/administration.blade.php
+ M resources/views/tagore/admissions/create.blade.php
+ M resources/views/tagore/admissions/index.blade.php
+ M resources/views/tagore/admissions/show.blade.php
+ M resources/views/tagore/dashboard.blade.php
+ M resources/views/tagore/departments/profile.blade.php
+ M resources/views/tagore/fees/receipt.blade.php
+ M resources/views/tagore/fees/student.blade.php
+ M resources/views/tagore/parent-dashboard.blade.php
+ M resources/views/tagore/payments/checkout.blade.php
+ M resources/views/tagore/payroll/payslip.blade.php
+ M resources/views/tagore/platform/index.blade.php
+ M resources/views/tagore/reports/pdf.blade.php
+ M resources/views/tagore/staff/leave.blade.php
+ M resources/views/tagore/tasks/employee.blade.php
+ M resources/views/tagore/tasks/index.blade.php
+ M routes/tagore.php
+?? app/Http/Controllers/Tagore/OlympiadController.php
+?? app/Http/Controllers/Tagore/ParentOlympiadController.php
+?? database/migrations/2026_10_12_170000_create_tagore_olympiad_tables.php
+?? docs/OLYMPIAD-ERP-INTEGRATION.md
+?? docs/QUALITY-AND-RELEASE-SOP.md
+?? docs/UI-DESIGN-SYSTEM.md
+?? resources/views/tagore/olympiad/index.blade.php
+?? resources/views/tagore/olympiad/parent-exam.blade.php
+?? resources/views/tagore/olympiad/parent-index.blade.php
+?? resources/views/tagore/olympiad/parent-result.blade.php
+?? resources/views/tagore/olympiad/show.blade.php
+?? resources/views/tagore/olympiad/student-exam.blade.php
+?? resources/views/tagore/olympiad/student-index.blade.php
+?? resources/views/tagore/olympiad/student-result.blade.php
+?? resources/views/tagore/tasks/performance.blade.php
+?? tests/Feature/TagoreOlympiadTest.php
+?? tests/Feature/TagoreParentOlympiadTest.php
