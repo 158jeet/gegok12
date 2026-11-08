@@ -179,4 +179,4 @@ jobs:
           git -c "http.extraheader=AUTHORIZATION: basic $basic" -C $repoDir push origin $branch
           if ($LASTEXITCODE -ne 0) { throw 'Could not push the recovery branch to GitHub.' }
           "RECOVERY_BRANCH=$branch"
-          "RECOVERY_COMMIT=$(git -C $repoDir rev-parse HEAD)"rse HEAD)"
+          "RECOVERY_COMMIT=$(git -C $repoDir rev-parse HEAD)"
