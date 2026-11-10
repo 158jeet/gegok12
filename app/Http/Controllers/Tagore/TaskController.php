@@ -71,6 +71,59 @@ class TaskController extends Controller
         return view('tagore.tasks.employee', compact('employee','taskStats','tasks','reviews','activity','trend','teamAverageActive'));
     }
 
+    public function performance(Request $request): View
+    {
+        [$userId, $roles, $institutionIds] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+        abort_unless($institutionIds !== [], 403);
+
+        $days = (int) $request->query('days', 30);
+        abort_unless(in_array($days, [7, 30, 90], true), 422);
+        $since = now()->subDays($days)->startOfDay();
+
+        $staffUsers = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->whereIn('ur.institution_id', $institutionIds)
+            ->where('ur.status', 'active')
+            ->whereNotIn('r.code', ['STUDENT', 'PARENT'])
+            ->select('ur.user_id')->distinct();
+
+        $employees = DB::table('users as u')
+            ->joinSub($staffUsers, 'staff', fn ($join) => $join->on('staff.user_id', '=', 'u.id'))
+            ->leftJoin('tagore_user_departments as ud', function ($join) {
+                $join->on('ud.user_id', '=', 'u.id')->where('ud.status', 'active')->where('ud.is_primary', true);
+            })
+            ->leftJoin('tagore_departments as d', 'd.id', '=', 'ud.department_id')
+            ->leftJoin('tagore_tasks as t', function ($join) use ($institutionIds, $since) {
+                $join->on('t.assigned_to', '=', 'u.id')
+                    ->whereIn('t.institution_id', $institutionIds)
+                    ->where('t.created_at', '>=', $since);
+            })
+            ->whereNull('u.deleted_at')
+            ->select('u.id', 'u.name', 'ud.designation', 'd.name as department')
+            ->selectRaw('COUNT(t.id) as assigned')
+            ->selectRaw("SUM(CASE WHEN t.status IN ('open','in_progress','blocked') THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed")
+            ->selectRaw("SUM(CASE WHEN t.status NOT IN ('completed','cancelled') AND t.due_at IS NOT NULL AND t.due_at < ? THEN 1 ELSE 0 END) as overdue", [now()])
+            ->selectRaw('COALESCE(ROUND(AVG(t.progress), 1), 0) as average_progress')
+            ->groupBy('u.id', 'u.name', 'ud.designation', 'd.name')
+            ->orderBy('u.name')
+            ->get();
+
+        $totals = [
+            'staff' => $employees->count(),
+            'assigned' => (int) $employees->sum('assigned'),
+            'active' => (int) $employees->sum('active'),
+            'completed' => (int) $employees->sum('completed'),
+            'overdue' => (int) $employees->sum('overdue'),
+        ];
+        $totals['completion_rate'] = $totals['assigned'] > 0
+            ? round(($totals['completed'] / $totals['assigned']) * 100, 1)
+            : 0;
+
+        return view('tagore.tasks.performance', compact('employees', 'totals', 'days'));
+    }
+
     public function index(Request $request): View
     {
         [$userId, $roles, $institutionIds] = $this->context($request);
