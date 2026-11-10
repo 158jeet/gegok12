@@ -89,7 +89,14 @@ class TagoreParentOlympiadTest extends TestCase
         $token = $matches[1] ?? '';
         $this->assertNotEmpty($token);
 
-        $this->get($examUrl)->assertOk()->assertSee('What is 2 + 2?')->assertSee('Parent-supervised');
+        $this->post(route('tagore.parent.olympiad.answers.save', [
+            'studentId' => $student->id, 'olympiadId' => $eventId, 'token' => $token,
+        ]), ['answers' => [$questionId => 'B']])->assertOk()->assertJsonPath('saved', true);
+        $savedAnswers = json_decode((string) DB::table('tagore_olympiad_registrations')
+            ->where('olympiad_id', $eventId)->where('student_user_id', $student->id)->value('answers'), true);
+        $this->assertSame([(string) $questionId => 'B'], $savedAnswers);
+
+        $this->get($examUrl)->assertOk()->assertSee('What is 2 + 2?')->assertSee('Parent-supervised')->assertSee('value="B" checked', false);
         $this->post(route('tagore.parent.olympiad.submit', ['studentId' => $student->id, 'olympiadId' => $eventId, 'token' => $token]), [
             'answers' => [$questionId => 'B'],
         ])->assertRedirect(route('tagore.parent.olympiad.result', ['studentId' => $student->id, 'olympiadId' => $eventId]));
