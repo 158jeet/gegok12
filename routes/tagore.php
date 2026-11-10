@@ -84,6 +84,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
 
+    Route::get('/performance', [TaskController::class, 'performance'])->name('tagore.performance.index');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
     Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tagore.tasks.store');
