@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Http\\Controllers\\Tagore\\PerformanceController;
-use App\\Http\\Controllers\\Tagore\\TaskController;
-use Illuminate\\Http\\Request;
-use Tests\\TestCase;
+use App\Http\Controllers\Tagore\PerformanceController;
+use App\Http\Controllers\Tagore\TaskController;
+use Illuminate\Http\Request;
+use Tests\TestCase;
 
 class TagorePerformanceRouteTest extends TestCase
 {
