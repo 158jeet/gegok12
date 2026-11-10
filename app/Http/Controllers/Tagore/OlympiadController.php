@@ -281,7 +281,8 @@ class OlympiadController extends Controller
         $questions = $questions->map(function ($q) { $q->options = json_decode($q->options, true) ?: []; return $q; });
         $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
         $remainingSeconds = max(0, $deadline - time());
-        return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds'));
+        $savedAnswers = json_decode($registration->answers ?? '{}', true) ?: [];
+        return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds', 'savedAnswers'));
     }
 
     public function saveAnswers(Request $request, int $olympiadId)
