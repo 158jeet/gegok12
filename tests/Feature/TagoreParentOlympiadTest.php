@@ -131,7 +131,7 @@ class TagoreParentOlympiadTest extends TestCase
             'standardLink_id' => $standardLinkId, 'roll_number' => 'QA-STUDENT-OLY-001',
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        $grade = (int) preg_replace('/\\D+/', '', (string) $standard->name);
+        $grade = (int) preg_replace('/\D+/', '', (string) $standard->name);
         if ($grade < 1 || $grade > 12) $grade = (int) $standard->order - 3;
         $this->assertGreaterThanOrEqual(1, $grade);
         $this->assertLessThanOrEqual(12, $grade);
