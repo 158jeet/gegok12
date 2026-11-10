@@ -147,6 +147,30 @@ class ParentOlympiadController extends Controller
         return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds', 'studentId', 'parentExamToken', 'child'));
     }
 
+    public function saveAnswers(Request $request, int $studentId, int $olympiadId, string $token)
+    {
+        [, $event, $registration] = $this->resolveLaunch($request, $studentId, $olympiadId, $token);
+        abort_unless($registration->status === 'in_progress' && $registration->started_at, 409);
+        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        abort_unless(time() <= $deadline, 409);
+
+        $data = $request->validate(['answers' => ['nullable', 'array', 'max:200']]);
+        $questions = DB::table('tagore_olympiad_questions')->where('olympiad_id', $event->id)->whereNotNull('approved_at')
+            ->get(['id', 'options'])->keyBy('id');
+        $cleanAnswers = [];
+        foreach (($data['answers'] ?? []) as $questionId => $answer) {
+            $question = $questions->get((int) $questionId);
+            if (!$question || !is_scalar($answer)) continue;
+            $option = strtoupper(trim((string) $answer));
+            $options = json_decode($question->options, true) ?: [];
+            if (array_key_exists($option, $options)) $cleanAnswers[(string) $question->id] = $option;
+        }
+        $updated = DB::table('tagore_olympiad_registrations')->where('id', $registration->id)->where('status', 'in_progress')
+            ->update(['answers' => json_encode($cleanAnswers), 'updated_at' => now()]);
+        abort_unless($updated === 1, 409);
+        return response()->json(['saved' => true, 'saved_at' => now()->toIso8601String()]);
+    }
+
     public function submit(Request $request, int $studentId, int $olympiadId, string $token)
     {
         [, $event, $registration] = $this->resolveLaunch($request, $studentId, $olympiadId, $token);
