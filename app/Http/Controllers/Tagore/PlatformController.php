@@ -28,7 +28,7 @@ class PlatformController extends Controller
 
     public function alumni(Request $request)
     {
-        [$roles,$ids]=$this->context($request); $this->guard($roles,['PRINCIPAL','COORDINATOR']);
+        [$roles,$ids]=$this->context($request); $this->guard($roles,['OWNER','PRINCIPAL','COORDINATOR']);
         $d=$request->validate(['institution_id'=>'required|integer','student_id'=>'required|integer','passout_year'=>'nullable|integer','course'=>'nullable|string|max:100','phone'=>'nullable|string|max:30','email'=>'nullable|email|max:190','current_org'=>'nullable|string|max:190','designation'=>'nullable|string|max:190','notes'=>'nullable|string|max:4000']);
         abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
         DB::table('tagore_alumni_profiles')->updateOrInsert(['institution_id'=>$d['institution_id'],'student_id'=>$d['student_id']],$d+['created_at'=>now(),'updated_at'=>now()]);
