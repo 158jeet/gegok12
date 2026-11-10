@@ -34,7 +34,7 @@ Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
-    Route::get('/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
+    Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
     Route::get('/parent/olympiad/{studentId}', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'index'])->whereNumber('studentId')->name('tagore.parent.olympiad.index');
