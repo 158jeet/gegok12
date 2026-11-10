@@ -144,7 +144,8 @@ class ParentOlympiadController extends Controller
         $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
         $remainingSeconds = max(0, $deadline - time());
         $parentExamToken = $token;
-        return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds', 'studentId', 'parentExamToken', 'child'));
+        $savedAnswers = json_decode($registration->answers ?? '{}', true) ?: [];
+        return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds', 'studentId', 'parentExamToken', 'child', 'savedAnswers'));
     }
 
     public function saveAnswers(Request $request, int $studentId, int $olympiadId, string $token)
