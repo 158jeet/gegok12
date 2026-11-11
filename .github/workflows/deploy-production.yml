@@ -21,7 +21,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'C:\\server\\gegok12-main-new'
+          $root = 'C:\server\gegok12-main-new'
           if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
           # Enumerate individual paths instead of recursively copying untracked directories.
           # Generated build/cache trees can change while other CI jobs use this machine.
@@ -32,7 +32,7 @@ jobs:
             if ($entry.Length -lt 4) { continue }
             $relative = $entry.Substring(3).Trim()
             if ($relative -match ' -> ') { $relative = ($relative -split ' -> ')[-1] }
-            $normalized = $relative.Replace('\\','/')
+            $normalized = $relative.Replace('\','/')
             if ($normalized -match '(^|/)(build|node_modules|vendor|dist|coverage|\.gradle|\.idea|\.dart_tool|\.next|\.turbo)(/|$)') { continue }
             if ($normalized -match '(^|/)(\.DS_Store|Thumbs\.db)$') { continue }
             $source = Join-Path $root $relative
@@ -43,7 +43,7 @@ jobs:
             exit 0
           }
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-          $backupRoot = 'G:\\TagoreBackups'
+          $backupRoot = 'G:\TagoreBackups'
           New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
           $stage = Join-Path $env:RUNNER_TEMP "tagore-checkout-state-$stamp"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
