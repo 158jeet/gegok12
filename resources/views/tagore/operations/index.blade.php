@@ -193,7 +193,15 @@
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const rowText = String(row.textContent || row.innerText || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+      // Search rendered record cells only, excluding hidden edit forms and actions.
+      const rowText = Array.from(row.cells || [])
+        .slice(0, -1)
+        .map(cell => String(cell.textContent || cell.innerText || ''))
+        .join(' ')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
