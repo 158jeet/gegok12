@@ -110,7 +110,7 @@
       <div class="tg-operations-tools">
         <input id="tg-operations-search" type="search" oninput="window.tagoreOperationsFilter(this.value, null)" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
         @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" onchange="window.tagoreOperationsFilter(null, this.value)"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
-        <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} records</span>
+        <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} of {{ $rows->count() }} records</span>
       </div>
       <div class="tg-table-wrap">
         <table class="tg-operations-table">
@@ -178,8 +178,7 @@
     </section>
   </div>
 </div>
-
-<script>
+ 
 <script>
 (() => {
   const apply = (queryValue, statusValue) => {
@@ -232,6 +231,5 @@
 
   apply();
 })();
-</script>
 </script>
 @endsection
