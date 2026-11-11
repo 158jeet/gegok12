@@ -34,11 +34,30 @@ Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
-    Route::get('/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
+    Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::get('/parent/olympiad/{studentId}', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'index'])->whereNumber('studentId')->name('tagore.parent.olympiad.index');
+    Route::post('/parent/olympiad/{studentId}/{olympiadId}/register', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'register'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.register');
+    Route::post('/parent/olympiad/{studentId}/{olympiadId}/launch', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'launch'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.launch');
+    Route::get('/parent/olympiad/{studentId}/{olympiadId}/{token}/exam', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'exam'])->whereNumber('studentId')->whereNumber('olympiadId')->where('token', '[A-Za-z0-9]+')->name('tagore.parent.olympiad.exam');
+    Route::post('/parent/olympiad/{studentId}/{olympiadId}/{token}/answers', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'saveAnswers'])->whereNumber('studentId')->whereNumber('olympiadId')->where('token', '[A-Za-z0-9]+')->name('tagore.parent.olympiad.answers.save');
+    Route::post('/parent/olympiad/{studentId}/{olympiadId}/{token}/submit', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'submit'])->whereNumber('studentId')->whereNumber('olympiadId')->where('token', '[A-Za-z0-9]+')->name('tagore.parent.olympiad.submit');
+    Route::get('/parent/olympiad/{studentId}/{olympiadId}/result', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'result'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.result');
     Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
     Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
+    Route::get('/olympiad', [\App\Http\Controllers\Tagore\OlympiadController::class, 'index'])->name('tagore.olympiad.index');
+    Route::post('/olympiad', [\App\Http\Controllers\Tagore\OlympiadController::class, 'store'])->name('tagore.olympiad.store');
+    Route::get('/olympiad/question-template', [\App\Http\Controllers\Tagore\OlympiadController::class, 'downloadQuestionTemplate'])->name('tagore.olympiad.question-template');
+    Route::post('/olympiad/{olympiadId}/register', [\App\Http\Controllers\Tagore\OlympiadController::class, 'register'])->whereNumber('olympiadId')->name('tagore.olympiad.register');
+    Route::get('/olympiad/{olympiadId}/exam', [\App\Http\Controllers\Tagore\OlympiadController::class, 'exam'])->whereNumber('olympiadId')->name('tagore.olympiad.exam');
+    Route::post('/olympiad/{olympiadId}/answers', [\App\Http\Controllers\Tagore\OlympiadController::class, 'saveAnswers'])->whereNumber('olympiadId')->name('tagore.olympiad.answers.save');
+    Route::post('/olympiad/{olympiadId}/submit', [\App\Http\Controllers\Tagore\OlympiadController::class, 'submitExam'])->whereNumber('olympiadId')->name('tagore.olympiad.submit');
+    Route::get('/olympiad/{olympiadId}/result', [\App\Http\Controllers\Tagore\OlympiadController::class, 'result'])->whereNumber('olympiadId')->name('tagore.olympiad.result');
+    Route::get('/olympiad/{olympiadId}', [\App\Http\Controllers\Tagore\OlympiadController::class, 'show'])->whereNumber('olympiadId')->name('tagore.olympiad.show');
+    Route::post('/olympiad/{olympiadId}/questions/import', [\App\Http\Controllers\Tagore\OlympiadController::class, 'importQuestions'])->whereNumber('olympiadId')->name('tagore.olympiad.questions.import');
+    Route::patch('/olympiad/questions/{questionId}/approve', [\App\Http\Controllers\Tagore\OlympiadController::class, 'approveQuestion'])->whereNumber('questionId')->name('tagore.olympiad.questions.approve');
+    Route::patch('/olympiad/{olympiadId}/publish', [\App\Http\Controllers\Tagore\OlympiadController::class, 'publish'])->whereNumber('olympiadId')->name('tagore.olympiad.publish');
     Route::get('/admin', [AdministrationController::class, 'index'])->name('tagore.admin');
     Route::post('/admin/users', [AdministrationController::class, 'storeUser'])->name('tagore.admin.users.store');
     Route::post('/admin/users/{userId}/password', [AdministrationController::class, 'resetUserPassword'])->whereNumber('userId')->name('tagore.admin.users.password');
@@ -67,6 +86,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
 
+    Route::get('/performance', [TaskController::class, 'performance'])->name('tagore.performance.index');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
     Route::get('/tasks/employee/{employeeId}', [TaskController::class, 'employeeProfile'])->whereNumber('employeeId')->name('tagore.tasks.employee');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tagore.tasks.store');
