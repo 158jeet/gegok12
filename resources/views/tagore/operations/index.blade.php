@@ -219,8 +219,18 @@
   const search = document.getElementById('tg-operations-search');
   const status = document.getElementById('tg-operations-status');
 
-  // Bind directly to the controls as well as the inline fallback. Direct
-  // listeners are reliable on mobile browsers with native type=search events.
+  // Delegate from the document so filtering survives mobile browsers or
+  // responsive components replacing the input node after initial rendering.
+  // Read the live control values at event time; do not depend on inline handlers.
+  document.addEventListener('input', event => {
+    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
+  }, true);
+  document.addEventListener('search', event => {
+    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
+  }, true);
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'tg-operations-status') apply(undefined, event.target.value);
+  }, true);
   if (search) {
     search.addEventListener('input', refreshFromControls);
     search.addEventListener('search', refreshFromControls);
