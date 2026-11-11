@@ -17,6 +17,50 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     steps:
+      - name: Preserve existing server checkout changes before deployment
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\server\gegok12-main-new'
+          if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
+          $status = @(git -c "safe.directory=$root" -C $root status --porcelain=v1)
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production checkout before backup.' }
+          if ($status.Count -eq 0) {
+            Write-Host 'Production checkout is clean; no source-state archive is required.'
+            exit 0
+          }
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backupRoot = 'G:\TagoreBackups'
+          New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+          $stage = Join-Path $env:RUNNER_TEMP "tagore-checkout-state-$stamp"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          foreach ($entry in $status) {
+            if ($entry.Length -lt 4) { continue }
+            $relative = $entry.Substring(3).Trim()
+            if ($relative -match ' -> ') { $relative = ($relative -split ' -> ')[-1] }
+            $source = Join-Path $root $relative
+            if (-not (Test-Path -LiteralPath $source)) { continue }
+            $destination = Join-Path $stage $relative
+            $parent = Split-Path -Parent $destination
+            if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
+            if (Test-Path -LiteralPath $source -PathType Container) {
+              Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
+            } else {
+              Copy-Item -LiteralPath $source -Destination $destination -Force
+            }
+          }
+          $archive = Join-Path $backupRoot "predeploy-checkout-state-$stamp.zip"
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal -Force
+          if (-not (Test-Path -LiteralPath $archive) -or (Get-Item -LiteralPath $archive).Length -lt 100) {
+            throw 'Existing server source changes could not be backed up; deployment is blocked.'
+          }
+          $verify = Join-Path $env:RUNNER_TEMP "tagore-checkout-state-verify-$stamp"
+          Expand-Archive -LiteralPath $archive -DestinationPath $verify -Force
+          $restoredFiles = @(Get-ChildItem -LiteralPath $verify -Recurse -File)
+          if ($restoredFiles.Count -eq 0) { throw 'Existing server source backup archive contains no files.' }
+          Write-Host "Verified source-state backup: $archive ($($restoredFiles.Count) files)"
+          "SOURCE_BACKUP=$archive" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Verify server checkout and deployment prerequisites
         shell: powershell
         run: |
@@ -30,7 +74,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Docker Compose is unavailable.' }
           $status = git -c "safe.directory=$root" -C $root status --porcelain
           if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production checkout.' }
-          if ($status) { throw "Production checkout has local changes; refusing to overwrite them: $status" }
+          if ($status) { Write-Host 'Existing checkout changes were archived and verified; deployment may proceed.' }
           "Production checkout and prerequisites verified."
 
       - name: Create and verify pre-deployment database and uploads backups
@@ -69,6 +113,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Git fetch failed.' }
           git -c "safe.directory=$root" -C $root reset --hard $env:GITHUB_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Could not update production checkout to the tested commit.' }
+          git -c "safe.directory=$root" -C $root clean -fd
+          if ($LASTEXITCODE -ne 0) { throw 'Could not remove archived untracked source files from the production checkout.' }
+          git -c "safe.directory=$root" -C $root submodule update --init --recursive --force
+          if ($LASTEXITCODE -ne 0) { throw 'Could not synchronize production submodules.' }
           $actual = (git -c "safe.directory=$root" -C $root rev-parse HEAD).Trim()
           if ($actual -ne $env:GITHUB_SHA) { throw "Checkout SHA mismatch: $actual" }
 
