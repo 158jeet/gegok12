@@ -89,6 +89,9 @@ class TagoreParentOlympiadTest extends TestCase
         $token = $matches[1] ?? '';
         $this->assertNotEmpty($token);
 
+        // The exam GET transitions a registered attempt to in_progress before autosave is accepted.
+        $this->get($examUrl)->assertOk()->assertSee('What is 2 + 2?');
+
         $this->post(route('tagore.parent.olympiad.answers.save', [
             'studentId' => $student->id, 'olympiadId' => $eventId, 'token' => $token,
         ]), ['answers' => [$questionId => 'B']])->assertOk()->assertJsonPath('saved', true);
