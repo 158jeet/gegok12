@@ -176,7 +176,7 @@ jobs:
           {
             echo "## TagoreK12 Prototype acceptance decision"
             echo
-            echo "- Candidate commit: `$CANDIDATE_SHA`"
+            echo "- Candidate commit: ${CANDIDATE_SHA}"
             echo "- Tagore test suite: **$TEST**"
             echo "- MySQL migration smoke: **$MYSQL_MIGRATION**"
             echo "- Prototype end-to-end: **$PROTOTYPE_E2E**"
