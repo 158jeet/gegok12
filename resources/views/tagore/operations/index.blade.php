@@ -193,7 +193,15 @@
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      const rowText = String(row.textContent || row.innerText || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+      // Search rendered record cells only, excluding hidden edit forms and actions.
+      const rowText = Array.from(row.cells || [])
+        .slice(0, -1)
+        .map(cell => String(cell.textContent || cell.innerText || ''))
+        .join(' ')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
@@ -208,15 +216,27 @@
   window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
 
   const refreshFromControls = () => apply();
-  ['input', 'search', 'keyup'].forEach(type => {
-    document.addEventListener(type, event => {
-      if (event.target?.id === 'tg-operations-search') refreshFromControls();
-    }, true);
-  });
+  const search = document.getElementById('tg-operations-search');
+  const status = document.getElementById('tg-operations-status');
 
-  document.addEventListener('change', event => {
-    if (event.target?.id === 'tg-operations-status') refreshFromControls();
+  // Delegate from the document so filtering survives mobile browsers or
+  // responsive components replacing the input node after initial rendering.
+  // Read the live control values at event time; do not depend on inline handlers.
+  document.addEventListener('input', event => {
+    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
   }, true);
+  document.addEventListener('search', event => {
+    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
+  }, true);
+  document.addEventListener('change', event => {
+    if (event.target?.id === 'tg-operations-status') apply(undefined, event.target.value);
+  }, true);
+  if (search) {
+    search.addEventListener('input', refreshFromControls);
+    search.addEventListener('search', refreshFromControls);
+    search.addEventListener('keyup', refreshFromControls);
+  }
+  if (status) status.addEventListener('change', refreshFromControls);
 
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
