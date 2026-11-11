@@ -179,9 +179,7 @@
   </div>
 </div>
 
-@endsection
-
-@push('scripts')
+<script>
 <script>
 (() => {
   const apply = (queryValue, statusValue) => {
@@ -235,6 +233,5 @@
   apply();
 })();
 </script>
-@endpush
-
-[executed on device: DESKTOP-564ES39 (d76c0fdf-a9a5-457e-b21a-81313e01406e)]
+</script>
+@endsection
