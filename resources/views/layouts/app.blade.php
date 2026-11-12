@@ -18,6 +18,7 @@
         @if(request()->is('tagore/*') || request()->is('admin/attendance*') || request()->is('teacher/attendance*') || request()->is('admin/feedback*'))
         <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261030-core-ui1' }}">
         <link rel="stylesheet" href="{{ asset('tagore-inner-polish.css') . '?v=20261026-2' }}">
+        <link rel="stylesheet" href="{{ asset('tagore-design-system.css') . '?v=20261112-1' }}">
         @endif
         <style>
           .tg-app,.tg-shell,.tg-layout,.tg-main,.tg-card,.tg-form,.tg-grid{min-width:0;max-width:100%}
