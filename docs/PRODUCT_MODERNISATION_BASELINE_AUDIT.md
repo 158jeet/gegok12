@@ -25,6 +25,8 @@ Tagore ERP is not a blank product. The repository contains a large legacy school
 
 ## Key product finding: the UI is not yet one coherent system
 
+The published dashboard stylesheet currently defines a light, white/blue palette, while the inner-page polish stylesheet defines a separate charcoal/dark palette with green focus accents. The live owner dashboard tab also exposes a well-structured command-centre layout (KPIs, needs-attention work, quick actions and institution snapshot). The next design pass should preserve this useful information architecture while bringing the dashboard and inner screens onto the agreed Tagore charcoal visual direction with consistent green/red status semantics.
+
 The newer dashboard uses a dedicated `tagore-erp.css` design system and a standalone shell. Other screens vary in implementation:
 
 - The admissions list contains a separate inline light-theme style block and standalone HTML shell, while also loading Tagore stylesheets.
