@@ -25,8 +25,8 @@ class AdmissionsController extends Controller
 
         if($request->filled('status')) $query->where('status',$request->string('status')->toString());
         if($request->filled('assigned_to')) $query->where('assigned_to',(int)$request->input('assigned_to'));
-        if($request->input('follow_up')==='due') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<=',now());
-        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now());
+        if($request->input('follow_up')==='due') $query->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->whereNotIn('status',['admitted','lost']);
+        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost']);
         if($request->input('source')) $query->where('source',$request->string('source')->toString());
         if($request->input('campaign')) $query->where('campaign',$request->string('campaign')->toString());
 
@@ -49,7 +49,7 @@ class AdmissionsController extends Controller
             'new'=>(clone $base)->where('status','new')->count(),
             'follow_up'=>(clone $base)->where('status','follow_up')->count(),
             'due_today'=>(clone $base)->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->count(),
-            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost'])->count(),
+            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost'])->count(),
             'qualified'=>(clone $base)->where('status','qualified')->count(),
             'admitted'=>(clone $base)->where('status','admitted')->count(),
             'lost'=>(clone $base)->where('status','lost')->count(),
@@ -64,7 +64,8 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
         $institutions=DB::table('tagore_institutions')->whereIn('id',$ids)->where('status','active')->orderBy('display_name')->get(['id','display_name']);
-        return view('tagore.admissions.create',compact('institutions'));
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        return view('tagore.admissions.create',compact('institutions','staff'));
     }
 
     public function store(Request $request)
