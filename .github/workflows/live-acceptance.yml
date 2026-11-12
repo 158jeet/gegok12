@@ -57,7 +57,7 @@ jobs:
             echo
             echo "- **Live-site result: NOT RUN.** This pull-request run validates test discovery only."
             echo "- No deployed ERP was contacted by this validation job."
-            echo "- To perform actual live acceptance, manually dispatch this workflow with the HTTPS target and all eight dedicated role accounts configured."
+            echo "- To perform actual live acceptance, manually dispatch this workflow with the HTTPS target and one dedicated owner account. Other role permissions are tested against synthetic fixtures in the disposable CI database."
             echo "- A green result from this validation-only workflow must never be interpreted as production acceptance."
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -87,10 +87,10 @@ jobs:
           let accounts = {};
           try { accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON || '{}'); }
           catch { throw new Error('TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON must be valid JSON.'); }
-          const roles = ['owner','principal','coordinator','teacher','parent','student','accounts','fee-editor'];
+          const roles = ['owner'];
           const missing = roles.filter(role => !accounts[role] || !accounts[role].email || !accounts[role].password);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'missing_roles=' + missing.join(',') + '\n');
-          console.log('HTTPS target validated. Missing dedicated role accounts: ' + (missing.join(', ') || 'none') + '. Secret values are not printed.');
+          console.log('HTTPS target validated. Missing required live account (owner only): ' + (missing.join(', ') || 'none') + '. Other roles are verified against disposable synthetic fixtures in the full CI acceptance suite. Secret values are not printed.');
           NODE
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
