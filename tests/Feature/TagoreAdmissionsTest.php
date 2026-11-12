@@ -203,4 +203,36 @@ class TagoreAdmissionsTest extends TestCase
             ->count(), 'A rejected family-link attempt must not change parent/student links.');
     }
 
+    public function test_follow_up_queue_separates_due_today_from_overdue_and_hides_terminal_leads(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->value('id');
+
+        $insertLead = function (string $name, string $status, $followUp) use ($institutionId): int {
+            return DB::table('tagore_admission_leads')->insertGetId([
+                'institution_id' => $institutionId,
+                'lead_no' => 'QA-DUE-' . uniqid(),
+                'student_name' => $name,
+                'status' => $status,
+                'next_follow_up_at' => $followUp,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        };
+
+        $dueTodayId = $insertLead('Due Today QA', 'follow_up', now()->startOfDay()->addHour());
+        $overdueId = $insertLead('Overdue QA', 'follow_up', now()->subDay());
+        $closedId = $insertLead('Admitted No Reminder QA', 'admitted', now()->subDay());
+
+        $this->actingAs($owner)->get(route('tagore.admissions.index', ['follow_up' => 'due']))
+            ->assertOk()->assertSee('Due Today QA')->assertDontSee('Overdue QA');
+
+        $this->actingAs($owner)->get(route('tagore.admissions.index', ['follow_up' => 'overdue']))
+            ->assertOk()->assertSee('Overdue QA')->assertDontSee('Due Today QA')->assertDontSee('Admitted No Reminder QA');
+
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $dueTodayId]);
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $overdueId]);
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $closedId]);
+    }
+
 }
