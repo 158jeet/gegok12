@@ -1,6 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
 const enabled = process.env.TAGORE_LIVE_ACCEPTANCE_ENABLED === 'true';
+// One representative account per role is used for the read-only production sweep.
+// This is not an individual student/staff account census.
 const requiredRoles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor'];
 
 function getAccounts() {
