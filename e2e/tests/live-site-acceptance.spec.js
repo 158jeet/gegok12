@@ -1,9 +1,9 @@
 const { test, expect } = require('@playwright/test');
 
 const enabled = process.env.TAGORE_LIVE_ACCEPTANCE_ENABLED === 'true';
-// Production live sweep uses the existing owner account only. All other roles are
-// authenticated with synthetic fixtures in the disposable full-acceptance CI database.
-const requiredRoles = ['owner'];
+// One representative account per role is used for the read-only production sweep.
+// This is not an individual student/staff account census.
+const requiredRoles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor'];
 
 function getAccounts() {
   if (!enabled) return {};
