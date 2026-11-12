@@ -23,10 +23,23 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $root = 'C:\server\gegok12-main-new'
           if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
-          $status = @(git -c "safe.directory=$root" -C $root status --porcelain=v1)
+          # Enumerate individual paths instead of recursively copying untracked directories.
+          # Generated build/cache trees can change while other CI jobs use this machine.
+          $status = @(git -c "safe.directory=$root" -C $root status --porcelain=v1 --untracked-files=all)
           if ($LASTEXITCODE -ne 0) { throw 'Could not inspect production checkout before backup.' }
-          if ($status.Count -eq 0) {
-            Write-Host 'Production checkout is clean; no source-state archive is required.'
+          $preserve = @()
+          foreach ($entry in $status) {
+            if ($entry.Length -lt 4) { continue }
+            $relative = $entry.Substring(3).Trim()
+            if ($relative -match ' -> ') { $relative = ($relative -split ' -> ')[-1] }
+            $normalized = $relative.Replace('\','/')
+            if ($normalized -match '(^|/)(build|node_modules|vendor|dist|coverage|\.gradle|\.idea|\.dart_tool|\.next|\.turbo)(/|$)') { continue }
+            if ($normalized -match '(^|/)(\.DS_Store|Thumbs\.db)$') { continue }
+            $source = Join-Path $root $relative
+            if (Test-Path -LiteralPath $source -PathType Leaf) { $preserve += $relative }
+          }
+          if ($preserve.Count -eq 0) {
+            Write-Host 'No non-generated modified or untracked source files require an archive.'
             exit 0
           }
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -34,20 +47,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
           $stage = Join-Path $env:RUNNER_TEMP "tagore-checkout-state-$stamp"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          foreach ($entry in $status) {
-            if ($entry.Length -lt 4) { continue }
-            $relative = $entry.Substring(3).Trim()
-            if ($relative -match ' -> ') { $relative = ($relative -split ' -> ')[-1] }
+          foreach ($relative in $preserve) {
             $source = Join-Path $root $relative
-            if (-not (Test-Path -LiteralPath $source)) { continue }
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
             $destination = Join-Path $stage $relative
             $parent = Split-Path -Parent $destination
             if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
-            if (Test-Path -LiteralPath $source -PathType Container) {
-              Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
-            } else {
-              Copy-Item -LiteralPath $source -Destination $destination -Force
-            }
+            Copy-Item -LiteralPath $source -Destination $destination -Force
           }
           $archive = Join-Path $backupRoot "predeploy-checkout-state-$stamp.zip"
           Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal -Force
@@ -57,7 +63,7 @@ jobs:
           $verify = Join-Path $env:RUNNER_TEMP "tagore-checkout-state-verify-$stamp"
           Expand-Archive -LiteralPath $archive -DestinationPath $verify -Force
           $restoredFiles = @(Get-ChildItem -LiteralPath $verify -Recurse -File)
-          if ($restoredFiles.Count -eq 0) { throw 'Existing server source backup archive contains no files.' }
+          if ($restoredFiles.Count -ne $preserve.Count) { throw "Source backup verification mismatch: expected $($preserve.Count), restored $($restoredFiles.Count)." }
           Write-Host "Verified source-state backup: $archive ($($restoredFiles.Count) files)"
           "SOURCE_BACKUP=$archive" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
