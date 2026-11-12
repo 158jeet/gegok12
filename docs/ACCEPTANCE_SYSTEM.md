@@ -22,7 +22,7 @@ The disposable automated test identities and their role mapping are documented i
 
 The manual GitHub Actions workflow **Tagore Live-Site Acceptance** tests the deployed website from a GitHub-hosted browser runner. It is read-only: it signs into dedicated test accounts, checks dashboard rendering and visible navigation routes, and verifies responsive login rendering. It does not submit forms or mutate student, fee, or attendance data.
 
-Before the first run, configure the repository Actions secret `TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON` with one dedicated owner acceptance account. Do not create seven extra production accounts solely for browser testing. All eight role profiles are seeded as synthetic identities in the disposable SQLite database and exercised by the full CI browser suite; production live acceptance verifies the owner login and public responsive pages only. Example secret shape (use a dedicated test credential, never a production staff password):
+Before the first run, configure the repository Actions secret `TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON` with one dedicated representative account for each of the eight roles. Use the accounts already created through the Owner account-management interface; do not create accounts for every individual student or staff member solely for browser testing. The production sweep checks one account per role, while bulk records are covered by automated synthetic-data tests in the disposable CI database. Example secret shape (use a dedicated test credential, never a production staff password):
 
 ```json
 {
@@ -39,7 +39,7 @@ Before the first run, configure the repository Actions secret `TAGORE_LIVE_ACCEP
 
 Run **Actions → Tagore Live-Site Acceptance → Run workflow**, enter the HTTPS base URL and environment label, and inspect the result and the uploaded screenshot/trace artifact. If the production server firewall does not permit GitHub-hosted runner access, use a self-hosted runner with a restricted network path; do not expose an administrative port or disable authentication to make the test pass.
 
-The live workflow fails closed when the base URL or owner acceptance account is missing. The other seven roles are covered by the disposable synthetic CI fixture suite, including desktop/mobile navigation, route visibility and permission-boundary checks. Test accounts should be least-privileged, contain synthetic records, and never be reused by real users. Rotate their passwords and remove the accounts when no longer needed. A passing live read-only sweep is evidence for those pages and routes only; it does not certify every mutating business workflow.
+The live workflow fails closed when the base URL or any of the eight representative role accounts is missing. Each role is tested on desktop and mobile for login, dashboard, visible navigation and route access. This is representative role coverage, not a login test for every student or staff account. Test accounts should be least-privileged, contain synthetic records, and never be reused by real users. Rotate their passwords and remove the accounts when no longer needed. A passing live read-only sweep is evidence for those pages and routes only; it does not certify every mutating business workflow.
 
 ## Mandatory business workflow scenarios
 
