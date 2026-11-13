@@ -18,6 +18,16 @@
 <div class="tg-ad-field tg-ad-full"><label for="notes">Conversation notes / next action</label><textarea id="notes" name="notes" maxlength="5000" placeholder="Record what the parent said and what should happen next…"></textarea></div>
 </div><button type="submit" style="margin-top:14px">Save activity</button></form></section>
 </div>
+<section class="tg-ad-card tg-ad-section"><h2>Enrolment conversion</h2>
+@if($lead->converted_student_id)
+<p class="tg-ad-flash">Linked to enrolled student account #{{ $lead->converted_student_id }} · {{ optional($lead->converted_at)->format('d M Y, h:i A') }}</p>
+@else
+<p class="tg-ad-muted">Once the student account has been created through the approved student-admission workflow, link it here. This step does not create accounts or issue passwords.</p>
+<form method="post" action="{{ route('tagore.admissions.convert',$lead) }}">@csrf
+<div class="tg-ad-formgrid"><div class="tg-ad-field"><label for="converted-student-id">Existing student account ID</label><input id="converted-student-id" name="student_id" type="number" min="1" required placeholder="Student user ID"></div></div>
+<button type="submit" style="margin-top:14px">Link student and mark admitted</button></form>
+@endif
+</section>
 <section class="tg-ad-card tg-ad-section"><h2>Family account linking</h2><p class="tg-ad-muted">After the student and parent accounts exist, link the verified parent account. Reuse the same parent account for siblings so family dues and the parent diary remain consolidated. This action does not create accounts.</p>
 <form method="post" action="{{ route('tagore.admissions.link-family',$lead) }}">@csrf<div class="tg-ad-formgrid">
 <div class="tg-ad-field"><label for="family-student-id">Existing student account ID</label><input id="family-student-id" name="student_id" type="number" min="1" required placeholder="Student user ID"></div>
