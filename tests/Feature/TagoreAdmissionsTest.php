@@ -61,7 +61,7 @@ class TagoreAdmissionsTest extends TestCase
         $leadId=DB::table('tagore_admission_leads')->insertGetId([
             'institution_id'=>$institutionId,'lead_no'=>'QA-FUNNEL-'.uniqid(),
             'student_name'=>'Funnel Student','mobile'=>'9888888888','source'=>'Meta',
-            'campaign'=>'JEE 2027','status'=>'follow_up','next_follow_up_at'=>now()->subHour(),
+            'campaign'=>'JEE 2027','status'=>'follow_up','next_follow_up_at'=>now()->startOfDay()->subHour(),
             'created_at'=>now(),'updated_at'=>now(),
         ]);
 
