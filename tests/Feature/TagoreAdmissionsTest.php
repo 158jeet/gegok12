@@ -99,10 +99,10 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNotNull($lead->last_contacted_at);
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
-            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
+            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'qualified',
         ])->assertRedirect();
 
-        $this->assertNotNull($lead->fresh()->converted_at);
+        $this->assertNull($lead->fresh()->converted_at);
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
             'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',
