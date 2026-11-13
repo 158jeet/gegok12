@@ -21,3 +21,11 @@ html,body{max-width:100%;overflow-x:clip}
   .tg-ad-tablewrap{width:100%;min-width:0}
   .tg-ad-table{min-width:760px}
 }
+
+/* Mobile containment hardening; cache-busted with the matching Blade asset version. */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body>.tg-admissions,.tg-admissions{width:100%;min-width:0;max-width:100%;}
+.tg-ad-shell{width:100%;min-width:0;max-width:1440px}
+.tg-ad-tablewrap{width:100%;min-width:0;max-width:100%;overflow-x:auto!important;}
+.tg-ad-tablewrap>.tg-ad-table{width:max-content;min-width:980px;}
+@media(max-width:700px){.tg-ad-tablewrap>.tg-ad-table{min-width:760px}}
