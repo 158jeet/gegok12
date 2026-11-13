@@ -118,6 +118,66 @@ class AdmissionsController extends Controller
         return view('tagore.admissions.show',compact('lead','staff'));
     }
 
+    public function convert(Request $request, int $leadId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+
+        $lead = TagoreAdmissionLead::findOrFail($leadId);
+        abort_unless(in_array((int) $lead->institution_id, $this->institutionIds($userId, $roles), true), 403);
+
+        $data = $request->validate(['student_id' => ['required', 'integer']]);
+        $institution = DB::table('tagore_institutions')->where('id', $lead->institution_id)->first();
+        abort_unless($institution, 422, 'Institution not found.');
+
+        $student = DB::table('users')->where('id', (int) $data['student_id'])
+            ->where('usergroup_id', 6)->where('school_id', $institution->school_id)
+            ->whereNull('deleted_at')->first();
+        abort_unless($student, 422, 'Select an active student account belonging to this institution.');
+
+        DB::transaction(function () use ($lead, $student, $userId, $institution) {
+            if ($lead->converted_student_id && (int) $lead->converted_student_id !== (int) $student->id) {
+                abort(422, 'This enquiry is already linked to a different student account.');
+            }
+
+            $lead->update([
+                'converted_student_id' => $student->id,
+                'status' => 'admitted',
+                'converted_at' => $lead->converted_at ?: now(),
+                'lost_reason' => null,
+            ]);
+
+            TagoreAdmissionActivity::create([
+                'lead_id' => $lead->id,
+                'user_id' => $userId,
+                'type' => 'note',
+                'outcome' => 'enrolment_linked',
+                'notes' => 'CRM enquiry linked to enrolled student account #' . $student->id,
+                'completed_at' => now(),
+            ]);
+
+            if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+                DB::table('tagore_audit_events')->insert([
+                    'user_id' => $userId,
+                    'action' => 'admissions.convert',
+                    'entity_type' => 'Student',
+                    'entity_id' => $student->id,
+                    'old_values_json' => null,
+                    'new_values_json' => json_encode([
+                        'lead_id' => $lead->id,
+                        'student_id' => $student->id,
+                        'institution_id' => $institution->id,
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Enquiry linked to the enrolled student account.');
+    }
+
     public function linkFamily(Request $request, int $leadId)
     {
         $userId = (int) $request->user()->id;
@@ -181,6 +241,9 @@ class AdmissionsController extends Controller
             'status'=>['nullable','in:new,contacted,follow_up,qualified,admitted,lost'],'next_follow_up_at'=>['nullable','date'],
             'lost_reason'=>['nullable','string','max:120'],
         ]);
+        if (($data['status'] ?? null) === 'admitted' && !$lead->converted_student_id) {
+            abort(422, 'Link the enrolled student account before marking this enquiry admitted.');
+        }
         DB::transaction(function() use($lead,$data,$userId){
             TagoreAdmissionActivity::create([
                 'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>$data['type'],'outcome'=>$data['outcome']??null,
