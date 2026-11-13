@@ -235,4 +235,48 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertDatabaseHas('tagore_admission_leads', ['id' => $closedId]);
     }
 
+
+    public function test_admission_lead_can_be_converted_only_by_linking_an_existing_student_in_the_same_institution(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->firstOrFail();
+        $student = User::query()->where('usergroup_id', 6)
+            ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-CONVERT-' . uniqid(),
+            'student_name' => 'Conversion Gate Student',
+            'status' => 'qualified',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.activity', $leadId), [
+            'type' => 'meeting', 'status' => 'admitted',
+        ])->assertStatus(422);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.convert', $leadId), [
+            'student_id' => $student->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_admission_leads', [
+            'id' => $leadId, 'status' => 'admitted', 'converted_student_id' => $student->id,
+        ]);
+        $this->assertDatabaseHas('tagore_admission_activities', [
+            'lead_id' => $leadId, 'outcome' => 'enrolment_linked',
+        ]);
+        $this->assertDatabaseHas('tagore_audit_events', [
+            'user_id' => $owner->id, 'action' => 'admissions.convert',
+            'entity_type' => 'Student', 'entity_id' => $student->id,
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.convert', $leadId), [
+            'student_id' => $student->id,
+        ])->assertRedirect();
+
+        $this->assertSame(1, DB::table('tagore_admission_activities')
+            ->where('lead_id', $leadId)->where('outcome', 'enrolment_linked')->count());
+    }
+
 }
