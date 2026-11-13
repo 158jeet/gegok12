@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New enquiry · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-admissions.css') . '?v=20261112-1' }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New enquiry · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-admissions.css') . '?v=20261113-2' }}"></head>
 <body><div class="tg-admissions"><div class="tg-ad-shell">
 <header class="tg-ad-top"><a class="tg-ad-brand" href="{{ route('tagore.admissions.index') }}"><img src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group"><div><strong>Tagore ERP</strong><span>Admissions workspace</span></div></a><a class="tg-ad-btn" href="{{ route('tagore.admissions.index') }}">← Back to pipeline</a></header>
 <section class="tg-ad-hero"><div><h1>Create an enquiry</h1><p>Capture the family’s details, select the right institution and assign a clear owner for the next follow-up.</p></div></section>
