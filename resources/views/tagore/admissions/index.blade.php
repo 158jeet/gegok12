@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admissions CRM · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-admissions.css') . '?v=20261112-1' }}"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admissions CRM · Tagore ERP</title><link rel="stylesheet" href="{{ asset('tagore-admissions.css') . '?v=20261113-2' }}"></head>
 <body><div class="tg-admissions"><div class="tg-ad-shell">
 <header class="tg-ad-top"><a class="tg-ad-brand" href="{{ route('tagore.dashboard') }}"><img src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group"><div><strong>Tagore ERP</strong><span>Admissions workspace</span></div></a><div class="tg-ad-actions"><a class="tg-ad-btn" href="{{ route('tagore.dashboard') }}">Dashboard</a><a class="tg-ad-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New enquiry</a></div></header>
 <section class="tg-ad-hero"><div><h1>Admissions CRM</h1><p>One pipeline for every prospective family — from first enquiry to admission, with clear ownership and the next action always visible.</p></div></section>
