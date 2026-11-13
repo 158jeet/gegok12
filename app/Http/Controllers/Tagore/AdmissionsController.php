@@ -137,41 +137,45 @@ class AdmissionsController extends Controller
         abort_unless($student, 422, 'Select an active student account belonging to this institution.');
 
         DB::transaction(function () use ($lead, $student, $userId, $institution) {
-            if ($lead->converted_student_id && (int) $lead->converted_student_id !== (int) $student->id) {
+            $lockedLead = TagoreAdmissionLead::whereKey($lead->id)->lockForUpdate()->firstOrFail();
+            if ($lockedLead->converted_student_id && (int) $lockedLead->converted_student_id !== (int) $student->id) {
                 abort(422, 'This enquiry is already linked to a different student account.');
             }
 
-            $lead->update([
+            $alreadyLinked = (int) $lockedLead->converted_student_id === (int) $student->id;
+            $lockedLead->update([
                 'converted_student_id' => $student->id,
                 'status' => 'admitted',
-                'converted_at' => $lead->converted_at ?: now(),
+                'converted_at' => $lockedLead->converted_at ?: now(),
                 'lost_reason' => null,
             ]);
 
-            TagoreAdmissionActivity::create([
-                'lead_id' => $lead->id,
-                'user_id' => $userId,
-                'type' => 'note',
-                'outcome' => 'enrolment_linked',
-                'notes' => 'CRM enquiry linked to enrolled student account #' . $student->id,
-                'completed_at' => now(),
-            ]);
-
-            if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
-                DB::table('tagore_audit_events')->insert([
+            if (!$alreadyLinked) {
+                TagoreAdmissionActivity::create([
+                    'lead_id' => $lockedLead->id,
                     'user_id' => $userId,
-                    'action' => 'admissions.convert',
-                    'entity_type' => 'Student',
-                    'entity_id' => $student->id,
-                    'old_values_json' => null,
-                    'new_values_json' => json_encode([
-                        'lead_id' => $lead->id,
-                        'student_id' => $student->id,
-                        'institution_id' => $institution->id,
-                    ]),
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'type' => 'note',
+                    'outcome' => 'enrolment_linked',
+                    'notes' => 'CRM enquiry linked to enrolled student account #' . $student->id,
+                    'completed_at' => now(),
                 ]);
+
+                if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+                    DB::table('tagore_audit_events')->insert([
+                        'user_id' => $userId,
+                        'action' => 'admissions.convert',
+                        'entity_type' => 'Student',
+                        'entity_id' => $student->id,
+                        'old_values_json' => null,
+                        'new_values_json' => json_encode([
+                            'lead_id' => $lockedLead->id,
+                            'student_id' => $student->id,
+                            'institution_id' => $institution->id,
+                        ]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         });
 
