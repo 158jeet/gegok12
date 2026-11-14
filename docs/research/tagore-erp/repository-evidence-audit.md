@@ -211,3 +211,35 @@ PR #72's three workflow runs (ERP Full Acceptance Convergence, ERP CI and Tagore
 ## 6. Audit limitations and next action
 
 This pass is based on current GitHub main source and static file inspection. It has not run the application, database migrations, PHPUnit, browser click-through, mobile emulator or visual regression. The next pass must inspect remaining controllers/services, policies, route middleware, import/export paths, notifications, timetable, attendance, report generation and UI templates, then run available synthetic tests/CI where permitted. No production DB, live student data, hardware integration, merge or deployment was touched.
+
+## 7. Additional pass — academics, attendance, diary and communications
+
+### Timetable and substitution
+- Legacy timetable views and an authenticated API controller exist (`resources/views/admin/school/timetable/*`, `app/Http/Controllers/Api/TimetableController.php`).
+- The inspected API builds a student's timetable from the student's latest academic link and the authenticated user's school. This pass did not find a Tagore-specific automatic substitute recommendation engine, teacher absence conflict solver or approval/notification workflow.
+- Verify that the timetable API rejects a student ID outside the authenticated user's permitted school and handles missing student/academic-link records safely.
+- Status: timetable foundation present; automated substitution and security acceptance unknown/not evidenced.
+
+### Student and staff attendance
+- Legacy student attendance create/list/export routes and controller exist; records are scoped by the authenticated legacy `school_id` and active academic year in the inspected controller.
+- Staff attendance is manual in the inspected `Admin/StaffAttendanceController.php`; no T304F punch ingestion is present on main.
+- **Code-quality risk:** the inspected staff attendance `store()` catches an exception and calls `dd($e->getMessage())`, which can terminate the request with a debug dump. Replace with structured logging and a controlled error response before treating this workflow as production-ready.
+- No evidence in this pass of automated absent-parent SMS/email notification or class-wise alert scheduling.
+- Status: student/staff manual attendance present; automated notifications and biometric ingestion partial/absent.
+
+### Parent study / feedback diary
+- `DailyDiaryController` supports parent and school roles, linked-child selection, date-range entries, parent study-hours/feedback fields and school homework/feedback fields.
+- Role-specific request fields are removed before validation, and school updates preserve parent-owned fields.
+- `TagoreDailyDiaryAcceptanceTest` and a Playwright E2E spec exist.
+- Status: diary foundation present; verify mobile parity, teacher assignment scope, parent acknowledgement/reply UX and notifications.
+
+### Communication campaigns
+- `CommunicationController` and `CommunicationService` implement institution-scoped campaigns for email, SMS, WhatsApp and push, audience filters and per-recipient delivery rows with sent/failed states.
+- Email uses Laravel Mail; SMS/WhatsApp uses Twilio when configured; push uses registered Firebase device tokens.
+- The inspected service treats a previously sent recipient as idempotently complete, but this pass did not verify scheduled campaign dispatch, provider callbacks, retry policy/backoff, delivery receipts, parent acknowledgement or full privacy/consent controls.
+- No secure click-to-call integration or live third-party social-feed integration was found in the inspected Tagore routes/services.
+- Do not execute campaign actions during research: they can contact real recipients when credentials are configured.
+
+### Generic operations CRUD and audit retention
+- `OperationsController::destroy()` deletes the selected generic operations row and writes an audit event. The source inspected does not show soft-delete/restore for those rows. Confirm whether hard deletion is acceptable per module; finance, visitor, security, payroll and inventory evidence should generally be retained or voided rather than silently removed.
+- Generic operation tables are mostly broad string/JSON columns. Treat them as scaffolding for several domains, not proof of validated end-to-end modules.
