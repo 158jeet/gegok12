@@ -266,3 +266,30 @@ This pass is based on current GitHub main source and static file inspection. It 
 ### Hostel and PG College
 - Hostel room and allocation schema exists, but this pass did not find a dedicated Tagore hostel controller/workflow in the Tagore controller set. The generic operations table is not a substitute for occupancy conflict checks, bed assignment, warden attendance, mess management and fee-ledger integration.
 - No dedicated Tagore PG College/semester/OBE controller was identified in the inspected Tagore controller set. Treat college functionality as unknown pending course/affiliation discovery, not as a completed college ERP.
+
+## 9. Additional pass — reports, documents, learning and CCTV
+
+### Custom reports — one confirmed broken export source
+- `ReportController` supports institution-scoped report definitions and exports for payroll runs, payroll items, inventory, expenses, assets, transport trips and communication campaigns.
+- **Confirmed schema mismatch:** the report export builder unconditionally applies `where('institution_id', $report->institution_id)` to every source. The `tagore_payroll_items` migration has `payroll_run_id` but no `institution_id` column. Therefore a saved custom report using the `payroll_items` source will fail at query time. It must join `tagore_payroll_runs` and scope through the run's institution.
+- The custom export path also accepts `table`, `csv` or `pdf` at definition time, but the inspected export action emits PDF only when the request query says `format=pdf`; all other formats are CSV. Verify the UI and output contract.
+- Status: partial; payroll-items export has a concrete defect requiring a fix and regression test.
+
+### Documents — private storage and versioning foundation; access review needed
+- Upload stores files on the private disk under institution-specific paths and records version metadata including original name, MIME type, size, uploader and SHA-256.
+- Download enforces institution membership and optional role allow-list from `access_json`.
+- **Access-control gap:** the versions endpoint checks institution membership and broad staff roles but does not apply the document's `access_json.roles` restriction. It returns version rows including private storage paths and file metadata. Apply the same object-level access policy to versions and minimise returned fields.
+- The inspected download path does not use `owner_type/owner_id` to verify the current user's relationship to a private student/staff document. Define and enforce ownership/guardian/assigned-class policy before using this as a student-record document vault.
+
+### Learning, hostel and student store — partial; tenant checks needed
+- Learning content, courses, enrollments, progress, surveys, hostel rooms/allocations and student-store orders have routes and schema.
+- **Hostel allocation risk:** `LearningController::allocate()` verifies the room belongs to an institution the actor can access and verifies the target is a student, but does not verify that the student's school matches the room institution. The inspected Tagore routes include room creation and allocation, but no hostel checkout/transfer workflow.
+- **Course enrollment risk:** `enroll()` verifies the course and student exist but does not verify that the student's institution matches the course institution. A student may attempt to enroll across institutions if the route is reachable.
+- **Survey audience gap:** `surveyResponse()` checks that the survey is published but does not enforce the survey's institution/audience against the respondent.
+- **Store order gap:** parent/student roles bypass the institution-membership check in `order()`; validate that the buyer is linked/enrolled to the target institution and restrict child purchasing to linked children.
+- Status: partial; add cross-institution negative tests and role/audience rules.
+
+### CCTV integration — Frigate status check, not Hikvision integration
+- `PlatformController::cctvStatus()` makes a read-only request to a configured private Frigate NVR `/api/stats` endpoint and reports reachability/camera/detector counts.
+- It explicitly does not verify camera streams or AI detection accuracy. This is not evidence of Hikvision integration, visitor-to-camera event linkage, recording retrieval or production activation.
+- Status: read-only Frigate connectivity check only; Hikvision remains an external integration requirement and must not be activated without the actual vendor/API/security contract.
