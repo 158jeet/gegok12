@@ -39,7 +39,7 @@ class TagoreCashierWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Cashier counter')
             ->assertSee('Search by student name', false)
-            ->assertSee('Record & email receipt', false);
+            ->assertSee('Student name, mobile or ID', false);
     }
 
     public function test_read_only_coordinator_cannot_post_a_payment_directly(): void
