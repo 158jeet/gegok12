@@ -79,7 +79,7 @@ class FeeController extends Controller
     {
         $userId = (int) $request->user()->id;
         $roles = $this->roles($userId);
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
 
         $institutionsQuery = DB::table('tagore_institutions as i')
             ->join('schools as s', 's.id', '=', 'i.school_id')
@@ -277,24 +277,24 @@ class FeeController extends Controller
     private function authorizeAccounts($roles): void
     {
         // Coordinators may view the Accounts workspace but cannot record financial transactions.
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function authorizePaymentRecording($roles): void
     {
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void
     {
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()) {
             $query->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id'));
         }
     }
 
     private function authorizeInstitution(int $userId, int $institutionId, $roles): void
     {
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()) {
             abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')->exists(), 403);
         }
     }
@@ -314,7 +314,7 @@ class FeeController extends Controller
             abort_unless($studentId === $userId, 403);
             return;
         }
-        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
+        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
     }
