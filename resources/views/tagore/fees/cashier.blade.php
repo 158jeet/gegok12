@@ -58,7 +58,7 @@
 </form>
 <div class="tg-table-wrap" style="margin-top:14px">
 <table class="table tg-cashier-table">
-<thead><tr><th>Student</th><th>Institution</th><th>Open items</th><th>Outstanding</th><th>Payment amount (₹)</th><th>Mode</th><th>Reference / cheque no.</th><th>Action</th></tr></thead>
+<thead><tr><th>Student</th><th>Institution</th><th>Open items</th><th>Outstanding</th><th>Collect payment</th></tr></thead>
 <tbody>
 @forelse($students as $student)
 <tr>
@@ -66,15 +66,16 @@
 <td>{{ $student->institution }}</td>
 <td>{{ $student->open_items }}</td>
 <td><strong>₹{{ number_format((float)$student->outstanding,2) }}</strong></td>
-<td><form method="POST" action="{{ route('tagore.fees.payment',$student->student_id) }}">@csrf
-<input type="number" name="amount" min="0.01" max="{{ number_format((float)$student->outstanding,2,'.','') }}" step="0.01" value="{{ number_format((float)$student->outstanding,2,'.','') }}" required aria-label="Payment amount for {{ $student->student_name }}">
-</td>
-<td><select name="payment_mode" required aria-label="Payment mode"><option value="cash">Cash</option><option value="cheque">Cheque</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></td>
-<td><input name="reference_number" maxlength="160" placeholder="Optional reference" aria-label="Payment reference for {{ $student->student_name }}"></td>
-<td><button type="submit" class="tg-btn primary" onclick="return confirm('Record this payment for {{ addslashes($student->student_name) }}? The payment will be posted to the fee ledger.');">Record & email receipt</button></form></td>
+<td><form method="POST" action="{{ route('tagore.fees.payment',$student->student_id) }}" class="tg-cashier-table">@csrf
+<div class="tg-cashier-tools">
+<input type="number" name="amount" min="0.01" max="{{ number_format((float)$student->outstanding,2,'.','') }}" step="0.01" value="{{ number_format((float)$student->outstanding,2,'.','') }}" required aria-label="Payment amount for student {{ $student->student_id }}">
+<select name="payment_mode" required aria-label="Payment mode"><option value="cash">Cash</option><option value="cheque">Cheque</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select>
+<input name="reference_number" maxlength="160" placeholder="Optional reference" aria-label="Payment reference">
+<button type="submit" class="tg-btn primary" onclick="return confirm('Record this payment and post it to the fee ledger?');">Record & email receipt</button>
+</div></form></td>
 </tr>
 @empty
-<tr><td colspan="8"><div class="tg-empty"><strong>No outstanding students found</strong><span>Try a different name, mobile number or student ID.</span></div></td></tr>
+<tr><td colspan="5"><div class="tg-empty"><strong>No outstanding students found</strong><span>Try a different name, mobile number or student ID.</span></div></td></tr>
 @endforelse
 </tbody>
 </table>
