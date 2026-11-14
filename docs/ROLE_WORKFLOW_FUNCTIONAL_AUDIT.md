@@ -22,7 +22,7 @@ The codebase therefore has components for these jobs, but the work is split acro
 - A backend payment action already exists at `POST /tagore/accounts/fees/student/{studentId}/payment`. It validates payment amount/mode, calls `FeeService::recordOfflinePayment`, allocates to the oldest outstanding obligations, creates a receipt number and emails the receipt. The missing link was the daily operator interface.
 - Fee structure setup and bulk demand generation are present under Fee management, but those are fee-master/administration workflows, not the cashier's collection counter.
 
-**Change in this branch:** a dedicated `/tagore/cashier` workspace is being added for OWNER, PRINCIPAL, and ACCOUNTS. It searches students with balances, displays institution and outstanding totals, records cash/cheque/bank-transfer/other payments through the existing ledger-safe endpoint, shows today's posted collection, and lists recent downloadable receipts. Coordinators and read-only roles are intentionally excluded from payment entry.
+**Change in this branch:** a dedicated `/tagore/cashier` workspace is being added for OWNER, PRINCIPAL, ACCOUNTS, and a separate institution-scoped CASHIER role. CASHIER can view fee balances and payment status and post offline collections, but cannot edit fee structures, issue refunds, reconcile gateway settlements, or access the wider Accounts roll-up. The counter shows total outstanding, overdue dues, online payments awaiting gateway confirmation, today's successful collection, and recent downloadable receipts. Overdue and pending-payment alerts are visible to the daily operator.
 
 ### 2. Admissions / front office
 
@@ -49,7 +49,8 @@ The codebase therefore has components for these jobs, but the work is split acro
 
 | Role | Daily responsibilities | Should not automatically be allowed |
 |---|---|---|
-| Cashier / Accounts Operator | Student balance lookup, fee collection, payment modes, receipt reprint/email, day collection report | Fee-master edits, refunds, concessions, admission approval, class promotion, user administration |
+| Cashier | Institution-scoped student balance lookup, fee collection, pending/paid status, overdue and gateway-pending alerts, receipt reprint/email, day collection report | Fee-master edits, refunds, concessions, gateway settlement reconciliation, admission approval, class promotion, user administration |
+| Accounts | Institution-scoped fee oversight, fee-master administration, gateway settlement reconciliation, financial reports | Routine student admission, class promotion, unrestricted user administration |
 | Front Office / Admissions | Enquiry capture, follow-up, admission checklist, student/guardian onboarding, documents, class placement request | Cash posting, fee concessions/refunds, final academic promotion |
 | Academic Office | Class/section allocation, promotion preview/import, academic-year rollover, results and student academic records | Cash collection, financial reconciliation |
 | Principal / Owner | Approvals, oversight, delegated permissions, exception handling | Routine cashier actions need not be performed by senior management |
