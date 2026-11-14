@@ -82,14 +82,26 @@ Static review of `app/Providers/AuthServiceProvider.php` found:
 
 These are static-source findings. They have not been exercised against a running app or database in this research phase.
 
-## 5. Next audit work
+## 5. Runtime manifest result and next audit work
 
-1. Generate and retain a runtime `php artisan route:list --json` artifact in disposable CI, including method, URI, name, action and expanded middleware. Resolve the apparent `tagore_api.php` registration gap and any conditional/included route declarations.
-2. Join each resolved route to its controller method, request validation, model queries, Gate/policy calls, view/API response, mutation/export action and test coverage.
-3. Complete action-level scope review for all legacy Admin, Accountant, Teacher, Student, Parent, Librarian, Receptionist, Payroll and modern Tagore surfaces. Include cross-institution, cross-class, cross-year and unrelated-family negative tests.
-4. Audit exports/downloads, API tokens, impersonation, queued work, notifications, listeners, console commands and scheduled paths.
-5. Produce a role-by-page-by-action inventory with explicit allow/deny rules and test evidence. Compare every legacy page with the modern Tagore UI before proposing consolidation or removal.
+The first disposable-CI framework manifest is now available and recorded in [runtime-route-manifest-audit.md](runtime-route-manifest-audit.md).
+
+- 1,444 registered route entries; 200 under the `api/` prefix.
+- 221 named routes and 1,223 unnamed routes.
+- No duplicate exact method+URI pairs in this manifest.
+- 69 entries do not include an `Authenticate` middleware class; this is a triage count, not a vulnerability count.
+- 50 GET/HEAD routes target `destroy` or `delete` actions; five target approval-related actions and three target reset/token-update candidates.
+- The manifest is from `APP_ENV=testing` with E2E enabled and a disposable SQLite database. Test-only `__e2e` routes and package debug routes must not be misrepresented as production exposure.
+
+Next work, in order:
+
+1. Inventory the 50 GET delete/destroy routes and approval/reset candidates, locate every web/mobile caller, and test that GET/HEAD never mutates. Prepare a compatibility-aware method migration proposal.
+2. Inspect the 23 API routes without explicit Sanctum authentication individually; classify public login/password/lookup/info routes and test ownership boundaries for data-bearing endpoints.
+3. Inspect impersonation entry/exit flows, target institution boundaries, audit events and session revocation.
+4. Join routes to controller methods, request validation, model queries, Gate/policy calls, views/mobile clients, exports/downloads and tests. Prioritise finance, identity, family/child, documents and exports.
+5. Generate a production-equivalent route manifest with debug/tinker/ignition packages disabled as expected for production; compare it to the testing manifest.
+6. Complete action-level scope review across legacy Admin, Accountant, Teacher, Student, Parent, Librarian, Receptionist, Payroll and modern Tagore surfaces, with cross-institution/class/year/family negative tests.
 
 ## 6. Audit boundary
 
-This pass inspected all 19 route-definition files, the route provider, HTTP kernel middleware aliases, selected role middleware and the central authorization provider. It did **not** execute the application, run `route:list`, inspect every controller method or every policy body, nor validate runtime authorization. The audit remains in progress. No application code, production data, live database, hardware or external integration was changed.
+The framework route list was executed in CI against the workflow's disposable SQLite database with synthetic seeded data. This confirms runtime route registration in the **testing** configuration only. It does not prove production reachability, tenant isolation, record-level authorization, or controller correctness. The full controller/policy/client/negative-test mapping remains in progress. No application code, production data, live database, hardware or external integration was changed by this audit.
