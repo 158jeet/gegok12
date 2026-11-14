@@ -411,3 +411,25 @@ The open PR list was checked on 14 November 2026. All listed PRs below remain op
 4. Review #62 admission conversion separately; extend it to a safe admission-to-enrolment workflow only after duplicate and year/class/fee rules are defined.
 5. Do not merge stale #42/#52/#60 branches where main already contains newer equivalents; compare diffs and close/mark superseded only after owner decision.
 6. Reconcile #49/#59/#70 workflow changes together, preserving no-production-mutation behavior for research branches.
+
+## 16. Whole-repository audit sizing — beyond Tagore-specific controllers
+
+The preserved PR #71 register recorded the following recursive-tree baseline on the same main SHA `a5806356ad317c8126845a6512b80575376a7f63`:
+- 7,920 tracked files
+- 19 route definition files
+- 281 HTTP controllers
+- 633 Blade/PHP view files
+- 150 database migrations
+- 123 model files
+- 22 policy files
+- 31 feature/unit test files
+- 36 console command files
+- 0 job files
+- 30 listener files
+- 4 notification files
+
+The route declaration scan counted 174 route-related declaration lines in `routes/tagore.php`, 107 in `routes/api.php`, 503 in `routes/admin.php`, 255 in `routes/teacher.php`, 77 in `routes/student.php`, 50 in `routes/accountant.php`, 51 in `routes/payroll.php` and 52 in `routes/librarian.php` (these are declaration-line counts, not unique endpoints).
+
+**Coverage boundary:** The current evidence audit has deeply inspected selected Tagore controllers/services and several legacy attendance/timetable controllers, but it has not yet reviewed all 281 controllers, 633 views, 22 policies, 30 listeners, 36 commands or all 19 route files. In particular, legacy Admin, Accountant, Teacher, Student, Parent, Librarian, Receptionist and Payroll portals remain to be mapped against Tagore's modern module surfaces. The 0-job-file count also means queued work may be implemented via listeners/commands or inline dispatch; inventory those paths rather than assuming there are no background processes.
+
+**Next systematic audit deliverable:** generate and commit a framework `route:list --json` artifact from disposable CI, then join each route (method, URI, name, action, middleware) to controller action, view/API, policy, role, institution/class/year scope, model ownership and tests. Use this to find duplicate routes, dead links, unreferenced views/controllers, unsafe GET mutations, missing authorization, unscoped queries and exports. Then create a page/action inventory for all roles and compare the legacy portal with the modern Tagore UI so no functionality is silently lost during modernization.
