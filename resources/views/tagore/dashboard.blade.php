@@ -46,6 +46,9 @@
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
   @endif
+  @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','HR'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.biometric.index') }}"><span class="tg-side-icon">◉</span>Biometric devices</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
