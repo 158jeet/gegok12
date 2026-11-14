@@ -215,7 +215,7 @@ class AdmissionController extends Controller
     {
         try
         {
-            $admission = Admission::where('id',$id)->first();
+            $admission = Admission::where('school_id', Auth::user()->school_id)->whereKey($id)->firstOrFail();
 
             $admission->delete();
 
