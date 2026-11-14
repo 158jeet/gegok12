@@ -293,3 +293,22 @@ This pass is based on current GitHub main source and static file inspection. It 
 - `PlatformController::cctvStatus()` makes a read-only request to a configured private Frigate NVR `/api/stats` endpoint and reports reachability/camera/detector counts.
 - It explicitly does not verify camera streams or AI detection accuracy. This is not evidence of Hikvision integration, visitor-to-camera event linkage, recording retrieval or production activation.
 - Status: read-only Frigate connectivity check only; Hikvision remains an external integration requirement and must not be activated without the actual vendor/API/security contract.
+
+## 10. Additional pass — role catalogue, family migration and fee management boundaries
+
+### Role catalogue is incomplete for the requested operating model
+- `TagorePrototypeSeeder` and `TagoreDemoAccountsSeeder` define/seed eight roles only: OWNER, PRINCIPAL, COORDINATOR, TEACHER, PARENT, STUDENT, ACCOUNTS and FEE_EDITOR.
+- The supplied target operating model also needs CASHIER, HR Manager, Transport Manager and Hostel Warden/Admin (plus other optional module roles). Some controllers already test role codes such as HR, TRANSPORT and HOSTEL, but those codes are not created by the inspected prototype role seed.
+- There is no role-creation route in `AdministrationController`; it assigns only existing role records. Therefore these missing roles cannot be made available through the current owner admin UI unless separately seeded.
+- `StaffController::leave()` and `decideLeave()` use OWNER/PRINCIPAL/COORDINATOR as manager roles and do not include HR, despite payroll routes allowing HR. Align the HR manager/leave-approver policy with the agreed matrix.
+- The cashier gap is more than naming: `FeeController::authorizePaymentRecording()`, `FeeManagementController::MANAGE_ROLES` and `FeeWalletController` do not provide the required operational cashier collection rights. No cashier-specific daily collection/reconciliation workflow is evidenced.
+
+### Family migration nuance
+- The owner-only `StudentParentMigrationService` copies active legacy `student_parent_links` into `tagore_parent_students` using idempotent upserts. The inspected sync query does not require parent and student to share the same school, so it can preserve legacy cross-school guardian links where they already exist.
+- However, the new admissions `linkFamily()` flow requires the parent and student to belong to the same school. Thus cross-institution family access may survive migration but cannot reliably be created/managed through the new admissions UI. Add an explicit group-level verified guardian workflow and tests.
+
+### Fee-management separation
+- `FeeManagementController` manages fee structures, class assignments, individual demands, bulk preview and bulk generation; its manager roles are OWNER, PRINCIPAL and ACCOUNTS.
+- `FeeEditorController` limits percentage-based bulk adjustments to OWNER/FEE_EDITOR and excludes opening balances in the service.
+- `FeeController` has a separate payment recording and reconciliation path. The current cashier absence means the desired operational collection role is not yet wired.
+- `FeeManagementController::authorizeClassScope()` checks explicit class scopes when any exist; if no class-scope rows exist for a non-owner manager, it currently does not reject based on class scope. Current manager roles are owner/principal/accounts, so do not use this as a substitute for future coordinator class-scoping.
