@@ -65,8 +65,10 @@ class BiometricDeviceController extends Controller
             'model' => 'Realtime T304F',
             'serial_number' => trim($data['serial_number']),
             'firmware_version' => $data['firmware_version'] ?? null,
-            'connection_mode' => 'realtime_api',
-            'api_endpoint' => 'https://apirealtime.com/RealtimeBioConnect.asmx',
+            // Do not assume a vendor endpoint or protocol. Configure only after
+            // the owner supplies the device/API contract and credentials.
+            'connection_mode' => 'manual_config',
+            'api_endpoint' => null,
             'poll_interval_minutes' => 5,
             'timezone' => 'Asia/Kolkata',
             'sync_enabled' => false,
@@ -89,8 +91,20 @@ class BiometricDeviceController extends Controller
         ]);
         $schoolId = DB::table('tagore_institutions')->where('id', $device->institution_id)->value('school_id');
         $employee = DB::table('users')->where('id', $data['employee_id'])
-            ->where('school_id', $schoolId)->whereNull('deleted_at')->first();
-        abort_unless($employee, 422, 'Employee must belong to the same institution.');
+            ->where('school_id', $schoolId)->whereNull('deleted_at')
+            ->where(function ($query) {
+                // Legacy employee user groups; explicitly exclude student and parent groups.
+                $query->whereIn('usergroup_id', [3, 4, 5, 8, 10, 11, 12, 13])
+                    ->orWhereExists(function ($roles) {
+                        $roles->selectRaw('1')
+                            ->from('tagore_user_roles as ur')
+                            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                            ->whereColumn('ur.user_id', 'users.id')
+                            ->where('ur.status', 'active')
+                            ->whereIn('r.code', ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER', 'HR']);
+                    });
+            })->first();
+        abort_unless($employee, 422, 'Select an active staff/employee account belonging to this institution.');
         DB::table('tagore_biometric_employee_mappings')->updateOrInsert(
             ['device_id' => $deviceId, 'device_user_id' => trim($data['device_user_id'])],
             ['employee_id' => $employee->id, 'active' => true, 'created_by' => $userId, 'updated_at' => now(), 'created_at' => now()]
