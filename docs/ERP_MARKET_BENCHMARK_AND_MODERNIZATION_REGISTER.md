@@ -610,3 +610,14 @@ The following are permanent backlog requirements, not informal suggestions. They
 | Department work | Department/institution hierarchy, task model, scope matrix, owner roll-up and escalation tests |
 
 These requirements extend the existing admissions, parent/student, academic operations, assessment, communications, platform UX and work-management work packages. Preserve the IDs above as traceability keys in implementation PRs and final acceptance.
+
+
+### 13.9 Code-audit findings and corrections — 14 November 2026
+
+The following were found by inspecting the clean T304F/finance branch, not inferred from the feature descriptions:
+
+- **Fee access:** the fee controller previously authorised TEACHER/COORDINATOR by institution membership alone. A coordinator could reach the institution-wide Accounts summary, recent payments and family balances. Corrected on the clean integration branch: coordinators now require explicit `tagore_user_scopes` entries with `scope_type=standard_link` and the `fee.view` permission; their Accounts aggregates, recent payments and family balances are filtered to students in those assigned standard links for active academic years. Individual student fee/receipt access is checked against the same active-year class scope. Class teachers are restricted to their own `standards_link.class_teacher_id` assignments. Missing scope fails closed.
+- **Biometric employee mapping:** the previous mapping accepted any non-deleted user in the same school, including potentially student/parent accounts. Corrected on the clean integration branch: mapping now requires a recognised legacy staff user group or an active Tagore staff role, and the same-school check remains.
+- **Unverified vendor endpoint:** the registry previously prefilled an assumed Realtime API endpoint. Removed the hardcoded endpoint and changed new devices to `manual_config` with a null endpoint. Sync remains disabled until the owner supplies and verifies the actual model/firmware/API contract and connection details.
+- Added feature tests for coordinator denial without explicit class fee scope and rejection of biometric mapping to a student account. These tests are awaiting CI execution.
+- **Important limitation:** these corrections do not yet constitute a complete permission audit. Verify all cashier/central Accounts read/write paths, scope assignment lifecycle, active academic-year edge cases and employee-role coverage before marking finance/biometric acceptance complete.
