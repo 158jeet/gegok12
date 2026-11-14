@@ -312,3 +312,20 @@ This pass is based on current GitHub main source and static file inspection. It 
 - `FeeEditorController` limits percentage-based bulk adjustments to OWNER/FEE_EDITOR and excludes opening balances in the service.
 - `FeeController` has a separate payment recording and reconciliation path. The current cashier absence means the desired operational collection role is not yet wired.
 - `FeeManagementController::authorizeClassScope()` checks explicit class scopes when any exist; if no class-scope rows exist for a non-owner manager, it currently does not reject based on class scope. Current manager roles are owner/principal/accounts, so do not use this as a substitute for future coordinator class-scoping.
+
+## 11. Additional pass — offline sync and Windows client security
+
+### Current supported offline scope
+- `TagoreSyncController` exposes login, bootstrap and push endpoints under `/api/v2/tagore/sync`.
+- `OfflineSyncService` bootstraps only the authenticated user's assigned classes/students and currently accepts only attendance upserts.
+- The Windows Tauri client stores a local bootstrap snapshot and attendance outbox in IndexedDB; it supports present/absent capture and later sync. It is not an offline cashier, HR, hostel or general ERP client.
+- `TagoreOfflineSyncTest` verifies only that three routes are registered. It does not exercise login, class isolation, offline capture, duplicate sync, failed-change recovery or conflict resolution.
+
+### Security and reliability risks
+- The local session token and student/class snapshot are stored in IndexedDB without application-level encryption. Lost-device protection, secure credential storage, device revocation and local data retention need a design.
+- Device UUID is client-supplied and `registerDevice()` upserts by UUID; define collision/reassignment and device revocation controls.
+- Sync failures are persisted with status `failed`. The client deletes only `applied` changes from its outbox, so a failed change will be retried with the same client_change_id; the server returns the prior failed result and does not reprocess it. Provide a reviewed retry/requeue path and visible conflict resolution.
+- The push request validates the outer array but does not apply a complete nested schema for each change. The service checks required attendance keys and class-teacher/student relationships, but the inspected code does not strictly validate allowed status values, session enum, date policy, reason IDs or payload size per change.
+- Idempotency exists through unique client_change_id, but failure replay, duplicate concurrent pushes and audit/attendance correction rules need executable tests.
+- API token expiry/ability restriction and lost-device revocation were not evidenced in this pass.
+- Status: narrow attendance sync foundation present; safe offline production acceptance is not yet established.
