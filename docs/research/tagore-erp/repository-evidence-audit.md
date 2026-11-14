@@ -381,3 +381,33 @@ All changes between the successful initial candidate and this latest candidate a
 
 ### Interpretation
 These CI runs are valuable evidence that the current application baseline builds and passes its existing automated suites in disposable CI environments. They do **not** prove every business requirement in the research report is implemented, nor do they cover the newly identified missing/unsafe edge cases unless a specific test exists. In particular, a green baseline suite does not negate the class-scope, family checkout, gateway, import mapping, report export, document privacy or operational cross-institution gaps recorded above. No production database or live records were changed by these CI jobs.
+
+## 15. Open modernization PR reconciliation — current main vs proposed branches
+
+The open PR list was checked on 14 November 2026. All listed PRs below remain open; proposed branch code is not automatically part of main. This section distinguishes what is already on main from what remains only in an open branch.
+
+### Feature and UI PRs
+- **#63 Cashier counter** (base main): adds a dedicated cashier page, outstanding-student search, offline payment recording, today's collection/receipt KPIs and recent receipts. It is **not on main** (main has no cashier route/view). The first version allows OWNER/PRINCIPAL/ACCOUNTS only; #69 later adds CASHIER. Gaps: no aged overdue/follow-up queue, reminder workflow, daily cashier close/reconciliation, fee-item allocation preview or family checkout. The UI allocates through the existing oldest-outstanding-first payment service.
+- **#64 Profile/logout** (base #63): stacked on the cashier branch. It is part of the proposed #63→#64→#68→#69 integration chain; do not merge it directly to main without its parent or a deliberate rebase.
+- **#68 Biometric/import specification** (base #64): documentation-only integration specification. It is not a T304F adapter.
+- **#69 T304F registry and finance-role port** (base #68): adds cashier role/permissions, scoped fee behavior and device registry/mapping/punch schema. It remains setup-only; no vendor punch ingestion. It also permits CASHIER into the Accounts workspace; review/hide bank/gateway settlement IDs, settlement amount/date/status and pending settlement indicators from the cashier view. Cashier should see operational collection follow-up, not bank settlement reconciliation.
+- **#65/#66** are predecessor branches superseded by the cleaner #68/#69 chain. Do not merge both predecessor and replacement PRs.
+- **#62 Admissions CRM workspace** (base main): proposed enhancements include due/overdue follow-up date handling, staff assignment selector and a `convert()` action. The conversion links an already existing active student account in the same school to a lead; it does not create the student account, admission enrolment, fee demand or documents. It does not prove current-year enrolment, and it does not prevent the same student from being linked to another lead. The conversion migration/route are not on main. Review idempotency and duplicate-link controls before adopting.
+- **#61 Shared UI foundation** (base main): adds `tagore-design-system.css` and links it from `resources/views/layouts/app.blade.php`. The main layout does carry the `tagore-ui` body class, so legacy pages using that layout can receive the styles. Many Tagore-specific views (including dashboard/administration and module pages) are standalone `tg-app` documents rather than children of this layout; the stylesheet link alone will not modernise those pages. A shared Tagore layout migration or explicit stylesheet loading is still needed for complete parity. This PR is not on main.
+- **#52 Owner user-account management** (base main): the core functionality is already present on current main: owner-only create user, reset password, enable/disable, role assignment and `tagore_user_admin_audits` migration/routes/view. PR #52's branch differs from main and appears stale/superseded for the basic account-management capability; compare its extra changes before any merge. Current main still needs review for one-time password handling, forced password change/invitation, email verification semantics, last-owner lockout protection and cross-institution Accounts assignment.
+- **#42 Family fee consolidation and shared diary** (base main): current main already has a family balance summary and `DailyDiaryController`/migration/tests, but the branch has an older implementation and is not the authority for current behavior. The current family summary is not a family-wide checkout. Do not merge the older branch over current main without comparing exact content and tests.
+- **#60 Product modernisation baseline audit** (base main): an earlier audit document; superseded as a research package by PR #72 and the preserved expanded PR #71 register. Retain as history, do not merge blindly.
+- **#56 Production dirty-checkout/mobile operations filters**: modifies production deployment workflow and operations UI; keep separate from functional ERP modernization and review production implications independently.
+
+### CI / workflow PRs
+- **#49 and #59** both modify `.github/workflows/live-acceptance.yml`; #59 adds representative role acceptance and documentation. **#70** also changes that same workflow to prevent temporary `work/**` validation branches from triggering the live production sweep. Review the combined workflow and preserve the read-only/no-mutation guarantee before merging any of these.
+- **#33** Android emulator smoke automation, **#31** final ERP browser gate and older deployment PRs #27/#22/#21 are separate CI/deployment work. They must be reconciled with current workflow files and release policy, not mixed into feature implementation.
+- **#38** dashboard search is a separate UI utility. Confirm it indexes only visible/authorised modules after role and institution scope is finalised.
+
+### Current integration recommendation
+1. Keep PR #72 as the research/requirements record.
+2. Treat #63→#64→#68→#69 as a stacked integration chain; rebase and review as one dependency set, with explicit cashier settlement visibility and class-scope fixes.
+3. Review #61 UI foundation and create a complete Tagore shared-layout plan before using it as a global style fix.
+4. Review #62 admission conversion separately; extend it to a safe admission-to-enrolment workflow only after duplicate and year/class/fee rules are defined.
+5. Do not merge stale #42/#52/#60 branches where main already contains newer equivalents; compare diffs and close/mark superseded only after owner decision.
+6. Reconcile #49/#59/#70 workflow changes together, preserving no-production-mutation behavior for research branches.
