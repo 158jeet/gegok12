@@ -47,7 +47,7 @@ return new class extends Migration {
 
         Schema::create('tagore_biometric_punches', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('device_id')->constrained('tagore_biometric_devices')->cascadeOnDelete();
+            $table->foreignId('device_id')->constrained('tagore_biometric_devices')->restrictOnDelete();
             $table->string('device_user_id', 100);
             $table->unsignedInteger('employee_id')->nullable();
             $table->foreign('employee_id')->references('id')->on('users')->nullOnDelete();
