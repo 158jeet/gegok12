@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('tagore_biometric_devices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
+            $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
             $table->string('site_name', 120);
             $table->string('device_name', 120);
             $table->string('model', 60)->default('Realtime T304F');
@@ -33,10 +33,10 @@ return new class extends Migration {
 
         Schema::create('tagore_biometric_employee_mappings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('device_id')->constrained('tagore_biometric_devices')->cascadeOnDelete();
+            $table->foreignId('device_id')->constrained('tagore_biometric_devices')->restrictOnDelete();
             $table->string('device_user_id', 100);
             $table->unsignedInteger('employee_id');
-            $table->foreign('employee_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('employee_id')->references('id')->on('users')->restrictOnDelete();
             $table->boolean('active')->default(true);
             $table->unsignedInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
