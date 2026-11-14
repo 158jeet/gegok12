@@ -16,9 +16,9 @@ class BiometricDeviceController extends Controller
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
             ->where('ur.user_id', $userId)->where('ur.status', 'active')
             ->pluck('r.code')->unique()->values();
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL', 'HR'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty() || $roles->intersect(['PRINCIPAL', 'HR'])->isNotEmpty(), 403);
 
-        $ids = $roles->contains('OWNER')
+        $ids = $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()
             ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')
                 ->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
