@@ -125,6 +125,8 @@ These items are candidates for the final locked plan. They are not implementatio
 
 ## Phase 0 exit checklist
 
+**Progress note (2026-11-14):** All 19 route-definition files have now been enumerated and a first-pass static route/provider/middleware/policy inventory is recorded in [route-and-authorization-inventory.md](route-and-authorization-inventory.md). This is not the framework-generated runtime route manifest; route registration, expanded middleware and action reachability remain unverified until a disposable-CI `php artisan route:list --json` artifact is produced. The first pass identified a likely unregistered `routes/tagore_api.php`, duplicate `User` policy-map keys, a likely undefined variable in the `post_reply` Gate, and legacy payroll access tied to hard-coded user-group IDs. These are audit findings to validate, not authorisation to patch in this phase.
+
 - [ ] All 19 route definition files enumerated and framework route manifest generated.
 - [ ] All 281 controllers classified by route reachability and module owner.
 - [ ] All 633 Blade/PHP views mapped to route, role and workflow.
