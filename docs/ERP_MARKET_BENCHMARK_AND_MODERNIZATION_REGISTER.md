@@ -518,3 +518,95 @@ PR #68 and #69 are draft and unmerged. The old #65/#66 branches are not the clea
 - v2 validation is running against commit 38bec3bc (plus the workflow trigger guard on the work branch). Do not mark PR #69 accepted until ERP CI, full acceptance and Tagore prototype/migration smoke all complete successfully.
 
 Current PR sequence remains #63 → #64 → #68 → #69. PR #70 is a separate workflow-safety change. PR #65/#66 are stale predecessor branches, not the clean integration candidates.
+
+## 13. Owner-approved scope additions — 14 November 2026
+
+The following are permanent backlog requirements, not informal suggestions. They must be benchmarked, audited against existing code, assigned traceability IDs, and accepted before implementation. Reuse/consolidate existing workflows instead of creating parallel modules.
+
+### 13.1 Parent identity and family portal
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| FAM-01 | Canonical Parent ID | One distinct Parent ID and one parent account/profile per guardian. One parent application can register or link multiple children across Tagore institutions. Duplicate guardian records must be detected and reviewed, not silently merged. | P0 |
+| FAM-02 | Unified parent portal | Parent signs in once and switches between linked children. Each child’s permitted profile, attendance, results, fees, diary, notices and documents are accessible from the parent profile. | P0 |
+| FAM-03 | Student identity vs login | Keep each child’s distinct academic/student identity and history, but do not require a duplicate parent/student application or separate student login. Student login can be enabled by age/institution policy without creating a second student record. | P0 |
+| FAM-04 | Relationship security | Every API, page, export and file download enforces verified parent-child links server-side. Support multiple guardians, multiple children, revoked links, custody restrictions, sibling institution differences and audit history. | P0 |
+| FAM-05 | Safe migration | Inventory existing parent/student accounts, map duplicates for human review, preserve safe credentials, use invitation/activation rather than default passwords, and provide reconciliation/rollback. No live migration before approval. | P0 |
+
+### 13.2 Student 360° profile
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| STU-360-01 | Unified student profile | A single student 360° view and chronological journey covers identity, class/year history, attendance, results, report cards, diary/homework, activities, documents and approved communications. | P0 |
+| STU-360-02 | Achievements and participation | Record academic, sports, cultural, leadership, community service, club, competition, Olympiad and other participation/achievements with date, level, organiser, outcome and approving staff. Distinguish participation from awards. | P1 |
+| STU-360-03 | Certificates and portfolio | Approved certificates, commendations, badges and evidence can be viewed/downloaded by authorised parent/student and staff. Include file validation, malware scanning, retention and access audit. | P1 |
+| STU-360-04 | Results and progress | Display approved examination results, subject-wise trends, term/year summaries, Olympiad and JEE/NEET results where relevant. Published results are versioned; corrections retain reason and history. | P0 |
+| STU-360-05 | Attendance and engagement | Show daily/period attendance, punctuality and approved summaries; link to diary and interventions. | P0 |
+| STU-360-06 | Visibility/privacy | Parent/student see only their own linked child. Staff have role-scoped access. Health, safeguarding, discipline and sensitive wellbeing notes require separate permissions and access logs. | P0 |
+| STU-360-07 | Portfolio export | Searchable timeline and controlled portfolio/report export; exports inherit all relationship and document permissions and log downloads. | P2 |
+
+### 13.3 Timetable and teacher substitution
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| TTB-01 | Principal/coordinator timetable | View by institution, class, section, subject, room and teacher with clashes, vacant periods and workload. | P0 |
+| TTB-02 | Automatic substitution | Approved leave/absence triggers proposed substitutions. Candidate ranking considers subject fit, availability, timetable clashes, workload limits, campus/shift and fair distribution. Never silently assign a conflicting/unavailable teacher. | P0 |
+| TTB-03 | Manual substitution | Principal/coordinator can select or replace a substitute. Overrides show conflicts and require a reason where policy is overridden. | P0 |
+| TTB-04 | Publication and audit | Preserve original timetable and substitution history; notify substitute and affected class/staff, and update permitted parent/student views. | P1 |
+| TTB-05 | Coverage dashboard | Show unfilled periods, substitution load and recurring coverage gaps, scoped to institution/assigned classes. | P1 |
+
+### 13.4 NEP-aligned report cards / HPC
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| HPC-01 | Modern report-card engine | Configurable holistic progress card (HPC-style), not marks-only. Validate applicable current CBSE/RBSE and official NEP/framework requirements before claiming compliance. | P0 |
+| HPC-02 | Competency/outcome assessment | Subject competencies, learning outcomes, formative/summative evidence, rubrics, descriptive feedback and configurable grade bands. | P0 |
+| HPC-03 | Holistic development | Include co-scholastic, arts, physical education, skills, projects, student self/peer reflection and other applicable domains. Sensitive wellbeing information remains restricted. | P1 |
+| HPC-04 | Review and publication | Teacher entry → subject/class review → coordinator/principal moderation → approval → parent/student publication. Published snapshots are locked; corrections are versioned with reason/audit. | P0 |
+| HPC-05 | Board/stage templates | Separate configurable templates by board, stage, class and academic year; academic leadership signs off mapping to current official guidance. | P0 |
+| HPC-06 | Progress analytics | Longitudinal competency trends and learning-gap interventions; do not treat descriptive competency measures as directly comparable numeric exam scores. | P1 |
+
+### 13.5 Parent social feed and one-tap contacts
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| PAR-ENG-01 | Official social/news feed | Parent portal displays institution-approved Tagore social-media updates and school announcements. Prefer supported official APIs/embeds or a controlled first-party feed; never scrape or store social passwords. | P1 |
+| PAR-ENG-02 | Feed governance | Configure official accounts by institution, audience targeting, moderation, pin/archive, publication window and resilient cached/first-party fallback. Third-party failure must not break the portal. | P1 |
+| PAR-ENG-03 | One-tap department calling | Parent can tap to call Principal, Fees, Coordinator, Transport In-charge and other configured departments without manually dialling. Mobile uses a telephone action; desktop offers an appropriate contact fallback. | P1 |
+| PAR-ENG-04 | Contact directory security | Route contacts by the child’s institution/campus, verify numbers, maintain office hours/fallbacks, restrict who can edit and do not expose staff personal numbers by default. | P1 |
+
+### 13.6 Department-wise work management
+
+| ID | Requirement | Target behaviour and acceptance criteria | Priority |
+|---|---|---|---|
+| WORK-01 | Owner department workspace | Owner portal groups work by department and institution, with department leads and group-wide roll-up/drill-down. Avoid a flat undifferentiated task list. | P0 |
+| WORK-02 | Department detail | Show objectives, projects, tasks, accountable owner, assigned staff, deadlines, blockers, dependencies, evidence and configured KPIs/budget. Reuse the existing task store where possible. | P0 |
+| WORK-03 | Role-specific views | Department leads see their department; institution heads see authorised institutions; owner sees group-wide roll-up; staff see assigned work. Enforce scope server-side on lists, detail, exports and mutations. | P0 |
+| WORK-04 | Escalation | Highlight overdue, blocked and unassigned work with configurable reminders, SLAs, escalation chain and immutable status history. | P1 |
+| WORK-05 | Performance reporting | Compare department progress and drill into evidence without confusing activity counts with outcomes. | P2 |
+
+### 13.7 Audit, benchmark and acceptance gates
+
+1. Audit current parent/student models, guardian relationships, account creation, all parent/student routes/APIs, student profile pages, report-card engine, timetable, leave approvals, substitution, communication/social integrations and task/work models before implementation.
+2. Build a field-by-field Student 360° source map: source module, author/approver, timestamp, academic year, visibility, retention and correction history.
+3. Create synthetic family fixtures: one guardian with multiple children, multiple guardians for one child, siblings in different institutions, revoked guardian access, duplicate candidates and custody restrictions.
+4. Test substitution with leave approval, subject fit, unavailable teachers, timetable clashes, workload caps, manual override, notifications and audit.
+5. Map HPC templates to current official board/framework sources and record source/version/date; do not assert compliance without academic sign-off.
+6. Confirm social platform API terms, permissions, costs and resilience before selecting a provider. Feed is supplementary; school notices must remain available independently.
+7. Test one-tap calls for institution routing, mobile/desktop fallback, verified contact updates and prevention of private-number exposure.
+8. Test owner/department work views for cross-institution leakage, drill-down, assignments, overdue escalation and audit.
+9. Use synthetic data only. No live family/student migration or external social/device integration before explicit owner approval and release gates.
+
+### 13.8 New audit tracker
+
+| Area | Evidence required before implementation is ready |
+|---|---|
+| Parent/family | Existing models, duplicate patterns, relationship constraints, route/API inventory, safe migration and rollback |
+| Student 360° | Field/source map, visibility matrix, timeline coverage, document security and parent/student journey |
+| Timetable/substitution | Timetable schema, workload rules, leave trigger, conflict engine, manual override and notification tests |
+| HPC/report cards | Current official board mapping, rubric model, moderation/publication/versioning and sample acceptance reports |
+| Social feed | Supported API/embedding options, terms/cost, authentication, moderation, audience and fallback |
+| One-tap contacts | Institution/department directory, ownership, mobile/desktop behaviour and privacy tests |
+| Department work | Department/institution hierarchy, task model, scope matrix, owner roll-up and escalation tests |
+
+These requirements extend the existing admissions, parent/student, academic operations, assessment, communications, platform UX and work-management work packages. Preserve the IDs above as traceability keys in implementation PRs and final acceptance.
