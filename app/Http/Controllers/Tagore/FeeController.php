@@ -144,7 +144,24 @@ class FeeController extends Controller
         $institutions = $institutions->orderBy('i.display_name')->get(['i.id', 'i.display_name']);
         $ids = $institutions->pluck('id');
 
-        $summary = DB::table('tagore_fee_obligations')->whereIn('institution_id', $ids)
+        // Coordinators receive fee visibility only for explicitly assigned class/section
+        // links with the fee.view scope. An institution role alone never grants all-student access.
+        $scopedStudentIds = null;
+        if ($roles->contains('COORDINATOR')) {
+            $standardLinkIds = $this->scopedStandardLinkIds($userId);
+            $activeYearIds = $this->activeAcademicYearIds($userId);
+            $scopedStudentIds = DB::table('student_academics')
+                ->whereIn('standardLink_id', $standardLinkIds)
+                ->whereIn('academic_year_id', $activeYearIds)
+                ->whereNull('deleted_at')
+                ->pluck('user_id')->unique()->values();
+        }
+
+        $summaryQuery = DB::table('tagore_fee_obligations')->whereIn('institution_id', $ids);
+        if ($scopedStudentIds !== null) {
+            $summaryQuery->whereIn('student_id', $scopedStudentIds);
+        }
+        $summary = $summaryQuery
             ->selectRaw('COALESCE(SUM(gross_amount),0) gross, COALESCE(SUM(discount_amount),0) discount, COALESCE(SUM(concession_amount),0) concession, COALESCE(SUM(net_amount),0) payable, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(outstanding_amount),0) outstanding')->first();
 
         $recent = DB::table('tagore_payments as p')
@@ -152,6 +169,7 @@ class FeeController extends Controller
             ->join('tagore_institutions as i', 'i.id', '=', 'p.institution_id')
             ->leftJoin('tagore_payment_reconciliations as r', 'r.payment_id', '=', 'p.id')
             ->whereIn('p.institution_id', $ids)
+            ->when($scopedStudentIds !== null, fn ($query) => $query->whereIn('p.student_id', $scopedStudentIds))
             ->where('p.status', 'success')
             ->orderByDesc('p.paid_at')->orderByDesc('p.id')->limit(100)
             ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.payment_mode', 'p.gateway', 'p.gateway_order_id', 'p.gateway_payment_id', 'p.reference_number', 'p.paid_at', 'u.name as student', 'i.display_name as institution', 'r.status as reconciliation_status', 'r.settlement_id', 'r.settlement_amount', 'r.settlement_date']);
@@ -169,6 +187,7 @@ class FeeController extends Controller
             })
             ->where('ps.status', 'active')
             ->whereIn('child_institution.id', $ids)
+            ->when($scopedStudentIds !== null, fn ($query) => $query->whereIn('ps.student_id', $scopedStudentIds))
             ->whereNull('parent.deleted_at')
             ->whereNull('child.deleted_at')
             ->groupBy('ps.parent_user_id', 'parent.name', 'parent.mobile_no')
@@ -317,5 +336,48 @@ class FeeController extends Controller
         $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
+
+        if ($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty()) {
+            return;
+        }
+
+        $standardLinkIds = $roles->contains('COORDINATOR')
+            ? $this->scopedStandardLinkIds($userId)
+            : DB::table('standards_link')->where('class_teacher_id', $userId)
+                ->where('school_id', DB::table('tagore_institutions')->where('id', $institutionId)->value('school_id'))
+                ->whereIn('academic_year_id', $this->activeAcademicYearIds($userId))
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        abort_unless(DB::table('student_academics')
+            ->where('user_id', $studentId)
+            ->whereIn('standardLink_id', $standardLinkIds)
+            ->whereIn('academic_year_id', $this->activeAcademicYearIds($userId))
+            ->whereNull('deleted_at')
+            ->exists(), 403, 'Fee visibility is limited to your assigned classes and sections.');
+    }
+
+    private function activeAcademicYearIds(int $userId): array
+    {
+        $schoolId = DB::table('users')->where('id', $userId)->value('school_id');
+        if (!$schoolId) {
+            return [];
+        }
+
+        return DB::table('academic_years')->where('school_id', $schoolId)
+            ->where('status', 1)->whereNull('deleted_at')
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    private function scopedStandardLinkIds(int $userId): array
+    {
+        $feeViewPermissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        if (!$feeViewPermissionId) {
+            return [];
+        }
+
+        return DB::table('tagore_user_scopes')->where('user_id', $userId)
+            ->where('scope_type', 'standard_link')
+            ->where('permission_id', $feeViewPermissionId)
+            ->pluck('scope_id')->map(fn ($id) => (int) $id)->all();
     }
 }
