@@ -1,0 +1,34 @@
+/* Admissions CRM workspace — shared visual language for the complete lead journey. */
+.tg-admissions{--ad-bg:#101720;--ad-panel:#192431;--ad-raised:#223140;--ad-line:#344658;--ad-text:#edf3f8;--ad-muted:#a7b6c6;--ad-green:#20b77a;--ad-red:#f16b7c;color:var(--ad-text);min-height:100vh;background:var(--ad-bg);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;box-sizing:border-box}
+.tg-admissions *{box-sizing:border-box}.tg-admissions a{color:#76dfb2;text-decoration:none}.tg-admissions a:hover{text-decoration:underline}
+.tg-ad-shell{max-width:1440px;margin:0 auto}.tg-ad-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}.tg-ad-brand{display:flex;align-items:center;gap:12px;color:var(--ad-text)!important}.tg-ad-brand img{width:42px;height:42px;object-fit:contain}.tg-ad-brand strong{display:block;font-size:16px}.tg-ad-brand span{display:block;color:var(--ad-muted);font-size:12px}
+.tg-ad-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:12px 0 22px}.tg-ad-hero h1{font-size:clamp(25px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:0 0 7px;color:var(--ad-text)}.tg-ad-hero p{margin:0;color:var(--ad-muted);max-width:720px}
+.tg-ad-btn,.tg-admissions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;padding:9px 14px;border:1px solid var(--ad-line);border-radius:10px;background:var(--ad-raised);color:var(--ad-text);font-weight:700;cursor:pointer}.tg-ad-btn.primary,.tg-admissions button[type=submit]{background:var(--ad-green);border-color:var(--ad-green);color:#062015}.tg-ad-btn:hover,.tg-admissions button:hover{filter:brightness(1.08);text-decoration:none}
+.tg-ad-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.tg-ad-card{min-width:0;background:var(--ad-panel);border:1px solid var(--ad-line);border-radius:15px;padding:16px;box-shadow:0 10px 28px #0002}.tg-ad-kpi{font-size:12px;color:var(--ad-muted);font-weight:700}.tg-ad-value{font-size:27px;line-height:1.2;font-weight:800;letter-spacing:-.04em;margin-top:5px}.tg-ad-card h2{font-size:16px;margin:0 0 13px;color:var(--ad-text)}
+.tg-ad-filters{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(5,minmax(125px,1fr)) auto;gap:9px;margin:16px 0}.tg-admissions input,.tg-admissions select,.tg-admissions textarea{width:100%;min-width:0;min-height:40px;padding:9px 11px;border:1px solid #46596c;border-radius:9px;background:#111b26;color:var(--ad-text);font:inherit}.tg-admissions textarea{min-height:105px;resize:vertical}.tg-admissions label{display:block;color:#d9e3ec;font-size:12px;font-weight:750;margin:0 0 6px}.tg-ad-field{min-width:0}.tg-ad-formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.tg-ad-full{grid-column:1/-1}
+.tg-ad-tablewrap{overflow-x:auto;border:1px solid var(--ad-line);border-radius:13px;background:var(--ad-panel)}.tg-ad-table{width:100%;min-width:980px;border-collapse:collapse}.tg-ad-table th{text-align:left;background:#243443;color:#c8d6e4;font-size:10px;letter-spacing:.07em;text-transform:uppercase}.tg-ad-table td,.tg-ad-table th{padding:12px 13px;border-bottom:1px solid var(--ad-line);vertical-align:middle}.tg-ad-table td{color:#e1e9f0}.tg-ad-table tr:last-child td{border-bottom:0}.tg-ad-table tbody tr:hover{background:#ffffff08}
+.tg-ad-pill{display:inline-flex;padding:4px 9px;border:1px solid var(--ad-line);border-radius:999px;font-size:11px;font-weight:750;background:#ffffff08}.tg-ad-pill.new{color:#9cc8ff}.tg-ad-pill.follow_up{color:#f4ca78}.tg-ad-pill.qualified{color:#83dfbd}.tg-ad-pill.admitted{color:#72e0a8}.tg-ad-pill.lost{color:#ff9aaa}
+.tg-ad-muted{color:var(--ad-muted)}.tg-ad-flash{padding:11px 13px;border:1px solid #267b59;background:#123b2c;border-radius:10px;color:#b9f3d8;margin:12px 0}.tg-ad-errors{padding:11px 13px;border:1px solid #9e4655;background:#401f29;border-radius:10px;color:#ffd1d8;margin:12px 0}.tg-ad-section{margin-top:16px}.tg-ad-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tg-ad-timeline{border-top:1px solid var(--ad-line);padding:13px 0}.tg-ad-timeline:first-child{border-top:0}.tg-ad-timeline p{margin:6px 0 0;white-space:pre-wrap}.tg-ad-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.tg-ad-pagination{padding:14px 0}
+@media(max-width:1050px){.tg-ad-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tg-ad-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.tg-ad-filters input:first-child{grid-column:span 2}}
+@media(max-width:700px){.tg-admissions{padding:15px}.tg-ad-top,.tg-ad-hero{align-items:flex-start;flex-direction:column}.tg-ad-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tg-ad-card{padding:13px}.tg-ad-value{font-size:23px}.tg-ad-filters{grid-template-columns:1fr 1fr}.tg-ad-filters input:first-child{grid-column:1/-1}.tg-ad-formgrid,.tg-ad-two{grid-template-columns:1fr}.tg-ad-full{grid-column:auto}.tg-ad-hero .tg-ad-btn{width:100%}}
+
+/* Keep the wide data grid inside its own scroll region on narrow screens. */
+html,body{max-width:100%;overflow-x:clip}
+.tg-admissions,.tg-ad-shell,.tg-ad-card,.tg-ad-two,.tg-ad-tablewrap{min-width:0;max-width:100%}
+.tg-ad-tablewrap{display:block;width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.tg-ad-table{width:100%;min-width:980px}
+@media(max-width:700px){
+  .tg-ad-tablewrap{width:100%;min-width:0}
+  .tg-ad-table{min-width:760px}
+}
+
+/* Mobile containment hardening; cache-busted with the matching Blade asset version. */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body>.tg-admissions,.tg-admissions{width:100%;min-width:0;max-width:100%;}
+.tg-ad-shell{width:100%;min-width:0;max-width:1440px}
+.tg-ad-tablewrap{width:100%;min-width:0;max-width:100%;overflow-x:auto!important;}
+.tg-ad-tablewrap>.tg-ad-table{width:max-content;min-width:980px;}
+@media(max-width:700px){.tg-ad-tablewrap>.tg-ad-table{min-width:760px}}
+
+/* The standalone CRM pages do not use the shared application body reset. */
+html,body{margin:0;padding:0}

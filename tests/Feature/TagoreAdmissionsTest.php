@@ -61,7 +61,7 @@ class TagoreAdmissionsTest extends TestCase
         $leadId=DB::table('tagore_admission_leads')->insertGetId([
             'institution_id'=>$institutionId,'lead_no'=>'QA-FUNNEL-'.uniqid(),
             'student_name'=>'Funnel Student','mobile'=>'9888888888','source'=>'Meta',
-            'campaign'=>'JEE 2027','status'=>'follow_up','next_follow_up_at'=>now()->subHour(),
+            'campaign'=>'JEE 2027','status'=>'follow_up','next_follow_up_at'=>now()->startOfDay()->subHour(),
             'created_at'=>now(),'updated_at'=>now(),
         ]);
 
@@ -99,10 +99,10 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNotNull($lead->last_contacted_at);
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
-            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
+            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'qualified',
         ])->assertRedirect();
 
-        $this->assertNotNull($lead->fresh()->converted_at);
+        $this->assertNull($lead->fresh()->converted_at);
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
             'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',
@@ -201,6 +201,82 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertSame($linksBefore, DB::table('tagore_parent_students')
             ->where('student_id', $student->id)
             ->count(), 'A rejected family-link attempt must not change parent/student links.');
+    }
+
+    public function test_follow_up_queue_separates_due_today_from_overdue_and_hides_terminal_leads(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->value('id');
+
+        $insertLead = function (string $name, string $status, $followUp) use ($institutionId): int {
+            return DB::table('tagore_admission_leads')->insertGetId([
+                'institution_id' => $institutionId,
+                'lead_no' => 'QA-DUE-' . uniqid(),
+                'student_name' => $name,
+                'status' => $status,
+                'next_follow_up_at' => $followUp,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        };
+
+        $dueTodayId = $insertLead('Due Today QA', 'follow_up', now()->startOfDay()->addHour());
+        $overdueId = $insertLead('Overdue QA', 'follow_up', now()->subDay());
+        $closedId = $insertLead('Admitted No Reminder QA', 'admitted', now()->subDay());
+
+        $this->actingAs($owner)->get(route('tagore.admissions.index', ['follow_up' => 'due']))
+            ->assertOk()->assertSee('Due Today QA')->assertDontSee('Overdue QA');
+
+        $this->actingAs($owner)->get(route('tagore.admissions.index', ['follow_up' => 'overdue']))
+            ->assertOk()->assertSee('Overdue QA')->assertDontSee('Due Today QA')->assertDontSee('Admitted No Reminder QA');
+
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $dueTodayId]);
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $overdueId]);
+        $this->assertDatabaseHas('tagore_admission_leads', ['id' => $closedId]);
+    }
+
+
+    public function test_admission_lead_can_be_converted_only_by_linking_an_existing_student_in_the_same_institution(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->firstOrFail();
+        $student = User::query()->where('usergroup_id', 6)
+            ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-CONVERT-' . uniqid(),
+            'student_name' => 'Conversion Gate Student',
+            'status' => 'qualified',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.activity', $leadId), [
+            'type' => 'meeting', 'status' => 'admitted',
+        ])->assertStatus(422);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.convert', $leadId), [
+            'student_id' => $student->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_admission_leads', [
+            'id' => $leadId, 'status' => 'admitted', 'converted_student_id' => $student->id,
+        ]);
+        $this->assertDatabaseHas('tagore_admission_activities', [
+            'lead_id' => $leadId, 'outcome' => 'enrolment_linked',
+        ]);
+        $this->assertDatabaseHas('tagore_audit_events', [
+            'user_id' => $owner->id, 'action' => 'admissions.convert',
+            'entity_type' => 'Student', 'entity_id' => $student->id,
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.convert', $leadId), [
+            'student_id' => $student->id,
+        ])->assertRedirect();
+
+        $this->assertSame(1, DB::table('tagore_admission_activities')
+            ->where('lead_id', $leadId)->where('outcome', 'enrolment_linked')->count());
     }
 
 }
