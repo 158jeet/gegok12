@@ -479,3 +479,32 @@ This is the PR base topology, not proof that all changes are conflict-free or re
 7. Update the feature register with exact file/line evidence and status: implemented + verified, partial, missing, duplicate, unsafe, or owner decision.
 
 **Scope note:** This snapshot is a verified repository-tree baseline only. It does not yet claim controller-level security review, complete endpoint counts, UI click coverage, or independent competitor feature verification.
+
+### 12.4 Integration repair and first code-review findings — 14 November 2026
+
+The stacked biometric/profile branch chain was repaired without merging or discarding the original branches:
+
+- PR #64 profile test had malformed doubled namespace separators in tests/Feature/TagoreProfileSelfServiceTest.php. Corrected the PHP namespace/imports and the escaped Blade-heading assertion on the PR #64 branch (commit 6e2f1708).
+- PR #65 had diverged from its current base because its test-file change was based on an earlier profile-test commit. Its merge state was dirty even after correcting the malformed namespaces on the old branch.
+- Created clean replacement PR #68, based on the corrected PR #64 branch, containing the biometric/import specification.
+- Ported the nine-file T304F/finance change set to clean replacement PR #69, based on PR #68. The replacement branch is cleanly based on its parent; the original PRs #65 and #66 remain open and must be treated as superseded until their disposition is decided.
+- The first port exposed malformed doubled namespace separators in the three new biometric route controller references in routes/tagore.php. Corrected those route references on PR #69.
+- The biometric registry migration initially used cascading foreign-key deletion from institutions/devices into device mappings and raw punch records. Changed institution/device references to restrict deletion so retiring a device or institution cannot cascade-delete biometric evidence. Employee deletion from punch rows remains nullable to preserve the raw event.
+
+**Open security/functional review findings (not yet resolved):**
+
+1. BiometricDeviceController::mapEmployee currently verifies users.school_id against the institution's school_id, but does not independently prove that the selected user is an active employee (rather than another user type) or has the required employment assignment. Inspect the authoritative employee/HR relationship before accepting this mapping workflow.
+2. The fee controller's current authorizeStudent checks staff institution membership but does not demonstrate class/section assignment checks for TEACHER and COORDINATOR. This does not yet satisfy the agreed class-teacher and coordinator fee visibility boundaries.
+3. The fee Accounts workspace authorises COORDINATOR, but the visible query scope is institution-level. Coordinators must instead receive only read-only balances for their explicitly assigned classes/sections; they must not inherit institution-wide finance summaries.
+4. Cashier must remain institution-scoped; Central Accounts remains group-wide. The role check changes must be validated against every fee read and write path, not just the dashboard/cashier entry points.
+5. The biometric registry is setup-only: sync defaults off, no live device adapter or scheduler is implemented, and no real device calls have been made. Vendor model/firmware/API contract confirmation remains a commissioning prerequisite.
+
+### 12.5 Current clean integration sequence
+
+main
+└── #63 cashier
+    └── #64 profile/logout (namespace/test correction committed)
+        └── #68 biometric + import specification (clean replacement for #65)
+            └── #69 T304F registry and finance-role port (clean replacement for #66)
+
+PR #68 and #69 are draft and unmerged. The old #65/#66 branches are not the clean integration path. Do not merge any part of the chain until CI and the above scope/security findings are reviewed. No deployment or live-data mutation.
