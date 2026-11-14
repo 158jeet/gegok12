@@ -42,6 +42,21 @@ class TagoreCashierWorkspaceTest extends TestCase
             ->assertSee('Record & email receipt', false);
     }
 
+    public function test_read_only_coordinator_cannot_post_a_payment_directly(): void
+    {
+        $coordinator = User::query()
+            ->where('email', 'coordinator@tagore-demo.local')
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
+        $this->actingAs($coordinator)
+            ->post('/tagore/accounts/fees/student/1/payment', [
+                'amount' => 1,
+                'payment_mode' => 'cash',
+            ])
+            ->assertForbidden();
+    }
+
     public function test_cashier_route_is_named_and_resolvable(): void
     {
         $route = app('router')->getRoutes()->getByName('tagore.cashier.index');
