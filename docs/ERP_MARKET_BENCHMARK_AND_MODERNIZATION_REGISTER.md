@@ -508,3 +508,13 @@ main
             └── #69 T304F registry and finance-role port (clean replacement for #66)
 
 PR #68 and #69 are draft and unmerged. The old #65/#66 branches are not the clean integration path. Do not merge any part of the chain until CI and the above scope/security findings are reviewed. No deployment or live-data mutation.
+### 12.6 CI compatibility and validation findings — 14 November 2026
+
+- The first MySQL 8.4 migration smoke for the T304F registry failed because Laravel's generated unique-index name for (device_id, device_user_id) exceeded MySQL's 64-character identifier limit. Replaced it with the explicit short name tagore_bio_map_device_user_unique (commit 38bec3bc).
+- The initial v1 prototype validation is therefore a confirmed failure, not a pass. Its failure is isolated to migration index naming at migration line 34; v2 validation branches were created from the corrected commit.
+- CI branch routing is now understood: ERP CI and Full ERP Acceptance run on work/** pushes; Tagore Prototype runs on tagore/** pushes; the PR workflows are configured for pull requests targeting main. The clean stacked PRs #68/#69 do not receive those PR checks automatically because their bases are feature branches.
+- A work/** push also triggered the configured read-only live-site sweep against the deployed HTTPS host. The run completed successfully: all eight dedicated role accounts were present and 18 desktop/mobile role acceptance tests passed. The suite logged in and browsed routes; it did not submit business forms or mutate fee/student/staff records.
+- To avoid repeating that side effect for temporary CI branches, PR #70 removes work/** from the live-acceptance push trigger while preserving main pushes and manual dispatch. A work/** validation branch now carries that trigger guard; the tagore/** branch does not invoke the live sweep.
+- v2 validation is running against commit 38bec3bc (plus the workflow trigger guard on the work branch). Do not mark PR #69 accepted until ERP CI, full acceptance and Tagore prototype/migration smoke all complete successfully.
+
+Current PR sequence remains #63 → #64 → #68 → #69. PR #70 is a separate workflow-safety change. PR #65/#66 are stale predecessor branches, not the clean integration candidates.
