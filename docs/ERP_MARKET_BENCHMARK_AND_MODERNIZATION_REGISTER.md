@@ -886,3 +886,14 @@ Inspected the current `main` branch route/controller/migration/view/test files. 
 - **Not yet verified:** menu discoverability by role, concurrency and race conditions, server-time tamper resistance under all paths, import row-level error reporting/rollback, question/answer snapshot immutability, result/rank privacy, external registrant deduplication, accessibility/mobile acceptance and production-scale performance.
 
 **Next Phase A tasks:** inspect dashboard/sidebar route links for every role; inspect all Olympiad schema/indexes and registration identity matching; build route × role × action × scope matrix; run focused synthetic feature tests; record concrete evidence and defects before implementation PRs. The coaching engine implementation must not be grafted into the school marks-entry controller or built as a superficial extension of the existing Olympiad single-choice flow.
+
+
+**Navigation audit — verified from `resources/views/tagore/dashboard.blade.php`:**
+- The desktop sidebar currently exposes only **Examinations**, and only for OWNER, PRINCIPAL, COORDINATOR and TEACHER.
+- There is no Olympiad link in the inspected desktop sidebar.
+- The module-card grid includes an Examination & Results link for staff, but no Olympiad or Coaching Test Series entry.
+- The mobile bottom navigation does not expose Examination, Olympiad or Coaching Tests.
+- Parent and student roles do not receive the staff Examination sidebar link. Student/parent results and Olympiad entry points are reached through other role-specific paths; this needs a coherent, explicit navigation design.
+- This confirms a real discoverability gap for Olympiad and the future coaching test-series portal. The staff school-examination route is present in the desktop sidebar, so “nothing exists” would be inaccurate; however the complete student coaching portal is not present in the inspected nav.
+
+**Navigation work item added to acceptance:** define a permission-aware Assessment workspace group with distinct entries for School/College Examinations, Coaching Tests and Olympiad. Show only the correct entry points to each role (exam admin, subject expert, teacher/mentor, student, parent and invigilator), and provide matching desktop/mobile navigation. Verify every link reaches an authorised route and unauthorised roles receive server-side denial.
