@@ -13,9 +13,19 @@ The ERP must distinguish a central **Accounts** function from an institution-lev
 
 ### Institution Cashier (local)
 - The CASHIER role is assigned to one or more explicit institutions through tagore_user_roles.institution_id.
-- Cashier can search students, collect offline fees, record supported payment modes/reference, issue/reprint receipts, and view that institution's daily collection totals and reports.
-- Cashier cannot access another institution, global payroll, fee master edits, concessions/refunds, gateway reconciliation, or staff HR records unless a separate permission is explicitly granted.
+- Cashier can search every student in the assigned institution; collect offline fees; record supported payment modes/reference; issue/reprint receipts; view paid, pending, overdue and part-paid balances; view collection-vs-demand reports; and view daily/period collection summaries.
+- Cashier can send or trigger approved fee-pending notifications to guardians for students in the assigned institution, using institution-approved templates/channels and respecting contact preferences and notification rate limits. Delivery status and sender are audited.
+- Cashier can prepare daily/weekly collection and pending-dues reports and route/escalate them to the institution Principal/Owner and central Accounts. This operational collection reconciliation is distinct from gateway/bank settlement reconciliation.
+- Cashier cannot access another institution, global payroll, fee master edits, concessions/refunds, write-off/ledger adjustments, or gateway/bank settlement reconciliation unless a separate permission is explicitly granted.
 - Principal/Owner retain institution oversight; central Accounts retains group-wide finance authority.
+
+### Class teacher and coordinator fee visibility (academic scope)
+- Class Teacher can see paid/pending/overdue status and outstanding amount for students in their own assigned class and section only. This is read-only financial visibility for follow-up; teachers cannot collect/post payments, edit ledgers, grant concessions or view unrelated family/financial details.
+- Class Teacher can send/request an approved pending-fee reminder for their assigned students, with each notification recorded in the communication audit. Institution policy may require cashier approval before bulk reminders.
+- Coordinator can see fee status for every student in all sections of the classes explicitly assigned to that coordinator. Example: a coordinator assigned classes 2–5 sees every section of classes 2, 3, 4 and 5, but not other classes or institutions.
+- Class/section and coordinator grade-band assignments must be explicit, academic-year-aware and institution-scoped. Never infer class ownership from a job title or trust a class/section ID supplied by the browser without checking the assignment server-side.
+- Coordinators and teachers can create follow-up tasks/notes and report collection issues to the cashier/Principal; only Cashier, authorised finance staff and Central Accounts can post a payment.
+- Student fee views show only the minimum needed: student identity, class/section, payable, paid, outstanding, due date and reminder/follow-up state. Bank settlement details and internal audit records are not exposed.
 
 ### Employee and biometric mapping
 - Each employee has one employing institution and department as their authoritative HR assignment.
