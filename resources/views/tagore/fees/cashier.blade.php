@@ -26,14 +26,14 @@
 <div class="tg-shell">
 <header class="tg-topbar">
 <a class="tg-brand" href="{{ route('tagore.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="{{ asset('uploads/tgi-logo.webp') }}" alt="Tagore Group"><div><strong>Tagore ERP</strong><span>Front office · Cashier desk</span></div></a>
-<div class="tg-top-actions"><div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</div><span>{{ auth()->user()->name ?? 'User' }}</span></div><a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Accounts overview</a><a class="tg-btn" href="{{ route('tagore.dashboard') }}">← Dashboard</a></div>
+<div class="tg-top-actions"><div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</div><span>{{ auth()->user()->name ?? 'User' }}</span></div>@if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())<a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Accounts overview</a>@endif<a class="tg-btn" href="{{ route('tagore.dashboard') }}">← Dashboard</a></div>
 </header>
 <div class="tg-layout">
 <aside class="tg-sidebar">
 <div class="tg-side-label">Daily work</div>
 <a class="tg-side-link" href="{{ route('tagore.dashboard') }}">⌂ Overview</a>
 <a class="tg-side-link active" href="{{ route('tagore.cashier.index') }}">▣ Cashier counter</a>
-<a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}">▤ Accounts overview</a>
+@if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())<a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}">▤ Accounts overview</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL'])->isNotEmpty())
 <a class="tg-side-link" href="{{ route('tagore.fees.manage') }}">₹ Fee structures</a>
 @endif
@@ -42,7 +42,7 @@
 <section class="tg-hero">
 <h1>Cashier counter</h1>
 <p>Find a student, confirm the outstanding balance, record a cash or offline payment, and issue the receipt. Payments are allocated to the oldest outstanding fee first and the receipt is emailed when a valid address is available.</p>
-<div class="tg-hero-actions"><a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Open financial overview →</a></div>
+@if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())<div class="tg-hero-actions"><a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Open financial overview →</a></div>@endif
 </section>
 @if(session('success'))<div class="tg-alert" role="status">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="tg-alert warning" role="alert"><strong>Payment was not recorded. Please review:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
