@@ -141,3 +141,5 @@ These items are candidates for the final locked plan. They are not implementatio
 - Add group-wide Central Accounts provisioning and institution scope management; require explicit dual approval for granting additional OWNER privileges.
 - Enforce one active academic year per institution and make year rollover an audited transition.
 - Fix manual legacy student mapping and test batch readiness before permitting fee import apply.
+
+**Progress note (2026-11-14, runtime manifest pipeline):** The ERP Full Acceptance workflow has been updated on this research branch to run `php artisan route:list --json`, validate that the output is non-empty valid JSON, and retain `route-list.json` alongside the verbose route report in the acceptance artifact. This is a CI-only change using the workflow's disposable SQLite database. The updated workflow has not yet completed on the new commit, so the runtime manifest is still pending; once the artifact is produced, use it to build the route/action/middleware map. No live database or production environment is involved.
