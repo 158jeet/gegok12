@@ -100,3 +100,35 @@ AI tutor/study recommendations and proctoring are later increments after core ac
 - **P3:** AI tutor, remote proctoring, social integrations, CCTV/advanced calling integrations.
 
 Priorities may change after evidence audit, dependency assessment and owner review. Do not parallelise work that depends on unsettled identity, tenant, ledger or permission foundations.
+
+## Evidence-derived P0/P1 work candidates from the initial code audit
+
+These items are candidates for the final locked plan. They are not implementation authorisation and should be revalidated in the remaining route/runtime audit.
+
+### P0 — protect money, identity and private records
+1. Enforce teacher-own-class and coordinator-assigned-grade fee visibility; include direct URLs, API endpoints and exports in negative tests.
+2. Add CASHIER role and institution-scoped collection permissions. Separate collection follow-up from bank/gateway settlement visibility; cashier must not see settlement IDs/amounts or perform reconciliation unless separately authorised.
+3. Add cross-institution guardian linking with verification, multiple guardians, revocation and custody restrictions.
+4. Design family payment intents with child/institution/fee-item allocations; reserve or revalidate outstanding balances at capture/settlement to prevent concurrent-order over-collection.
+5. Implement idempotent refund/reversal compensating ledger entries and gateway failure/timeout/retry handling.
+6. Fix confirmed legacy student mapping defect (batch ID not captured in closure) and add import reconciliation regression tests before any migration run.
+7. Fix payroll-item report export scoping through payroll run; apply document version/object-level access rules; validate institution membership for gate pass, transport, hostel, asset and learning records.
+8. Replace debug-dump exception handling in staff attendance; define immutable/audited correction paths.
+
+### P1 — lifecycle completeness and operations
+1. Finish admission lead-to-enrolment conversion and safe promotion/year rollover.
+2. Align seeded operational roles with controller policy (HR, Transport, Hostel) and make HR leave approval consistent.
+3. Extend T304F from device registry proposal to vendor-approved ingestion and immutable punch processing only after the actual protocol is supplied.
+4. Add offline sync encryption, device revocation, failed-change resolution and per-field payload validation.
+5. Complete hostel occupancy/checkout, course/survey/store audience scoping, document owner relationship checks and operational audit retention.
+6. Complete evidence-backed UI acceptance and review existing browser artifacts for every role/page.
+
+## Phase 0 exit checklist
+
+- [ ] All 19 route definition files enumerated and framework route manifest generated.
+- [ ] All 281 controllers classified by route reachability and module owner.
+- [ ] All 633 Blade/PHP views mapped to route, role and workflow.
+- [ ] Every policy, middleware, API, webhook, job/listener, command, scheduler, import/export and notification mapped.
+- [ ] Every institution/class/guardian/employee ownership boundary tested with at least two synthetic institutions.
+- [ ] Competitor benchmark matrix revalidated with dated primary source and plan tier.
+- [ ] P0/P1 gaps reviewed and signed off by owner before application code changes.
