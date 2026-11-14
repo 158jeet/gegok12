@@ -66,6 +66,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/users', [AdministrationController::class, 'storeUser'])->name('tagore.admin.users.store');
     Route::post('/admin/users/{userId}/password', [AdministrationController::class, 'resetUserPassword'])->whereNumber('userId')->name('tagore.admin.users.password');
     Route::patch('/admin/users/{userId}/status', [AdministrationController::class, 'updateUserStatus'])->whereNumber('userId')->name('tagore.admin.users.status');
+    Route::get('/hr/biometric-devices', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'index'])->name('tagore.biometric.index');
+    Route::post('/hr/biometric-devices', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'store'])->name('tagore.biometric.store');
+    Route::post('/hr/biometric-devices/{deviceId}/employee-mappings', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'mapEmployee'])->whereNumber('deviceId')->name('tagore.biometric.mapping.store');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
     Route::patch('/staff/me/leave/{leaveId}/cancel', [\App\Http\Controllers\Tagore\StaffController::class, 'cancelOwnLeave'])->whereNumber('leaveId')->name('tagore.staff.self.leave.cancel');
