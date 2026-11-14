@@ -9,7 +9,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Tagore ERP</title><link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}"><link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-ui10' }}">
-</head>
+<style>
+.tg-user-menu{position:relative}.tg-user-menu>summary{list-style:none;cursor:pointer;user-select:none}.tg-user-menu>summary::-webkit-details-marker{display:none}.tg-user-menu>summary:focus-visible{outline:2px solid #7dd3a7;outline-offset:3px;border-radius:12px}.tg-user-chevron{font-size:14px;opacity:.75}.tg-user-dropdown{position:absolute;right:0;top:calc(100% + 10px);z-index:1000;width:min(290px,calc(100vw - 28px));padding:8px;background:#fff;color:#17212b;border:1px solid #dce3e8;border-radius:14px;box-shadow:0 18px 45px rgba(15,23,42,.2)}.tg-user-identity{display:flex;flex-direction:column;gap:3px;padding:12px;border-bottom:1px solid #e8edf0;overflow-wrap:anywhere}.tg-user-identity span{font-size:12px;color:#667482}.tg-user-dropdown>a,.tg-logout-button{display:block;width:100%;padding:11px 12px;text-align:left;text-decoration:none;color:#17212b;background:transparent;border:0;border-radius:8px;font:inherit;cursor:pointer}.tg-user-dropdown>a:hover,.tg-logout-button:hover{background:#f1f5f7}.tg-logout-button{color:#b42318}.tg-user-menu[open] .tg-user-chevron{transform:rotate(180deg)}@media(max-width:640px){.tg-user-name{display:none}.tg-user-dropdown{right:0}}
+</style>\n</head>
 <body class="tg-app">
 <div class="tg-shell">
 <header class="tg-topbar">
@@ -18,7 +20,21 @@
   </a>
   <div class="tg-top-actions">
     <label class="tg-search" for="tg-dashboard-search" style="display:flex;align-items:center;gap:8px">⌕ <input id="tg-dashboard-search" type="search" placeholder="Search dashboard modules and items…" aria-label="Search dashboard modules and visible items" autocomplete="off" style="min-width:0;width:220px;border:0;outline:0;background:transparent;color:inherit;font:inherit"></label>
-    <div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</div><span>{{ auth()->user()->name ?? 'User' }}</span></div>
+    <details class="tg-user-menu">
+      <summary class="tg-user" aria-label="Open account menu" aria-haspopup="menu">
+        <span class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</span>
+        <span class="tg-user-name">{{ auth()->user()->name ?? 'User' }}</span>
+        <span class="tg-user-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="tg-user-dropdown" role="menu">
+        <div class="tg-user-identity"><strong>{{ auth()->user()->name ?? 'User' }}</strong><span>{{ auth()->user()->email }}</span></div>
+        <a role="menuitem" href="{{ route('tagore.profile') }}">My profile & settings</a>
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" role="menuitem" class="tg-logout-button">Sign out</button>
+        </form>
+      </div>
+    </details>
   </div>
 </header>
 
