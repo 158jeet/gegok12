@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\\Feature;
 
-use App\Models\User;
-use Tests\TestCase;
+use App\\Models\\User;
+use Tests\\TestCase;
 
 class TagoreProfileSelfServiceTest extends TestCase
 {
@@ -26,7 +26,7 @@ class TagoreProfileSelfServiceTest extends TestCase
             $this->actingAs($user)
                 ->get(route('tagore.profile'))
                 ->assertOk()
-                ->assertSee('My profile & settings')
+                ->assertSee('My profile & settings', false)
                 ->assertSee('Change password');
 
             $this->post(route('logout'))->assertRedirect();
