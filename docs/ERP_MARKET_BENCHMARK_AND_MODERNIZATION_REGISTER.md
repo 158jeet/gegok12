@@ -702,3 +702,148 @@ The following were found by inspecting the clean T304F/finance branch, not infer
 - Vendor demo validation for ambiguous capabilities, add-on/plan entitlements, integration costs and exact workflow behaviour.
 
 Until those tasks are evidenced, status remains **BENCHMARK RESEARCH EXPANDED — PARITY AUDIT OPEN**. Complete this audit and update the matrix before declaring the modernization scope locked or proceeding with broad feature implementation.
+
+
+## 16. Examination Portal and Olympiad Portal — dedicated market audit and product requirements
+
+**Owner direction:** Examination and Olympiad are separate visible workstreams. For Tagore Vedant Academy's JEE/NEET coaching wing, the examination experience should take WiziAI as a major product benchmark, while combining stronger exam-authoring, delivery reliability and faculty analytics patterns from specialist assessment platforms. The school/college examination workflows must remain distinct from coaching test-series workflows.
+
+### 16.1 Existing Tagore implementation — repository evidence, not acceptance
+
+Baseline inspected on `main` at `a5806356ad317c8126845a6512b80575376a7f63` on 14 November 2026:
+
+- `app/Http/Controllers/Tagore/ExaminationController.php` and `resources/views/tagore/examinations/*` exist. The controller currently creates institution/academic-year/class-section examinations, adds subject schedules, provides marks entry, and has submit/moderation/publish/withdraw and student-results workflow routes covered by `tests/Feature/TagoreExaminationTest.php`.
+- `database/migrations/2026_10_30_090000_create_tagore_examination_engine.php` establishes a Tagore examination data model. It is not evidence by itself of a full coaching test engine.
+- `app/Http/Controllers/Tagore/OlympiadController.php`, `OlympiadRegistrationController.php`, `ParentOlympiadController.php`, and `resources/views/tagore/olympiad/*` exist. Current visible surfaces include manager, teacher, student and parent views; event creation, class targeting, registration, question import/review/approval, publishing, student attempts and results.
+- `tests/Feature/TagoreOlympiadTest.php`, `TagoreParentOlympiadTest.php` and `OlympiadRegistrationTest.php` cover selected flows, including draft creation, manager approval before publishing and teacher denial for event creation/publishing.
+- The legacy API exam routes in `routes/api.php` are commented out. Modern Tagore routes are in `routes/tagore.php`; generated route-list and full role click-through still need to be captured.
+- The current exam controller's school-exam marks workflow is not equivalent to a coaching-grade CBT platform. The current Olympiad workflow is not proof of a full Olympiad question-bank, paper-blueprint, adaptive practice, analytics and multi-round competition system.
+
+**Initial conclusion:** both portals are present in code, but they are not yet evidenced as complete, modern, end-to-end assessment products. Their absence from the visible modernization workstream was a register/visibility failure. This section makes them explicit and independently trackable.
+
+### 16.2 Market benchmark — coaching / JEE / NEET examination
+
+| Product | Publicly documented strengths relevant to Tagore | What Tagore should adopt or verify |
+|---|---|---|
+| **WiZiAI** | JEE/NEET-focused smart mock tests; custom topic/difficulty quizzes; subject/topic performance analysis; strengths and weakness identification; time-management insights; personalized recommendations; adaptive mock tests; historical progress; peer comparison/leaderboards; AI study planning; voice/text AI tutor and stepwise doubt solving; PYQ practice. | Benchmark the student experience, report-card depth, learning loop and personalized improvement. Treat advertised question counts, accuracy, outcomes and performance metrics as vendor claims until independently verified. Do not assume its public website proves institute-side batch administration, question approval, paper security, centre operations or all exam-delivery edge cases. |
+| **Examezy** | Coaching test-series cycle: weekly tests, full-length mocks, scholarship tests; paper import and AI-assisted paper generation; JEE-style sections, numeric answers, negative marking and question palette; autosave; tab/camera checks; instant rank/percentile; time-per-section and question insights; AI class diagnostics; online and printed/shuffled paper paths; WhatsApp result alerts. | Strong reference for faculty workflow, mixed online/offline test operations, scholarship lead capture, same-day results and class-level diagnostic teaching. |
+| **JEENEET.org** | Exam-console patterns: timer, question palette, save/next, mark-for-review, rough sheet, readiness checks, autosave/resume/auto-submit, paper randomisation, question review, paper building, scheduled tests, reports, analytics and teacher study plans. | Benchmark candidate exam ergonomics, robust attempt lifecycle and faculty/student/parent report flows. Validate exact current capabilities in a demo. |
+| **Eklavvya** | Question-bank-driven exam creation; subject/topic/difficulty selection; sections and per-section settings; fixed/flexible scheduling; negative marking; multiple question types and languages; question/option shuffle; candidate assignment; proctoring options; activity logs; question/topic/batch reports and APIs. | Use as the assessment-engine and exam-operations benchmark: authoring, scheduling, access roles, audit trail, optional integrity controls and export/reporting. Proctoring must be configurable and privacy-reviewed, not always-on by default. |
+
+**Sources reviewed (14 November 2026):**
+- WiZiAI platform: https://www.wiziai.com/ and https://www.wiziai.com/about
+- WiZiAI Google Play feature description: https://play.google.com/store/apps/details?id=com.wiziai.student
+- Examezy coaching product: https://examezy.com/for/coaching-institutes/
+- Examezy feature catalogue: https://examezy.com/features/
+- JEENEET.org: https://jeeneet.org/
+- Eklavvya exam management: https://www.eklavvya.com/online-exam-management/ and https://www.eklavvya.com/exam-management/
+- Eklavvya exam creation help: https://help.eklavvya.com/a/how-to-create-manage-exams-/
+
+**Evidence caution:** This is public-source desk research, not hands-on product testing. Feature claims, question counts, AI accuracy, outcome statistics, pricing, proctoring and integrations require vendor demo/contract verification. Tagore must not copy proprietary questions, papers, code, interface assets or licensed PYQ content.
+
+### 16.3 Coaching examination product — agreed target capabilities
+
+The coaching examination portal is a first-class product for JEE Main, JEE Advanced, NEET, foundation and internal scholarship/diagnostic tests. It must support offline centre exams and online tests through a shared exam definition and result model.
+
+| ID | Capability | Target behaviour / acceptance | Priority |
+|---|---|---|---|
+| EXM-COACH-01 | Coaching workspaces | Separate dashboards for Owner/Academic Head, Exam Admin, Subject Faculty, Batch Mentor, Student and (where permitted) Parent; batch/institute/academic-year scope. | P0 |
+| EXM-COACH-02 | Test-series calendar | Weekly tests, chapter tests, part tests, cumulative tests, full mocks, PYQ practice, scholarship/diagnostic tests; assign to one or more batches/centres and publish schedule/reminders. | P0 |
+| EXM-COACH-03 | Question bank | Subject → chapter → topic/subtopic → concept; exam, paper, year/source, difficulty, marks, negative marks, estimated time, language, question type, solution/explanation, tags, status and version. | P0 |
+| EXM-COACH-04 | Rich question types | Single/multiple correct, integer/numerical range, decimal/tolerance, matrix/matching, assertion-reason, paragraph/comprehension-linked, passage/case, image/diagram, subjective response and file upload where appropriate. Marking rules must be explicit per type. | P0 |
+| EXM-COACH-05 | Question quality workflow | Draft → subject expert review → approved → retired; duplicate detection, source/license metadata, error reporting, correction/version history and no silent edits after assignment. | P0 |
+| EXM-COACH-06 | Paper blueprint builder | Configure exam pattern by JEE Main/Advanced, NEET, foundation or custom template; sections, question counts, marks, negative marking, optional questions, time, difficulty distribution and chapter weightage; preview total marks/time before publish. | P0 |
+| EXM-COACH-07 | Paper assembly | Select approved questions manually or by blueprint; enforce syllabus coverage, difficulty mix and duplicate controls; freeze a versioned question/answer snapshot per test. | P0 |
+| EXM-COACH-08 | Exam player | Responsive CBT screen with section tabs, question palette, answered/not answered/review states, save/next, clear response, mark for review, section navigation rules, server-authoritative timer, optional calculator and rough-work area. | P0 |
+| EXM-COACH-09 | Reliable attempt lifecycle | Start token, one active attempt policy, autosave, idempotent answer writes, reconnect/resume, browser refresh recovery, server-side deadline, auto-submit, duplicate request protection and attempt event log. No answer loss on intermittent network. | P0 |
+| EXM-COACH-10 | Exam security | Randomized question/option order where permitted, per-student paper variants, time windows, centre attendance/check-in, device/session policy, suspicious-event logging and optional proctoring. Do not claim cheating prevention from tab-switch counts alone. | P0 |
+| EXM-COACH-11 | Offline centre workflow | Print controlled paper variants/QR or booklet codes; invigilator attendance; OMR/manual marks import with validation; online and offline candidates join the same test result pool without duplicate attempts. | P1 |
+| EXM-COACH-12 | Auto evaluation | Server-side marking for objective/numeric types, configurable partial credit and negative marking; manual rubric/evaluator queue for subjective responses; double-check high-risk answer-key changes. | P0 |
+| EXM-COACH-13 | Result release | Immediate/private result, scheduled release or faculty moderation; freeze result version, re-evaluation/challenge window, correction audit and publish notifications. | P0 |
+| EXM-COACH-14 | Rank and percentile | Batch, centre, course, institution and eligible all-Tagore ranks; tie-break rules; percentile calculation cohort and denominator explicitly stated; handle absentees, late attempts and multiple sessions consistently. | P0 |
+| EXM-COACH-15 | Student analytics | Total score, subject/section score, accuracy, attempted/unattempted, negative marks, time/question, speed vs accuracy, chapter/topic/concept strength, difficulty performance, careless vs knowledge-gap classification (clearly labelled heuristic), trend and improvement. | P0 |
+| EXM-COACH-16 | Faculty analytics | Question-wise option distribution, most-missed questions, distractor analysis, batch heatmap, topic mastery, class average/median, outliers, attendance and improvement since previous tests. | P0 |
+| EXM-COACH-17 | Personalized action plan | Recommend next topics, practice sets and revision based on verified question tags and repeated performance; teacher can edit/approve plan. Explain why each recommendation was made. | P1 |
+| EXM-COACH-18 | AI study mentor | Ground explanations in approved solutions, syllabus and licensed content; step-by-step text/voice doubt support; cite source/question and flag uncertainty; protect student data; teacher escalation; usage/cost controls. Never invent answer keys. | P1 |
+| EXM-COACH-19 | Adaptive practice | Optional practice mode adjusts difficulty based on confidence and mastery; must not alter fixed competitive mock tests or official rank cohorts. | P1 |
+| EXM-COACH-20 | PYQ library | Year/exam/subject/chapter/topic filters, verified answer/explanation, provenance and rights metadata; import only licensed/publicly permitted material. | P1 |
+| EXM-COACH-21 | Parent/student reporting | Student sees own attempt/review/analysis; parent sees only linked child's released results and progress; teacher sees assigned batch; no cross-batch/private student leakage. | P0 |
+| EXM-COACH-22 | Export and integration | PDF report card, CSV/XLSX result export, question/response export with permission, API/webhook integration with ERP student/batch roster; all exports logged. | P1 |
+| EXM-COACH-23 | Performance and scale | Load-test concurrent starts/submissions, high-volume autosaves, rank generation and result publication; queue heavy analytics; cache immutable paper snapshots; monitor latency/error rates. | P0 |
+| EXM-COACH-24 | Mobile experience | Mobile-friendly practice and reports; for high-stakes full mocks show compatibility guidance and recommend supported desktop/browser where needed. | P1 |
+
+### 16.4 School / college examination portal — distinct from coaching
+
+| ID | Capability | Target behaviour / acceptance | Priority |
+|---|---|---|---|
+| EXM-SCH-01 | School exam lifecycle | Unit tests, half-yearly, annual, pre-board, board/internal, practical/oral and custom exams; class/section/subject/date schedule. | P0 |
+| EXM-SCH-02 | Marks and attendance | Bulk marks entry, absent/exempt/medical/withheld states, validation against maximum marks and class roster, draft/save/resume. | P0 |
+| EXM-SCH-03 | Assessment types | Written, practical, project, oral, internal assessment and configurable weightage; separate rubric where applicable. | P1 |
+| EXM-SCH-04 | Moderation and publication | Teacher submission → coordinator/principal moderation → lock/publish; correction/reopen reason and immutable version history. | P0 |
+| EXM-SCH-05 | Report cards | Board/stage-specific grading, subject totals, grades, attendance, remarks, competencies/HPC references and downloadable report cards. | P0 |
+| EXM-SCH-06 | College semester exams | PG College course/semester/subject registration, internal/university marks, practicals, backlog/supplementary/revaluation and transcript only after owner validates applicable university rules. | P1 |
+| EXM-SCH-07 | Digital evaluation | Assess PG College fit for barcode anonymisation, evaluator allocation, rubric marking, moderation, recheck and result audit; implement only after process/legal/board requirements confirmed. | P2 |
+| EXM-SCH-08 | Academic integration | Link results to Student 360°, promotion, attendance, parent portal and longitudinal progress without duplicating marks records. | P0 |
+
+### 16.5 Olympiad Portal — independent competition and registration product
+
+| ID | Capability | Target behaviour / acceptance | Priority |
+|---|---|---|---|
+| OLY-01 | Olympiad catalogue | Multiple competitions by subject, grade, institution, language, round, eligibility, dates, fee/scholarship and organiser; reusable annual editions. | P0 |
+| OLY-02 | Registration | In-school and external registration, parent/guardian consent, verified student identity, duplicate prevention, registration number, roster and status tracking. | P0 |
+| OLY-03 | Eligibility and rounds | Grade/age/subject eligibility; school, district, state and national rounds; qualification rules and progression history. | P1 |
+| OLY-04 | Olympiad question bank | Separate subject/topic/difficulty/grade/language bank; objective, numeric, reasoning, diagram and subjective question types; solutions and review/version controls. | P0 |
+| OLY-05 | Competition paper builder | Blueprint, section, marks, duration, negative marking, randomization, paper variants and locked answer key. | P0 |
+| OLY-06 | Candidate delivery | Student portal, exam schedule, instructions, readiness check, timer, question palette, autosave/resume, auto-submit and attempt audit. | P0 |
+| OLY-07 | Offline administration | Centre/school roster, invigilator, attendance, paper/OMR/manual score capture, verification and controlled upload. | P1 |
+| OLY-08 | Results and awards | Raw score, rank within defined cohort, qualification, certificates, medals/awards, downloadable result and public result only with consent/privacy controls. | P0 |
+| OLY-09 | School/institution dashboard | Registrations, attendance, completion, class/grade/subject performance, qualifying students and exports. | P1 |
+| OLY-10 | Parent experience | Linked-child registration status, schedule, instructions, result and certificate; no exposure to other students. | P1 |
+| OLY-11 | Integrity and disputes | Duplicate registration/attempt checks, answer-key correction, result challenge, moderation, audit and reissue controls. | P0 |
+| OLY-12 | External partner/API | Optional external school/organiser roster import, result export and certificate verification endpoint after owner-approved contract/security review. | P2 |
+
+### 16.6 Shared assessment engine — architecture decision
+
+Build one reusable assessment core with separate product experiences and permission boundaries:
+
+1. **Shared core:** question bank, taxonomy/tags, question versioning, exam blueprint, exam/paper version, scheduling, candidate assignment, attempt/session, answer persistence, marking rules, evaluation, result snapshot, analytics events, notifications and audit.
+2. **Separate product layers:** School/College Examination, Coaching Test Series and Olympiad Competition each own their templates, eligibility, workflow, reporting, roles and navigation. Do not force a school annual exam into a JEE mock-test interface or an Olympiad into a classroom marks-entry screen.
+3. **Institution and cohort scoping:** every exam, question set, attempt, result and report must carry institution, academic year, programme/batch/class and permitted cohort scope. Explicitly define cross-institution leaderboards; default to institution/batch only.
+4. **Content rights:** store source, author, licence/permission, provenance and revision for every imported question. AI may draft content but a qualified subject expert must approve before use in a scored test.
+5. **Integrity:** immutable published paper snapshot; server-side time and scoring; append-only attempt events; idempotent submission; transactional answer/result persistence; controlled answer-key correction and result recalculation.
+6. **Privacy:** proctoring is optional by exam risk level, disclosed before attempt, data-minimised, retention-limited and permission-controlled. Avoid facial recognition or continuous audio/video by default.
+7. **AI boundary:** AI insights are advisory, explainable and grounded in reviewed data; never silently set official marks, alter rank, publish results or replace teacher judgement.
+
+### 16.7 Delivery order and acceptance gates
+
+| Phase | Work package | Exit gate |
+|---|---|---|
+| A | Full code audit: all exam/Olympiad routes, controller methods, migrations, models/tables, views, JS, imports, API, tests, role matrix and route:list | Evidence map identifies implemented, partial, missing, duplicate and unsafe workflows; no assumptions based on file presence |
+| B | Shared assessment core design and schema gap review | Versioned ERD/state diagrams, API contracts, transaction/idempotency rules and role/action matrix reviewed |
+| C | Question bank and authoring/review | All required question types, validation, bulk import, duplicate/content review, versioning and access tests pass |
+| D | Exam blueprint, scheduling and candidate assignment | JEE/NEET templates, section/marking rules, batches/centres, overlapping schedules and preview tests pass |
+| E | Candidate exam player and attempt reliability | Timer, palette, autosave, network interruption, refresh/resume, deadline, duplicate submit and concurrency tests pass |
+| F | Evaluation, rank, analytics and reports | Independently verified scoring fixtures, tie/percentile rules, topic analytics, exports and parent/student/faculty privacy tests pass |
+| G | Olympiad workflow | Registration, eligibility, rounds, offline centre, results, awards, certificates and disputes pass |
+| H | AI study loop and adaptive practice | Grounded explanations, teacher-approved recommendations, content-rights checks, privacy/cost guardrails and offline fallback pass |
+| I | Final role and responsive acceptance | Owner/admin, exam admin, subject expert, teacher/mentor, student, parent and invigilator flows tested on desktop/mobile with synthetic data |
+
+### 16.8 Initial code-audit questions — do not mark complete yet
+
+- Does the current Olympiad JSON importer support only one correct MCQ option, and what are the actual row/batch limits? Inspect importer validation and tests before recording as a confirmed limitation.
+- Does the current exam engine support question banks, CBT attempts, autosave, timer recovery, section rules, numeric/multiple-correct answers, negative marking and rank/percentile, or is it currently school marks-entry only?
+- Are teacher and coordinator exam permissions restricted to assigned classes/batches, and are result endpoints equally scoped?
+- Are answer keys and question versions immutable after an exam is scheduled/published?
+- Can two concurrent requests, duplicate webhooks or browser retries create duplicate attempts/marks?
+- Is the student/parent Olympiad attempt lifecycle fully server-timed, recoverable and idempotent?
+- Are external Olympiad registrants separated from existing Tagore student accounts safely?
+- Are results/rank lists cohort-scoped, tie-break rules explicit and privacy-safe?
+- Are routes linked in every relevant role navigation/dashboard? The owner reports the work is not visible; add explicit role navigation and dashboard entry points only after route/permission verification.
+- Are offline print/OMR and online test results able to reconcile to one candidate/test without duplicate scoring?
+
+### 16.9 Status
+
+**Market desk research for coaching exams:** expanded across WiZiAI, Examezy, JEENEET.org and Eklavvya.  
+**School/college exam and Olympiad market comparison:** initial specialist comparison documented; CBSE/RBSE/PG College rule mapping and vendor demonstrations remain.  
+**Tagore implementation parity audit:** OPEN. The current repository contains school exam and Olympiad code, but no evidence yet that it meets the full coaching-grade CBT, question bank, analytics and adaptive learning target.  
+**Implementation:** not started by this register update. Next action is the code-audit work package (Phase A), then implement in coherent PRs with automated tests. No live student data, production deployment or merge is authorised by this work.
