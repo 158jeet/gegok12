@@ -132,3 +132,10 @@ These items are candidates for the final locked plan. They are not implementatio
 - [ ] Every institution/class/guardian/employee ownership boundary tested with at least two synthetic institutions.
 - [ ] Competitor benchmark matrix revalidated with dated primary source and plan tier.
 - [ ] P0/P1 gaps reviewed and signed off by owner before application code changes.
+
+### Additional P0/P1 identity and Owner-admin controls
+- Fix account status display/action binding; revoke Sanctum tokens and active sessions on password reset/disable.
+- Define verified invitation vs Owner-asserted email verification for newly created parent/student/staff accounts.
+- Add group-wide Central Accounts provisioning and institution scope management; require explicit dual approval for granting additional OWNER privileges.
+- Enforce one active academic year per institution and make year rollover an audited transition.
+- Fix manual legacy student mapping and test batch readiness before permitting fee import apply.
