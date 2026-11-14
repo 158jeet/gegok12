@@ -27,6 +27,7 @@ use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
 use App\Http\Controllers\Tagore\PerformanceController;
+use App\Http\Controllers\Tagore\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -34,6 +35,9 @@ Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('tagore.profile');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('tagore.profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('tagore.profile.password');
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
