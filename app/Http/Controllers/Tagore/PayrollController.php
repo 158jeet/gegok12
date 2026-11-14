@@ -73,7 +73,7 @@ class PayrollController extends Controller
     {
         $userId=(int)$request->user()->id;
         $roles=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.status','active')->pluck('r.code')->unique()->values();
-        $institutionIds=$roles->contains('OWNER')
+        $institutionIds=$roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty()
             ? DB::table('tagore_institutions')->where('status','active')->pluck('id')->map(fn($id)=>(int)$id)->all()
             : DB::table('tagore_user_roles')->where('user_id',$userId)->where('status','active')->whereNotNull('institution_id')->pluck('institution_id')->map(fn($id)=>(int)$id)->unique()->values()->all();
         return [$roles,$institutionIds];
