@@ -143,3 +143,8 @@ These items are candidates for the final locked plan. They are not implementatio
 - Fix manual legacy student mapping and test batch readiness before permitting fee import apply.
 
 **Progress note (2026-11-14, CI evidence):** The updated workflow completed successfully. Runtime manifest validation reported **1,444 registered routes**; backend tests reported **145 passed / 1,327 assertions**; the authenticated browser suite reported **92 passed**; focused Operations checks reported **5 passed** and public-login smoke **2 passed**. The route manifest and reports are available in the workflow artifact. No live database or production environment was used.
+
+- Remove state-changing behavior from all legacy GET/HEAD routes through a caller-aware migration; prove GET/HEAD non-mutation before switching route methods.
+- Harden password recovery: secure hashed OTPs, rate limits, safe missing-record handling, expiry at every step, atomic single-use consumption, generic responses and replay/concurrency tests.
+- Protect unauthenticated logout-all-device endpoints with verified account ownership proof; add abuse/denial-of-service tests.
+- Fix public API action correctness and multi-institution school bootstrap selection; verify the registered event-details route has a real controller action.
