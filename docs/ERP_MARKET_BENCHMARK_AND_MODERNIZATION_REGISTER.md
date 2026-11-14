@@ -398,3 +398,84 @@ Secondary discovery sources (use to identify vendors/topics, not as sole proof):
 | Final acceptance | NOT STARTED | Only after all approved implementation packages are complete |
 
 **Canonical rule:** All new findings and agreed changes must be added to this file (or a linked module-specific register) in Git before implementation begins. Do not let the backlog exist only in chat.
+
+
+## 12. Repository baseline inventory — verified 14 November 2026
+
+A recursive Git tree inspection of `main` (commit `a5806356ad317c8126845a6512b80575376a7f63`) establishes the following measurable baseline. These are file counts, not claims that every file is active or production-ready.
+
+| Area | Count on main | Audit implication |
+|---|---:|---|
+| Tracked files | 7920 | Full repository surface is materially larger than the modern Tagore module alone |
+| Route definition files | 19 | All role and API route groups must be inventoried, not only `tagore.php` |
+| HTTP controller files | 281 | Controller count alone does not establish route coverage or workflow completeness |
+| Blade/PHP view files | 633 | Large legacy UI surface; duplicates, stale pages and shared layouts require classification |
+| Database migrations | 150 | Schema audit must include legacy and Tagore tables, ownership keys and migration order |
+| Model files | 123 | Map relationships, casts, scopes, tenant keys and lifecycle state |
+| Policy files | 22 | Policy coverage must be compared with route middleware and controller guards |
+| Feature/unit test files | 31 | Existing test count is not a substitute for role/workflow/action coverage |
+| Console command files | 36 | Scheduler and command side effects require audit |
+| Job files | 0 | Queue processing, retries, idempotency and failure handling require audit |
+| Listener files | 30 | Event-driven behavior and duplicate notification risks require audit |
+| Notification files | 4 | Channel, preference, retry and delivery audit required |
+
+### 12.1 Route surface counts
+
+The following counts are occurrences of route-related declarations detected in each file (including middleware/prefix/name declarations in the raw count). They are useful for sizing the audit, not exact unique endpoint counts. Commented-out routes and grouped declarations mean a framework-generated route manifest remains the authoritative next step.
+
+| Route file | Declaration lines detected |
+|---|---:|
+| `routes/tagore.php` | 174 |
+| `routes/tagore_api.php` | 2 |
+| `routes/web.php` | 32 |
+| `routes/api.php` | 107 |
+| `routes/admin.php` | 503 |
+| `routes/accountant.php` | 50 |
+| `routes/teacher.php` | 255 |
+| `routes/student.php` | 77 |
+| `routes/payroll.php` | 51 |
+| `routes/librarian.php` | 52 |
+| `routes/receptionist.php` | 118 |
+| `routes/setting.php` | 22 |
+| `routes/teacherapi.php` | 134 |
+| **Total across listed files** | **1577** |
+
+Notable findings:
+- The modern `routes/tagore.php` alone contains 174 route-related declaration lines; `routes/tagore_api.php` currently exposes only a small authenticated dashboard API route group. Mobile/API parity must therefore be assessed against the legacy `api.php` and `teacherapi.php` surfaces.
+- The legacy route surface is substantial: Admin (503 declaration lines), Teacher (255), Receptionist (118), Student (77), Accountant (50), Librarian (52), Payroll (51) and Settings (22). These must be mapped to the modern Tagore workspaces before any legacy portal is retired or duplicated.
+- The repository contains 633 view files versus 31 test files. This ratio is not a quality score; it highlights the need for route-to-view-to-action traceability and targeted browser acceptance.
+- The current tree includes both modern Tagore and legacy role controllers/views. Treating the modern dashboard as the whole ERP would omit important operational workflows.
+
+### 12.2 Branch topology and integration risk — verified 14 November 2026
+
+Open modernization work is not a flat set of independent branches. The current PR bases form this dependency chain:
+
+```text
+main
+├── #63 cashier counter
+│   └── #64 profile/logout controls
+│       └── #65 biometric + reusable import specification
+│           └── #66 T304F multi-location registry
+├── #62 admissions CRM workspace
+├── #61 shared UI foundation
+└── #67 market benchmark + modernization register
+```
+
+This is the PR base topology, not proof that all changes are conflict-free or ready to merge. In particular:
+- PR #65 currently reports a dirty/non-mergeable state against its parent branch; inspect and resolve its branch conflicts before treating it as an integration candidate.
+- PR #66 is based on #65 and must be revalidated after #65 is reconciled.
+- PR #64 is based on #63; test and review the combined cashier/profile path rather than treating either PR's green CI as standalone integration proof.
+- Independent PRs #61 and #62 may overlap shared layouts, navigation or role routes; compare changed files and acceptance coverage before sequencing them.
+- Older open PRs (#60, #59, #56, #52, #49, #42, #38, #33, #31 and deployment fixes) also need triage against the canonical register. Do not merge stale work merely to reduce the open-PR count.
+
+### 12.3 Audit execution order from this baseline
+
+1. Generate the framework route manifest in CI (including method, URI, name, action and middleware) and store a machine-readable artifact.
+2. Join every route to controller action, view/API response, middleware/policy, role and institution/class/year scope.
+3. Identify unreferenced controllers/views, duplicate route names, dead links, GET routes with write side effects, missing authorization and broad/unscoped model lookups.
+4. Inventory jobs, listeners, notifications, scheduled commands and external callbacks; record retry/idempotency and audit behavior.
+5. Map migrations/models to institution, academic year, class/section, employee, guardian/family and financial ownership.
+6. Build one representative synthetic acceptance journey per distinct permission profile, then add negative cross-institution and cross-class tests.
+7. Update the feature register with exact file/line evidence and status: implemented + verified, partial, missing, duplicate, unsafe, or owner decision.
+
+**Scope note:** This snapshot is a verified repository-tree baseline only. It does not yet claim controller-level security review, complete endpoint counts, UI click coverage, or independent competitor feature verification.
