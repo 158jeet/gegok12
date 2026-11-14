@@ -213,3 +213,16 @@ The original retained artifact `erp-full-acceptance-854e0af606b6c943783f77d56c1c
 - `Api\\TaskController` has ID-only task lookup patterns in its show/edit methods. Its destroy method needs a focused read and ownership test before changing the route; the API group has Sanctum authentication but authentication alone does not prove task ownership.
 
 **Risk classification:** these examples establish that the candidate set contains real state-changing GET endpoints. They do not prove every one of the 50 has the same impact or missing authorization. The next pass must finish per-controller and caller review, especially ID-only lookups and notification side effects. Do not change route verbs until this review and client compatibility mapping are complete.
+
+
+## Additional handler and UI trace sample
+
+A follow-up read inspected selected handlers and their Blade entry pages:
+
+- `Api\\TaskController@destroy` deletes all `TaskAssignee` rows for the selected task and then deletes the task itself. It loads the task with `Task::where('id', $id)->first()`; the destroy method does not constrain the task by the authenticated user's school, academic year, assignee relationship or ownership. This is a confirmed ID-only mutation candidate behind Sanctum authentication. The paired `show` and `edit` methods also use ID-only task lookups. Add cross-school and non-assignee negative tests before refactoring.
+- `Api\\LeaveController@destroy` similarly loads by ID only, sets the leave application to cancelled, saves, deletes, and logs. The handler does not scope the selected leave application to the authenticated user's school or permitted student/guardian relationship.
+- `Admin\\EventsController@eventapprove` is a confirmed GET mutation: it sets the event status to active, saves it and emits push/notification events. This action should become an explicit POST transition protected by the intended event-approval permission; GET must only display the approval form/details.
+- `Admin\\AcademicYearController@destroy` loads by ID, checks the `academic` Gate, deletes and logs. The controller query itself is not school-scoped, so the Gate must be tested against a foreign-school academic-year record.
+- The academic-year index Blade delegates rendering and actions to a Vue component named `list-academic-year`; the events index delegates to `show-event` and `event-popup`; the subject index includes `admin.subject.list`; the teacher assignment index delegates to `list-tab-assignment`. The precise component source and HTTP callers have **not** yet been traced, so caller compatibility remains open. The route audit must follow these component names to their source before implementation.
+
+These are source-level conclusions only. No endpoint was invoked against any database, and no route/controller was changed. The next pass should trace the named Vue components and the remaining controller bodies, then write the GET-no-mutation and tenant-ownership regression tests on disposable fixtures.
