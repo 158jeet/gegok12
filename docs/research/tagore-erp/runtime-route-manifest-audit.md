@@ -87,3 +87,49 @@ The next source pass inspected the unauthenticated API route handlers, their req
 **Required implementation acceptance:** OTP entropy and hashed storage; expiry at every transition; atomic single-use consumption; attempt limits by account and source; generic responses; safe missing-record behavior; per-route rate limits; session/token revocation at the correct point in the verified reset flow; synthetic tests for no OTP, expired OTP, wrong OTP, replay, concurrent use, inactive user, unknown mobile and two-institution bootstrap.
 
 9. **Unauthenticated remote device logout:** `api/logout/devices` and `api/teacher/logout/devices` are POST endpoints without authentication middleware. Their handlers locate an account using only the submitted mobile number and user-group ID, then delete all Sanctum tokens and clear device metadata. No OTP or proof of account ownership is checked in these handlers. This creates an account-level denial-of-service vector for anyone who knows a parent's or teacher's mobile number. Require verified recovery proof or authenticated device-management authorization, and add negative tests for unauthenticated arbitrary mobile numbers.
+
+
+## Follow-up source pass — route mutation classification (2026-11-14)
+
+The route-definition files were inspected on the research branch after the runtime manifest flagged GET/HEAD mutation candidates. This pass distinguishes active declarations from commented-out historical examples; it is still source inspection, not a controller exploit test.
+
+### Active source declarations confirmed in inspected route files
+
+| Route family | Source declaration / action | Preliminary classification |
+|---|---|---|
+| Admin notes | `GET /notes/delete/{id}` → `NotesController@delete` | State-changing by route intent; inspect method body and UI caller |
+| Admin subject | `GET /subject/delete/{id}` → `SubjectController@destroy` | Delete action on GET; migrate after caller inventory |
+| Admin events | `GET /events/delete/{id}` → `EventsController@destroy` | Delete action on GET; migrate after caller inventory |
+| Admin event approval | `GET /event/approve/{id}` → `EventsController@eventapprove` | Approval action on GET; inspect whether this renders a form or commits state |
+| Admin homework | `GET /homework/delete/{id}` → `Approval\\HomeWorkController@destroy` | Active route in approval namespace; confirm route-group closure and callers |
+| Admin notice | `GET /notice/delete/{id}` → `NoticeBoardController@destroy` | Delete action on GET |
+| Admin leave type | `GET /leavetype/delete/{id}` → `LeaveTypesController@destroy` | Delete action on GET |
+| Admin magazine | `GET /magazine/delete/{id}` → `BulletinsController@destroy` | Delete action on GET |
+| Admin call log / postal record | `GET /calllog/delete/{id}`, `GET /postalrecord/delete/{id}` | Delete actions on GET |
+| Admin class wall | `GET /classwall/page/delete/{id}`, `GET /classwall/post/delete/{id}`, and comment/reply delete routes | Delete actions on GET |
+| Teacher assignment | `GET /assignment/delete/{id}` → `AssignmentController@destroy` | Active declaration; delete action on GET |
+| Teacher leave approval | `GET /leave/approve/{id}` → `LeaveController@approveCreate`; POST same URI → `approveStore` | GET appears to be the approval form; POST is the mutation. Do not misclassify GET as a mutation without body/caller proof |
+| Teacher visitor/call/postal logs | GET `/visitorlog/delete/{id}`, `/calllog/delete/{id}`, `/postalrecord/delete/{id}` | Delete actions on GET |
+| Teacher class wall | GET post/comment/reply delete routes | Delete actions on GET |
+| Librarian | GET `/bookscategory/delete/{id}`, `/booklending/delete/{id}` | Delete actions on GET; books delete declaration in this file is commented out |
+| Receptionist | GET visitor/call/postal log delete routes | Delete actions on GET |
+| API v2 | GET `/leave/delete/{id}` → `LeaveController@destroy`; GET `/task/delete/{id}` → `TaskController@destroy` | Authenticated Sanctum group, but HTTP method is unsafe; convert only after mobile-client compatibility review |
+
+### Important false-positive controls
+
+- Several route files contain commented-out GET delete declarations. They are not active routes and must not be included in an implementation change.
+- Some GET paths containing `approve` are form/list pages (for example `approveCreate`); the paired POST route performs the state transition. Rename or migrate only after inspecting the action body and view form.
+- Some destroy actions already use DELETE (for example admission and payroll resource deletes); preserve these compliant routes.
+- Route declarations may be duplicated across role portals (teacher/receptionist/admin). A single controller action may serve multiple route families and must be changed consistently with all callers.
+- The runtime count of 50 GET/HEAD destroy/delete candidates is a manifest-wide count. The source snippets above are a confirmed sample, not a complete one-to-one enumeration of all 50.
+
+### Evidence still required before implementation
+
+1. Retrieve the complete runtime route manifest artifact and build an exact table of all 50 method+URI+action+middleware records; do not infer the list from grep alone.
+2. For every candidate, inspect controller body for actual mutation, soft-delete, redirect-only behavior, ownership and institution checks.
+3. Search every Blade form, JavaScript handler, Android/desktop client and external API contract that calls the route; record caller path and current method.
+4. Add regression tests that send GET and HEAD and assert no state change; then test the replacement POST/PATCH/DELETE route with CSRF/authentication and authorization.
+5. Implement in small route-family batches with temporary compatibility only where required. Compatibility endpoints must never mutate on GET; return a safe deprecation response or redirect to a read-only page.
+6. Re-run route manifest, browser tests, mobile API contract tests and negative cross-institution tests after each batch.
+
+**Decision:** no application route or controller was changed in this pass. The next implementation prerequisite is the exact runtime 50-route export plus caller/controller mapping. This prevents an unsafe blanket rewrite and avoids breaking legacy clients.
