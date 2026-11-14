@@ -41,7 +41,7 @@ return new class extends Migration {
             $table->unsignedInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
-            $table->unique(['device_id', 'device_user_id']);
+            $table->unique(['device_id', 'device_user_id'], 'tagore_bio_map_device_user_unique');
             $table->index(['employee_id', 'active']);
         });
 
