@@ -847,3 +847,42 @@ Build one reusable assessment core with separate product experiences and permiss
 **School/college exam and Olympiad market comparison:** initial specialist comparison documented; CBSE/RBSE/PG College rule mapping and vendor demonstrations remain.  
 **Tagore implementation parity audit:** OPEN. The current repository contains school exam and Olympiad code, but no evidence yet that it meets the full coaching-grade CBT, question bank, analytics and adaptive learning target.  
 **Implementation:** not started by this register update. Next action is the code-audit work package (Phase A), then implement in coherent PRs with automated tests. No live student data, production deployment or merge is authorised by this work.
+
+
+### 16.10 Phase A — first-pass code audit findings (14 November 2026)
+
+Inspected the current `main` branch route/controller/migration/view/test files. This is a static repository audit; no browser click-through or execution against a running test database is claimed.
+
+**Route inventory verified in `routes/tagore.php`:**
+- School examinations: `tagore.examinations.index/store`, subject schedule create, marks entry/save, grade scale save, submit, moderate, publish, withdraw and student results.
+- Olympiad manager: index/store, question template, show, import, approve and publish.
+- Olympiad student: register, exam, save answers, submit and result.
+- Parent-supervised Olympiad: linked-child index, register, launch, tokenised exam, save answers, submit and result.
+- Public Olympiad registration routes are in `routes/web.php`, behind a feature flag and throttles.
+- No coaching test-series, coaching batch exam scheduling, coaching question-bank, paper-blueprint, test analytics, rank/percentile or AI study-plan route family was found in the exam-specific route set inspected.
+
+**School Examination: confirmed current scope**
+- The migration creates `tagore_exams`, `tagore_exam_subjects`, `tagore_exam_marks`, `tagore_exam_mark_events`, `tagore_exam_grade_scales`, `tagore_exam_events` and uses `tagore_results`.
+- Controller supports institution/year/class-section exam setup, subject schedule, teacher/manager marks entry, grade scales, submit → moderate → publish → withdraw lifecycle and student/parent report card.
+- Teacher marks entry is checked against `class_teacher_links` for subject/class/year; parent report card is restricted to active linked children.
+- The current exam data model is school-exam marks-centric. The inspected schema/controller does not evidence a reusable coaching question bank, paper snapshot, candidate attempt/session, per-question response, section timer, negative-marking engine, numerical answer evaluator, rank/percentile cohort or topic-level coaching analytics.
+- Existing tests are useful contract/role smoke tests, but do not establish CBT delivery or concurrent attempt reliability.
+
+**Olympiad: confirmed current scope and specific limitations**
+- Manager creates institution-scoped events and targets classes; teacher/manager can import questions; imported questions require manager approval before event publication.
+- Import accepts JSON and XLSX/XLS/CSV, but the spreadsheet importer explicitly rejects types other than Single Choice. Each imported item requires one answer key matching one option key; the batch is explicitly limited to 1–200 questions.
+- The attempt player renders one-choice radio options. Answer saves accept scalar option keys and at most 200 answers. The scoring loop awards positive marks for the single correct option; the inspected scoring code does not implement configurable negative marking, partial credit or numerical/multiple-correct evaluation.
+- Exam timer is calculated from event end and registration start + duration. Browser autosave and refresh/resume are present; parent-supervised attempts use a separate token-based route family. Tests cover selected autosave/resume and linked-child protection.
+- The current student player renders a sequential question list and does not show the richer exam palette/section controls/rough sheet/review navigation required by the coaching target.
+- The inspected Olympiad flow has no evidenced blueprint builder, reusable taxonomy-rich question bank across events, multi-round progression, cohort percentile/leaderboard, detailed topic analytics, teacher batch diagnostics or certificate/award workflow.
+- Public registration is feature-flagged and rate-limited; verify the actual registration-to-ERP identity matching and duplicate handling in a dedicated acceptance pass.
+
+**Navigation visibility remains an open defect to verify:** routes and pages exist, but owner reports they are not visible in normal portal navigation. Next audit step is to trace every role dashboard/sidebar/menu and prove that authorised users can reach the correct Examination, Coaching Tests and Olympiad workspaces. Do not equate route existence with discoverability or acceptance.
+
+**Initial gap classification:**
+- **Confirmed missing from inspected exam-specific implementation:** coaching test series, coaching batch assignment, question bank/paper blueprint, CBT candidate attempt engine, advanced question types/marking schemes, rank/percentile, topic-level analytics, adaptive practice, AI mentor and coaching study plans.
+- **Confirmed Olympiad limitations:** single-choice import/attempt model, 200-question batch/answer cap, no negative marking/multi-answer/numeric scoring in inspected path, limited sequential player UI.
+- **Partially present and must be tested further:** event registration, class eligibility, approval gate, timed attempt, autosave/resume, parent-child access, result scoring and school marks moderation.
+- **Not yet verified:** menu discoverability by role, concurrency and race conditions, server-time tamper resistance under all paths, import row-level error reporting/rollback, question/answer snapshot immutability, result/rank privacy, external registrant deduplication, accessibility/mobile acceptance and production-scale performance.
+
+**Next Phase A tasks:** inspect dashboard/sidebar route links for every role; inspect all Olympiad schema/indexes and registration identity matching; build route × role × action × scope matrix; run focused synthetic feature tests; record concrete evidence and defects before implementation PRs. The coaching engine implementation must not be grafted into the school marks-entry controller or built as a superficial extension of the existing Olympiad single-choice flow.
