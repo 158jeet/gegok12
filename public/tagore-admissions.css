@@ -29,3 +29,6 @@ body>.tg-admissions,.tg-admissions{width:100%;min-width:0;max-width:100%;}
 .tg-ad-tablewrap{width:100%;min-width:0;max-width:100%;overflow-x:auto!important;}
 .tg-ad-tablewrap>.tg-ad-table{width:max-content;min-width:980px;}
 @media(max-width:700px){.tg-ad-tablewrap>.tg-ad-table{min-width:760px}}
+
+/* The standalone CRM pages do not use the shared application body reset. */
+html,body{margin:0;padding:0}
