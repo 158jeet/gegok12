@@ -329,3 +329,20 @@ This pass is based on current GitHub main source and static file inspection. It 
 - Idempotency exists through unique client_change_id, but failure replay, duplicate concurrent pushes and audit/attendance correction rules need executable tests.
 - API token expiry/ability restriction and lost-device revocation were not evidenced in this pass.
 - Status: narrow attendance sync foundation present; safe offline production acceptance is not yet established.
+
+## 12. Test and CI evidence
+
+### Existing automated coverage
+- `TagoreRoleAccessMatrixTest` checks permission declarations and one fee-management route across eight roles. It does not include CASHIER and does not comprehensively test cross-institution or class-scope IDOR cases.
+- `TagoreCoreModuleSmokeTest` checks that the Owner can open core module landing pages and that routes are named/resolvable. HTTP 200 is not workflow acceptance.
+- `TagoreOperationsAcceptanceTest` currently tests blank inventory quantity defaults, negative expense amount rejection and invalid status/JSON rejection. It does not establish full visitor/hostel/transport/inventory lifecycle completeness.
+- `TagoreFeeWorkflowAcceptanceTest` provides meaningful service-level coverage for offline partial payment, ledger/receipt/audit atomicity, overpayment rejection, percentage adjustments and parent statement privacy. It does not establish family multi-child checkout or complete gateway concurrency/refund/reversal behavior.
+- `TagoreOfflineSyncTest` checks route registration only; it does not execute sync.
+- `TagoreExaminationTest`, `TagoreOlympiadTest`, `TagoreDailyDiaryAcceptanceTest`, `TagoreTasksTest`, migration tests and other module suites exist and need a full execution/read-through.
+
+### Browser acceptance design
+- `e2e/tests/tagore-human-style.spec.js` lists eight roles (Owner, Principal, Coordinator, Teacher, Parent, Student, Accounts, Fee Editor). It checks route responses and representative rendered pages; it does not include Cashier.
+- `e2e/tests/tagore-interaction-audit.spec.js` inventories controls and screenshots concrete routes. It deliberately avoids firing destructive or financial submit actions; those require dedicated synthetic workflow tests.
+- `ERP CI` includes backend PHPUnit, desktop/mobile browser E2E and production Docker smoke jobs. `ERP Full Acceptance Convergence` includes mutating administrator acceptance, full authenticated browser coverage, Docker build and deployment-script syntax checks.
+- At the latest observed branch head `9836a7032834e82059d33a93d905bd8427b356b9`, ERP CI and TagoreK12 Prototype runs were queued and ERP Full Acceptance Convergence was pending. No pass/fail result is available yet.
+- The current audit itself did not execute PHPUnit, migrations, Playwright, Docker or mobile builds. Do not report runtime acceptance as passed until the associated CI runs complete and their artifacts/logs are reviewed.
