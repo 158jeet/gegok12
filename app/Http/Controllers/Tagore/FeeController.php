@@ -282,7 +282,7 @@ class FeeController extends Controller
 
     private function authorizePaymentRecording($roles): void
     {
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void
@@ -294,7 +294,7 @@ class FeeController extends Controller
 
     private function authorizeInstitution(int $userId, int $institutionId, $roles): void
     {
-        if (!$roles->contains('OWNER')) {
+        if (!$roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()) {
             abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')->exists(), 403);
         }
     }
