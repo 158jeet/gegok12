@@ -61,8 +61,11 @@ jobs:
           php artisan migrate --force --no-interaction
           php artisan db:seed --force --no-interaction
 
-      - name: Verify route bootstrap
-        run: php artisan route:list -vvv > route-list.txt
+      - name: Verify and export runtime route manifest
+        run: |
+          php artisan route:list --json > route-list.json
+          php artisan route:list -vvv > route-list.txt
+          php -r '$routes = json_decode(file_get_contents("route-list.json"), true, 512, JSON_THROW_ON_ERROR); if (!is_array($routes) || count($routes) === 0) { fwrite(STDERR, "Empty or invalid Laravel route manifest\\n"); exit(1); } echo "Runtime route manifest contains " . count($routes) . " registered routes\\n";'
 
       - name: Verify Laravel scheduler registrations
         run: |
@@ -265,6 +268,7 @@ jobs:
             e2e/playwright-report/
             e2e/test-results/
             e2e/test-results/interaction-audit/
+            route-list.json
             route-list.txt
             /tmp/tagore-e2e-server.log
           if-no-files-found: warn
