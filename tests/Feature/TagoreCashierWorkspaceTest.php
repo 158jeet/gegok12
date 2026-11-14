@@ -39,7 +39,7 @@ class TagoreCashierWorkspaceTest extends TestCase
             ->assertOk()
             ->assertSee('Cashier counter')
             ->assertSee('Search by student name', false)
-            ->assertSee('Record &amp; email receipt', false);
+            ->assertSee('Record & email receipt', false);
     }
 
     public function test_cashier_route_is_named_and_resolvable(): void
