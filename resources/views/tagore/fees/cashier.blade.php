@@ -13,12 +13,13 @@
 .tg-cashier-table form{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .tg-cashier-table .tg-btn{white-space:nowrap}
 .tg-cashier-muted{color:#9eacbd;font-size:12px}
-.tg-cashier-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.tg-cashier-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
 .tg-cashier-kpi{padding:18px;border:1px solid #344253;border-radius:14px;background:#19232e}
 .tg-cashier-kpi span{display:block;color:#9eacbd;font-size:12px}
 .tg-cashier-kpi strong{display:block;font-size:25px;margin-top:6px;color:#f4f7fb}
 .tg-cashier-section{margin-top:22px}
-@media(max-width:760px){.tg-cashier-tools input{max-width:none}.tg-cashier-table{min-width:880px}.tg-cashier-kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:1050px){.tg-cashier-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.tg-cashier-tools input{max-width:none}.tg-cashier-table{min-width:980px}.tg-cashier-kpis{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body class="tg-app">
@@ -45,10 +46,18 @@
 </section>
 @if(session('success'))<div class="tg-alert" role="status">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="tg-alert warning" role="alert"><strong>Payment was not recorded. Please review:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-<section class="tg-cashier-kpis" aria-label="Today's collection">
-<div class="tg-cashier-kpi"><span>Collected today</span><strong>₹{{ number_format((float)$todayCollection,2) }}</strong></div>
-<div class="tg-cashier-kpi"><span>Receipts posted today</span><strong>{{ number_format((int)$todayCount) }}</strong></div>
+<section class="tg-cashier-kpis" aria-label="Daily fee status">
+<div class="tg-cashier-kpi"><span>Total outstanding dues</span><strong>₹{{ number_format((float)$totalOutstanding,2) }}</strong></div>
+<div class="tg-cashier-kpi"><span>Overdue dues · {{ number_format((int)$overdueCount) }} items</span><strong>₹{{ number_format((float)$overdueAmount,2) }}</strong></div>
+<div class="tg-cashier-kpi"><span>Online payments awaiting confirmation · {{ number_format((int)$pendingOnlineCount) }}</span><strong>₹{{ number_format((float)$pendingOnlineAmount,2) }}</strong></div>
+<div class="tg-cashier-kpi"><span>Collected today · {{ number_format((int)$todayCount) }} receipts</span><strong>₹{{ number_format((float)$todayCollection,2) }}</strong></div>
 </section>
+@if((float)$overdueAmount > 0)
+<div class="tg-alert warning" role="alert">Fee follow-up alert: {{ number_format((int)$overdueCount) }} overdue fee items total ₹{{ number_format((float)$overdueAmount,2) }}.</div>
+@endif
+@if((int)$pendingOnlineCount > 0)
+<div class="tg-alert warning" role="status">{{ number_format((int)$pendingOnlineCount) }} online payment(s) totalling ₹{{ number_format((float)$pendingOnlineAmount,2) }} are awaiting gateway confirmation. Do not mark these as paid manually.</div>
+@endif
 <section class="tg-cashier-section">
 <div class="tg-section-head"><div><h2>Collect a student payment</h2><p>Search by student name, registered mobile number or student ID. Only students with an outstanding balance are shown.</p></div><span class="tg-status">{{ $students->total() }} matching students</span></div>
 <div class="tg-card" style="padding:16px">
@@ -59,13 +68,15 @@
 </form>
 <div class="tg-table-wrap" style="margin-top:14px;display:block;width:100%;max-width:100%;overflow-x:auto">
 <table class="table tg-cashier-table">
-<thead><tr><th>Student</th><th>Institution</th><th>Open items</th><th>Outstanding</th><th>Collect payment</th></tr></thead>
+<thead><tr><th>Student</th><th>Institution</th><th>Open items</th><th>Overdue</th><th>Due today</th><th>Outstanding</th><th>Collect payment</th></tr></thead>
 <tbody>
 @forelse($students as $student)
 <tr>
 <td><strong>{{ $student->student_name }}</strong><div class="tg-cashier-muted">Student #{{ $student->student_id }} · {{ $student->mobile_no ?: 'No mobile on file' }}</div></td>
 <td>{{ $student->institution }}</td>
 <td>{{ $student->open_items }}</td>
+<td>{{ (float)$student->overdue_amount > 0 ? '₹'.number_format((float)$student->overdue_amount,2) : '—' }}</td>
+<td>{{ (float)$student->due_today_amount > 0 ? '₹'.number_format((float)$student->due_today_amount,2) : '—' }}</td>
 <td><strong>₹{{ number_format((float)$student->outstanding,2) }}</strong></td>
 <td><form method="POST" action="{{ route('tagore.fees.payment',$student->student_id) }}" class="tg-cashier-table">@csrf
 <div class="tg-cashier-tools">
@@ -76,7 +87,7 @@
 </div></form></td>
 </tr>
 @empty
-<tr><td colspan="5"><div class="tg-empty"><strong>No outstanding students found</strong><span>Try a different name, mobile number or student ID.</span></div></td></tr>
+<tr><td colspan="7"><div class="tg-empty"><strong>No outstanding students found</strong><span>Try a different name, mobile number or student ID.</span></div></td></tr>
 @endforelse
 </tbody>
 </table>
