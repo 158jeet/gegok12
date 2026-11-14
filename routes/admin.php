@@ -87,7 +87,7 @@ Route::post( '/schooldetails/update/{school_id}', 'SchoolDetailsController@updat
 	Route::get( '/holiday/edit/{id}', 'HolidaysController@edit' );
 	Route::post( '/holiday/edit/{id}', 'HolidaysController@update' );
 	//delete
-	Route::get( '/holiday/delete/{id}', 'HolidaysController@destroy' );
+	Route::delete( '/holiday/delete/{id}', 'HolidaysController@destroy' );
 
 //standardlinks
 	//index
