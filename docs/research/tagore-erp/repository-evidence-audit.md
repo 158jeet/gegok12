@@ -362,3 +362,22 @@ This pass is based on current GitHub main source and static file inspection. It 
 - PR #69 does **not** provide a complete biometric ingestion/sync workflow: its controller registers devices and maps staff; sync remains disabled/manual-config and there is no vendor event ingestion route in the reviewed patch. Its test only proves coordinator denial without an explicit fee scope and rejection of student-to-device mapping; it does not fully prove teacher class scope, coordinator assigned-grade scope, cashier collection, group Accounts roll-up or device punch idempotency.
 - Because #69 is based on an integration branch, it must be rebased/reconciled against current main and its dependency diff reviewed before any merge decision. Do not cherry-pick only the controller without its migration, seeder, routes, views and tests.
 - PR #72 is the new canonical research package on its own branch and does not replace or merge application changes from #69. All four existing PRs (#67, #69, #71, #72) remain open drafts at the time of this audit; none is merged.
+
+## 14. CI results — exact evidence
+
+### Successful initial PR #72 candidate
+The first PR #72 head (`13c53b8bd8fc6c2e112ae1b6fcc6ac29d4337df9`, documentation-only package) completed these workflows successfully:
+- **ERP Full Acceptance Convergence:** success. Its job completed PHP syntax and clean disposable DB setup, route/scheduler bootstrap, backend feature/unit tests, production frontend build, disposable application health check, mutating administrator acceptance, focused Operations search/status acceptance, full authenticated desktop/mobile browser suite, public login checks, production Docker build/smoke and Windows deployment PowerShell syntax checks. The fail-closed decision step succeeded.
+- **ERP CI:** backend, browser-E2E, production Docker smoke, frontend build and release-blocking acceptance gate all succeeded. Backend log reports **145 tests passed, 1,327 assertions**. Browser log reports **92 tests passed**.
+- **TagoreK12 Prototype:** prototype E2E passed; Tagore suite log reports **93 tests passed, 1,022 assertions**; MySQL migration smoke and release-blocking prototype acceptance gate succeeded. The prototype-specific E2E suite reports **14 tests passed, 141 assertions**.
+
+### Latest docs-only candidate
+The audit documents were subsequently expanded. Latest recorded PR #72 head is `4f452539ebf159e05bf7d764937ea402d63f08dc`. At the latest check:
+- ERP Full Acceptance Convergence: pending, no jobs started.
+- ERP CI: queued (frontend, backend, browser-E2E and production Docker smoke jobs).
+- TagoreK12 Prototype: queued (prototype E2E, test and MySQL migration smoke jobs).
+
+All changes between the successful initial candidate and this latest candidate are documentation-only; no application code changed in PR #72. Nevertheless, the latest-head reruns must finish before reporting the current PR check suite as green.
+
+### Interpretation
+These CI runs are valuable evidence that the current application baseline builds and passes its existing automated suites in disposable CI environments. They do **not** prove every business requirement in the research report is implemented, nor do they cover the newly identified missing/unsafe edge cases unless a specific test exists. In particular, a green baseline suite does not negate the class-scope, family checkout, gateway, import mapping, report export, document privacy or operational cross-institution gaps recorded above. No production database or live records were changed by these CI jobs.
