@@ -133,3 +133,83 @@ The route-definition files were inspected on the research branch after the runti
 6. Re-run route manifest, browser tests, mobile API contract tests and negative cross-institution tests after each batch.
 
 **Decision:** no application route or controller was changed in this pass. The next implementation prerequisite is the exact runtime 50-route export plus caller/controller mapping. This prevents an unsafe blanket rewrite and avoids breaking legacy clients.
+
+
+## Exact runtime candidate inventory recovered from CI artifact
+
+The original retained artifact `erp-full-acceptance-854e0af606b6c943783f77d56c1cb500524d459c` was downloaded and parsed again. It contains 1,444 route records. Applying the original narrow rule — GET/HEAD plus an action containing `destroy` or `delete` — returns exactly **50 routes**. The broader scan returns 5 approval-related actions and 3 reset/token-update candidates. This reconciles the 50 count with the broader 58-row heuristic.
+
+### 50 GET/HEAD destroy/delete routes
+
+| Route | Controller action |
+|---|---|
+| `accountant/task/{id}/delete` | `Accountant\\TaskController@destroy` |
+| `admin/academic/delete/{id}` | `Admin\\AcademicYearController@destroy` |
+| `admin/calllog/delete/{id}` | `Admin\\CallLogController@destroy` |
+| `admin/classwall/page/delete/{id}` | `Admin\\PagesController@destroy` |
+| `admin/classwall/post/delete/comment/{comment_id}` | `Admin\\PostCommentsController@destroy` |
+| `admin/classwall/post/delete/{id}` | `Admin\\PostsController@destroy` |
+| `admin/classwall/post/reply/delete/comment/{post_comment_id}` | `Admin\\PostReplyCommentsController@destroy` |
+| `admin/discipline/delete/{id}` | `Admin\\DisciplineController@destroy` |
+| `admin/document/delete/{id}` | `Admin\\DocumentsController@destroy` |
+| `admin/events/delete/{id}` | `Admin\\EventsController@destroy` |
+| `admin/holiday/delete/{id}` | `Admin\\HolidaysController@destroy` |
+| `admin/homework/delete/{id}` | `Admin\\Approval\\HomeWorkController@destroy` |
+| `admin/leavetype/delete/{id}` | `Admin\\LeaveTypesController@destroy` |
+| `admin/magazine/delete/{id}` | `Admin\\BulletinsController@destroy` |
+| `admin/notes/delete/{id}` | `Admin\\NotesController@delete` |
+| `admin/notice/delete/{id}` | `Admin\\NoticeBoardController@destroy` |
+| `admin/phonenumber/delete/{id}` | `Admin\\TelephoneDirectoryController@destroy` |
+| `admin/postalrecord/delete/{id}` | `Admin\\PostalRecordController@destroy` |
+| `admin/standardLink/delete/{id}` | `Admin\\StandardsLinkController@destroy` |
+| `admin/subject/delete/{id}` | `Admin\\SubjectController@destroy` |
+| `admin/task/{id}/delete` | `Admin\\TaskController@destroy` |
+| `admin/visitorlog/delete/{id}` | `Admin\\VisitorLogController@destroy` |
+| `api/v2/leave/delete/{id}` | `Api\\LeaveController@destroy` |
+| `api/v2/task/delete/{id}` | `Api\\TaskController@destroy` |
+| `library/booklending/delete/{id}` | `Librarian\\BookLendingController@destroy` |
+| `library/books/delete/{id}` | `Librarian\\BookController@destroy` |
+| `library/bookscategory/delete/{id}` | `Librarian\\BookCategoryController@destroy` |
+| `library/task/{id}/delete` | `Librarian\\TaskController@destroy` |
+| `receptionist/calllog/delete/{id}` | `Receptionist\\CallLogController@destroy` |
+| `receptionist/leave/delete/{id}` | `Receptionist\\LeaveController@destroy` |
+| `receptionist/phonenumber/delete/{id}` | `Receptionist\\TelephoneDirectoryController@destroy` |
+| `receptionist/postalrecord/delete/{id}` | `Receptionist\\PostalRecordController@destroy` |
+| `receptionist/task/{id}/delete` | `Receptionist\\TaskController@destroy` |
+| `receptionist/visitorlog/delete/{id}` | `Receptionist\\VisitorLogController@destroy` |
+| `student/assignment/delete/{id}` | `Student\\AssignmentController@destroy` |
+| `student/classwall/post/delete/comment/{comment_id}` | `Student\\PostCommentsController@destroy` |
+| `student/classwall/post/reply/delete/comment/{post_comment_id}` | `Student\\PostReplyCommentsController@destroy` |
+| `student/homework/delete/{id}` | `Student\\HomeworkController@destroy` |
+| `student/task/{id}/delete` | `Student\\TaskController@destroy` |
+| `teacher/assignment/delete/{id}` | `Teacher\\Approval\\AssignmentController@destroy` |
+| `teacher/calllog/delete/{id}` | `Teacher\\CallLogController@destroy` |
+| `teacher/classwall/post/delete/comment/{comment_id}` | `Teacher\\PostCommentsController@destroy` |
+| `teacher/classwall/post/delete/{id}` | `Teacher\\PostsController@destroy` |
+| `teacher/classwall/post/reply/delete/comment/{post_comment_id}` | `Teacher\\PostReplyCommentsController@destroy` |
+| `teacher/homework/delete/{id}` | `Teacher\\Approval\\HomeWorkController@destroy` |
+| `teacher/leave/delete/{id}` | `Teacher\\LeaveController@destroy` |
+| `teacher/lessonplan/delete/{id}` | `Teacher\\LessonPlanController@destroy` |
+| `teacher/postalrecord/delete/{id}` | `Teacher\\PostalRecordController@destroy` |
+| `teacher/task/{id}/delete` | `Teacher\\TaskController@destroy` |
+| `teacher/visitorlog/delete/{id}` | `Teacher\\VisitorLogController@destroy` |
+
+### Additional 5 approval and 3 reset/token candidates
+
+- `admin/event/approve/{id}` → `Admin\\EventsController@eventapprove`
+- `api/teacher/checkleave/approve/list` → `Api\\Teacher\\LeaveController@leaveCheckListApproved` (read/list action; false positive, not a state mutation)
+- `teacher/leave/approve/list/{id}` → `Teacher\\LeaveController@approveList` (read/list action; false positive)
+- `teacher/leave/approve/{id}` → `Teacher\\LeaveController@approveCreate` (GET form; paired POST performs approval)
+- `teacher/studentLeave/approve/{id}` → `Teacher\\StudentLeaveController@approveCreate` (GET form; paired POST performs approval)
+- `admin/user/resetPassword/{id}` → `Admin\\UserController@resetPassword`
+- `api/v2/updatetoken` → `Api\\UserController@updatetoken`
+- `password/reset/{token}` → `Auth\\ResetPasswordController@showResetForm` (GET form; not a password mutation)
+
+### Controller-body spot checks — confirmed state-changing GET examples
+
+- `Admin\\AcademicYearController@destroy` queries an academic year by ID, authorizes it with the `academic` Gate, calls `delete()`, and writes an activity log. The route does not show an explicit school_id constraint in the query; the Gate is the remaining object authorization boundary and needs a cross-school negative test.
+- `Admin\\EventsController@eventapprove` loads an event by ID, sets `status='active'`, saves it, then triggers push and notification events. This is a confirmed mutation behind GET, not a form page.
+- `Api\\LeaveController@destroy` loads a leave application by ID, sets status to cancelled, saves and deletes it, then logs the action. Its query is ID-only; it does not constrain the leave row to the authenticated user's school or student/guardian relationship in the method body.
+- `Api\\TaskController` has ID-only task lookup patterns in its show/edit methods. Its destroy method needs a focused read and ownership test before changing the route; the API group has Sanctum authentication but authentication alone does not prove task ownership.
+
+**Risk classification:** these examples establish that the candidate set contains real state-changing GET endpoints. They do not prove every one of the 50 has the same impact or missing authorization. The next pass must finish per-controller and caller review, especially ID-only lookups and notification side effects. Do not change route verbs until this review and client compatibility mapping are complete.
