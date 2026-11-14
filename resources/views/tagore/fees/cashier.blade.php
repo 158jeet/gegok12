@@ -9,6 +9,7 @@
 .tg-cashier-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .tg-cashier-tools input{min-width:220px;max-width:420px;width:100%}
 .tg-cashier-table input,.tg-cashier-table select{max-width:150px;min-width:110px}
+.tg-cashier-section .tg-table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto!important;overscroll-behavior-x:contain}
 .tg-cashier-table form{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .tg-cashier-table .tg-btn{white-space:nowrap}
 .tg-cashier-muted{color:#9eacbd;font-size:12px}
@@ -56,7 +57,7 @@
 <button type="submit" class="tg-btn primary">Search</button>
 @if(request()->filled('q'))<a class="tg-btn" href="{{ route('tagore.cashier.index') }}">Clear</a>@endif
 </form>
-<div class="tg-table-wrap" style="margin-top:14px">
+<div class="tg-table-wrap" style="margin-top:14px;display:block;width:100%;max-width:100%;overflow-x:auto">
 <table class="table tg-cashier-table">
 <thead><tr><th>Student</th><th>Institution</th><th>Open items</th><th>Outstanding</th><th>Collect payment</th></tr></thead>
 <tbody>
@@ -85,7 +86,7 @@
 </section>
 <section class="tg-cashier-section">
 <div class="tg-section-head"><div><h2>Latest receipts</h2><p>Most recent successful payments across your permitted institutions.</p></div></div>
-<div class="tg-card" style="padding:16px"><div class="tg-table-wrap"><table class="table"><thead><tr><th>Receipt</th><th>Student</th><th>Date & time</th><th>Mode</th><th>Amount</th><th>Document</th></tr></thead><tbody>
+<div class="tg-card" style="padding:16px"><div class="tg-table-wrap" style="display:block;width:100%;max-width:100%;overflow-x:auto"><table class="table"><thead><tr><th>Receipt</th><th>Student</th><th>Date & time</th><th>Mode</th><th>Amount</th><th>Document</th></tr></thead><tbody>
 @forelse($recent as $payment)
 <tr><td><strong>{{ $payment->receipt_no ?: '—' }}</strong></td><td>{{ $payment->student_name }}</td><td>{{ $payment->paid_at ? \Carbon\Carbon::parse($payment->paid_at)->format('d M Y, H:i') : '—' }}</td><td>{{ ucfirst(str_replace('_',' ',$payment->payment_mode ?: '—')) }}</td><td>₹{{ number_format((float)$payment->amount,2) }}</td><td><a class="tg-btn" href="{{ route('tagore.fees.receipt',$payment->id) }}">Download receipt</a></td></tr>
 @empty<tr><td colspan="6"><div class="tg-empty"><strong>No receipts yet</strong><span>Newly recorded payments will appear here.</span></div></td></tr>@endforelse
