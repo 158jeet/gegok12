@@ -57,7 +57,10 @@ class AdmissionController extends Controller
     public function admissionlist(Request $request)
     {
         $academic_year = SiteHelper::getAcademicYear(Auth::user()->school_id);
-        $admissions = Admission::where([['school_id',Auth::user()->school_id],['academic_year_id',$academic_year->id]])->where('application_status','Draft')->orWhere('application_status','Pending')->paginate(10);
+        $admissions = Admission::where('school_id', Auth::user()->school_id)
+            ->where('academic_year_id', $academic_year->id)
+            ->whereIn('application_status', ['Draft', 'Pending'])
+            ->paginate(10);
               
         $admissions = AdmissionResource::collection($admissions);
         
@@ -71,7 +74,10 @@ class AdmissionController extends Controller
      */
     public function show($id)
     {
-        $admission = Admission::where('school_id',Auth::user()->school_id)->where('id',$id)->where('application_status','Draft')->orWhere('application_status','Pending')->first();
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->whereKey($id)
+            ->whereIn('application_status', ['Draft', 'Pending'])
+            ->firstOrFail();
 
         $sections = StandardLink::where('standard_id',$admission->standard_id)->get();
         
@@ -104,7 +110,7 @@ class AdmissionController extends Controller
      */
     public function edit($id)
     {
-        $admission = Admission::where('id',$id)->first();
+        $admission = Admission::where('school_id', Auth::user()->school_id)->whereKey($id)->firstOrFail();
 
         return view('/admin/admission/edit' , ['admission' => $admission]);
     }
@@ -120,7 +126,7 @@ class AdmissionController extends Controller
     {
         try
         {
-            $admission=Admission::where('id',$id)->first();
+            $admission = Admission::where('school_id', Auth::user()->school_id)->whereKey($id)->firstOrFail();
 
             $admission->application_status = $request->application_status;
 
@@ -209,7 +215,7 @@ class AdmissionController extends Controller
     {
         try
         {
-            $admission = Admission::where('id',$id)->first();
+            $admission = Admission::where('school_id', Auth::user()->school_id)->whereKey($id)->firstOrFail();
 
             $admission->delete();
 

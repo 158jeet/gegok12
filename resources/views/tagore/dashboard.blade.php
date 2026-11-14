@@ -38,6 +38,9 @@
   @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.manage') }}"><span class="tg-side-icon">₹</span>Fee management</a>
   @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">▣</span>Cashier counter</a>
+  @endif
   @if($roles->contains('FEE_EDITOR'))
     <a class="tg-side-link" href="{{ route('tagore.fees.editor') }}"><span class="tg-side-icon">₹</span>Fee editor</a>
   @endif
@@ -77,6 +80,9 @@
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Open accounts</a>
+      @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
+        <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Collect a fee</a>
       @endif
       @if($roles->contains('PARENT'))
         <a class="tg-btn primary" href="{{ route('tagore.parent.dashboard') }}">My children</a>

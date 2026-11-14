@@ -88,6 +88,9 @@
     <h1>Accounts & fee collection</h1>
     <p>One operational view of fee balances, family-level dues, receipts and online settlement reconciliation for your permitted institutions.</p>
     <div class="tg-hero-actions">
+      @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
+        <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">▣ Open cashier counter</a>
+      @endif
       @if($roles->intersect(['OWNER','PRINCIPAL'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.import') }}">⇧ Import legacy fees</a>
       @endif
