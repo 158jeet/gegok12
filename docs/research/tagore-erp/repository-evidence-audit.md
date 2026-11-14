@@ -243,3 +243,26 @@ This pass is based on current GitHub main source and static file inspection. It 
 ### Generic operations CRUD and audit retention
 - `OperationsController::destroy()` deletes the selected generic operations row and writes an audit event. The source inspected does not show soft-delete/restore for those rows. Confirm whether hard deletion is acceptable per module; finance, visitor, security, payroll and inventory evidence should generally be retained or voided rather than silently removed.
 - Generic operation tables are mostly broad string/JSON columns. Treat them as scaffolding for several domains, not proof of validated end-to-end modules.
+
+## 8. Additional pass — payroll, transport and inventory
+
+### Payroll — partial, verified foundation
+- `PayrollController` supports institution-scoped payroll runs, generate, approve, mark-paid and payslip PDF.
+- `PayrollService` validates employee school membership, calculates gross/allowances/PF/ESI/TDS/other deductions, and uses draft → processed → approved → paid states with row locks.
+- Gaps: the inspected service accepts salary/allowance/deduction inputs in the generation payload and does not derive payable days from approved leave/attendance or show a complete payroll policy/configuration workflow. Statutory calculation assumptions and Indian payroll compliance need specialist validation. HR role can generate but cannot approve/mark paid in the inspected controller; verify intended separation. No cashier role should gain payroll access.
+
+### Transport — more than a placeholder, still incomplete
+- `TransportController` has institution-scoped route, vehicle, driver, trip, GPS-event, live-location and boarding endpoints. Parent live-location access is checked against active child-to-route assignments.
+- This corrects the original report's implication that transport is only static route allocation: a GPS event ingestion endpoint and trip tracking model exist.
+- Gaps / risks: no external GPS vendor/device ingestion contract was verified; `driver()` checks that the selected user exists but does not verify same-institution employment; `boarding()` checks trip scope but the inspected method does not verify that the student belongs to the trip institution or route assignment. Add cross-institution negative tests.
+- Status: transport workflow partial; GPS provider integration unknown/blocked pending provider evidence.
+
+### Inventory, procurement and assets — partial, verified foundation
+- `InventoryController` supports institution-scoped vendors, items, stock movement, purchase orders, approval, receiving, expenses, expense decisions and assets.
+- `InventoryService` is used for stock movement and purchase-order receiving.
+- Gaps / risks: `asset()` verifies that an assigned user exists but does not verify that the assignee belongs to the selected institution. Verify stock movement audit/idempotency, partial receiving, vendor/item lifecycle, expense approval segregation and asset issue/return history.
+- Status: stronger than generic CRUD, but full procurement and fixed-asset acceptance remains open.
+
+### Hostel and PG College
+- Hostel room and allocation schema exists, but this pass did not find a dedicated Tagore hostel controller/workflow in the Tagore controller set. The generic operations table is not a substitute for occupancy conflict checks, bed assignment, warden attendance, mess management and fee-ledger integration.
+- No dedicated Tagore PG College/semester/OBE controller was identified in the inspected Tagore controller set. Treat college functionality as unknown pending course/affiliation discovery, not as a completed college ERP.
