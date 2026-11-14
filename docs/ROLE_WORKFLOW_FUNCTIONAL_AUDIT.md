@@ -26,12 +26,14 @@ The codebase therefore has components for these jobs, but the work is split acro
 
 ### 2. Admissions / front office
 
-- The Tagore Admissions CRM is a lead/enquiry pipeline, not a complete student-admission and enrolment workflow.
-- The current `AdmissionsController::STAFF_ROLES` is OWNER, PRINCIPAL, and COORDINATOR. ACCOUNTS, the legacy Accountant, and Receptionist are not included.
-- Lead capture, assignment, activity timeline, family linking, and conversion are present. Conversion currently requires an already-created active student account in the same institution and links the lead to that account. It does not itself create the student/guardian accounts or complete the student's admission record, class allocation, academic enrollment, fee demand, documents, and receipt as one guided process.
-- This means an office operator cannot currently run the full enquiry-to-enrolment process from one permitted workspace.
+- There are **two separate admissions systems**. The modern Tagore Admissions CRM is a lead/enquiry pipeline. The legacy Admin Admissions module (`/admin/admissions`, `/admin/admissionlist`, `/admin/admission/show/{id}`, `/admin/admission/edit/{id}`) is the older application-review and approval flow.
+- The legacy Admin controller can approve an application, set section/fee group/payment status, create the student account and father/mother accounts through `AdmissionUser`, and send approval notifications. Therefore, actual admission creation exists under the legacy Admin Admissions name; it is not yet integrated into the modern Tagore office workflow.
+- The Tagore CRM's `AdmissionsController::STAFF_ROLES` is OWNER, PRINCIPAL, and COORDINATOR. ACCOUNTS, the legacy Accountant, and Receptionist are not included.
+- CRM lead conversion requires an already-created active student account in the same institution and links the lead to that account. It does not itself run the full application approval, student/guardian account creation, academic enrollment, fee demand, document, and receipt process.
+- The legacy Admin admission controller has a high-priority school-scope defect to fix: list/show filters combine `where(...Draft)` with an ungrouped `orWhere(Pending)`, which can return pending applications outside the current school/year. Edit, update, and delete currently fetch by admission ID without consistently constraining the record to the signed-in user's school. This needs regression tests before relying on the legacy screen for office operations.
+- The Receptionist route set is mostly visitor log, call log, postal records, events, tasks, notices and staff utilities; it does not provide the missing modern cashier/admission/promotion counter.
 
-**Required next work:** define a separate, least-privilege Front Office / Admissions role (not silently grant the cashier unrestricted student or academic administration). Build a guided admission workflow with duplicate checks, guardian/family linking, student profile creation, academic-year/class placement, documents, fee-plan assignment/demand, and a completion checklist. Preserve principal/owner approval for sensitive concessions and exceptions.
+**Required next work:** consolidate the legacy application-approval capability with the modern lead CRM behind a least-privilege Front Office / Admissions role (not silently grant the cashier unrestricted student or academic administration). Add duplicate checks, guardian/family linking, student profile creation, academic-year/class placement, documents, fee-plan assignment/demand, and a completion checklist. Fix the legacy school-scope defect and make approval idempotent/transactional. Preserve principal/owner approval for sensitive concessions and exceptions.
 
 ### 3. Class promotion / academic-year rollover
 
