@@ -125,9 +125,9 @@ These items are candidates for the final locked plan. They are not implementatio
 
 ## Phase 0 exit checklist
 
-**Progress note (2026-11-14):** All 19 route-definition files have now been enumerated and a first-pass static route/provider/middleware/policy inventory is recorded in [route-and-authorization-inventory.md](route-and-authorization-inventory.md). This is not the framework-generated runtime route manifest; route registration, expanded middleware and action reachability remain unverified until a disposable-CI `php artisan route:list --json` artifact is produced. The first pass identified a likely unregistered `routes/tagore_api.php`, duplicate `User` policy-map keys, a likely undefined variable in the `post_reply` Gate, and legacy payroll access tied to hard-coded user-group IDs. These are audit findings to validate, not authorisation to patch in this phase.
+**Progress note (2026-11-14):** All 19 route-definition files have been enumerated, and a framework-generated runtime manifest is now retained in the ERP Full Acceptance CI artifact. The manifest contains 1,444 registered routes from the disposable testing configuration. The first-pass static audit also identified duplicate `User` policy-map keys, a likely undefined variable in the `post_reply` Gate, and legacy payroll access tied to hard-coded user-group IDs. Runtime findings include GET/HEAD delete/destroy and approval/reset candidates; see [runtime-route-manifest-audit.md](runtime-route-manifest-audit.md). This is a route-registration baseline, not a completed authorization audit or production route snapshot.
 
-- [ ] All 19 route definition files enumerated and framework route manifest generated.
+- [x] All 19 route definition files enumerated and framework route manifest generated in disposable CI.
 - [ ] All 281 controllers classified by route reachability and module owner.
 - [ ] All 633 Blade/PHP views mapped to route, role and workflow.
 - [ ] Every policy, middleware, API, webhook, job/listener, command, scheduler, import/export and notification mapped.
@@ -142,4 +142,4 @@ These items are candidates for the final locked plan. They are not implementatio
 - Enforce one active academic year per institution and make year rollover an audited transition.
 - Fix manual legacy student mapping and test batch readiness before permitting fee import apply.
 
-**Progress note (2026-11-14, runtime manifest pipeline):** The ERP Full Acceptance workflow has been updated on this research branch to run `php artisan route:list --json`, validate that the output is non-empty valid JSON, and retain `route-list.json` alongside the verbose route report in the acceptance artifact. This is a CI-only change using the workflow's disposable SQLite database. The updated workflow has not yet completed on the new commit, so the runtime manifest is still pending; once the artifact is produced, use it to build the route/action/middleware map. No live database or production environment is involved.
+**Progress note (2026-11-14, CI evidence):** The updated workflow completed successfully. Runtime manifest validation reported **1,444 registered routes**; backend tests reported **145 passed / 1,327 assertions**; the authenticated browser suite reported **92 passed**; focused Operations checks reported **5 passed** and public-login smoke **2 passed**. The route manifest and reports are available in the workflow artifact. No live database or production environment was used.
