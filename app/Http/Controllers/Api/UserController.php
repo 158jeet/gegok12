@@ -93,16 +93,19 @@ class UserController extends Controller
                 $user &&
                 $user->status === 'active' &&
                 $user->userprofile &&
-                $user->userprofile->status === 'active'
+                $user->userprofile->status === 'active' &&
+                (bool) $user->email_verified &&
+                filter_var((string) $user->email, FILTER_VALIDATE_EMAIL)
             ) {
                 try {
                     $issued = $challenges->issue(
                         $user,
                         RecoveryChallengeService::API_PASSWORD_RESET,
-                        $request->ip()
+                        $request->ip(),
+                        'email'
                     );
 
-                    $delivery->send($issued['code'], $user->mobile_no);
+                    $delivery->send($issued['code'], $user);
                 } catch (Throwable $e) {
                     // Keep the response indistinguishable for throttled or failed delivery.
                     Log::notice('API recovery challenge was not issued or delivered.', [
@@ -113,13 +116,13 @@ class UserController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Check sms to reset the password',
+                'message' => 'If the account is eligible, a recovery code will be sent to its registered email address.',
             ], 200);
         } catch (Throwable $e) {
             Log::warning('API password recovery initiation failed.', ['exception' => get_class($e)]);
             return response()->json([
                 'success' => true,
-                'message' => 'Check sms to reset the password',
+                'message' => 'If the account is eligible, a recovery code will be sent to its registered email address.',
             ], 200);
         }
     }
