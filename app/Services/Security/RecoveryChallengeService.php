@@ -12,13 +12,8 @@ use InvalidArgumentException;
 class RecoveryChallengeService
 {
     public const API_PASSWORD_RESET = 'api_password_reset';
-    public const PARENT_DEVICE_RECOVERY = 'parent_device_recovery';
-    public const TEACHER_DEVICE_RECOVERY = 'teacher_device_recovery';
-
     private const ALLOWED_PURPOSES = [
         self::API_PASSWORD_RESET,
-        self::PARENT_DEVICE_RECOVERY,
-        self::TEACHER_DEVICE_RECOVERY,
     ];
 
     private const ISSUE_LIMIT = 3;
