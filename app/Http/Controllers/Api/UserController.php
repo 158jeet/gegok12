@@ -5,264 +5,272 @@
  */
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\API\ResetChangePasswordRequest;
-use App\Http\Requests\API\ResetPasswordRequest;
-use App\Http\Requests\ChangePasswordRequest;
-use App\Http\Requests\API\OTPRequest;
-use App\Traits\AuthenticationProcess;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use App\Traits\ResetPasswordProcess;
 use App\Events\SinglePushEvent;
-use App\Models\Authentication;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Mail\ChangePassword;
-use Illuminate\Http\Request;
-use App\Models\SendMail;
 use App\Models\User;
-use Exception;
-use Hash;
-use Log;
+use App\Services\Security\RecoveryChallengeService;
+use App\Traits\MSG91;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class UserController extends Controller
 {
-    use AuthenticationProcess;
-    use ResetPasswordProcess;
+    use MSG91;
 
     public function updatetoken(Request $request)
     {
-        //
-        try
-        {
-            $user = User::where([['id',Auth::id()],['school_id',Auth::user()->school_id]])->first();
-            
-            $user->platform_token  = $request->device_name;
-             
+        try {
+            $user = User::where('id', Auth::id())
+                ->where('school_id', Auth::user()->school_id)
+                ->firstOrFail();
+
+            $user->platform_token = $request->device_name;
             $user->save();
 
-            $res['message']='Token Updated Successfully';
-        
-            return $res;
+            return ['message' => 'Token Updated Successfully'];
+        } catch (Throwable $e) {
+            Log::warning('API device token update failed.', ['exception' => get_class($e)]);
+            return response()->json(['success' => false, 'message' => 'Unable to update token.'], 500);
         }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        } 
     }
 
     public function changePassword(ChangePasswordRequest $request)
     {
-        try
-        {
-            $user = User::where('id',Auth::id())->first();
-            $hashedPassword = $user->password;
-            if (Hash::check($request->oldpassword, $hashedPassword)) 
-            {         
-                $user->password = Hash::make($request->newpassword);
-                $user->save();
-        
-                $success    = true;
-                $message    = 'Password Updated Successfully';
-                $error_code = 200;
+        try {
+            $user = User::findOrFail(Auth::id());
+
+            if (!Hash::check($request->oldpassword, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Password Update Failed',
+                ], 422);
             }
-            else
-            {
-                $success    = false;
-                $message    = 'Password Update Failed';
-                $error_code = 302;
-            }
-            
-            return response()->json([
-                'success'   =>  $success,
-                'message'   =>  $message
-            ],$error_code);
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
-    }
 
-    /*public function resetPassword(Request $request)
-    {
-        try
-        {
-            $user = User::where('mobile_no',$request->mobile_no)->first();
-            $token = $this->resetPasswordSms($user);
-        
-            return response()->json([
-                'success'   =>  true,
-                'message'   =>  'Check sms to reset the password'
-            ],200);
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
-        }     
-    }*/
-
-    public function resetPassword(ResetPasswordRequest $request)
-    {
-        try
-        {
-    $user = User::where([['mobile_no',$request->mobile_no],['usergroup_id', $request->usergroup]])->first();
-
-            $user->tokens()->delete();
-
-            $user->platform_token  = NULL;
-
+            $user->password = Hash::make($request->newpassword);
             $user->save();
 
-            $this->createAuthentication($user,$request,'reset');
-        
             return response()->json([
-                'success'   =>  true,
-                'message'   =>  'Check sms to reset the password'
-            ],200);
+                'success' => true,
+                'message' => 'Password Updated Successfully',
+            ], 200);
+        } catch (Throwable $e) {
+            Log::warning('Authenticated API password change failed.', ['exception' => get_class($e)]);
+            return response()->json(['success' => false, 'message' => 'Password Update Failed'], 500);
         }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
-        }    
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Start a mobile API password recovery. Unknown and ineligible accounts
+     * receive the same response as eligible accounts to avoid enumeration.
      */
-    public function storePassword(OTPRequest $request)
+    public function resetPassword(Request $request, RecoveryChallengeService $challenges)
     {
-        //
-        \DB::beginTransaction();
-        try
-        {
-            //$user = User::where('mobile_no',request('mobile_no'))->first();
-$user = User::where([['mobile_no',$request->mobile_no],['usergroup_id', $request->usergroup]])->first();
-            $authentication = Authentication::where([
-                ['user_id',$user->id],
-                ['status',0],
-                ['type','reset'],
-            ])->orderBy('id','DESC')->get();
+        $validator = Validator::make($request->all(), [
+            'mobile_no' => 'required|digits:10',
+            'usergroup' => 'required|integer',
+        ]);
 
-            if($authentication[0]['token'] == $request->password)
-            {
-                $authentication_update = Authentication::where('id',$authentication[0]['id'])->first();
-
-                $authentication_update->status = 1;
-
-                $authentication_update->save();
-
-                $user_update = User::where('mobile_no',$request->mobile_no)->first();
-
-                $user_update->is_reset  = 1;
-                //$user_update->password  = bcrypt($request->password);
-                $user_update->save();
-
-                \DB::commit();
-
-                return response()->json([
-                    'success'   =>  true,
-                    'message'   =>  'Password Reset Successfully',
-                ],200);
-            }
-            else
-            {
-                return response()->json([
-                    'success'   =>  false,
-                    'message'   =>  'Password Does Not Match',
-                ],302);
-            }
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'If the account is eligible, a verification code will be sent.',
+            ], 422);
         }
-        catch(Exception $e)
-        {
-            \DB::rollBack();
-            Log::info($e->getMessage());
-            dd($e->getMessage());
+
+        try {
+            $user = User::with('userprofile')
+                ->where('mobile_no', $request->mobile_no)
+                ->where('usergroup_id', $request->usergroup)
+                ->first();
+
+            if (
+                $user &&
+                $user->status === 'active' &&
+                $user->userprofile &&
+                $user->userprofile->status === 'active'
+            ) {
+                try {
+                    $issued = $challenges->issue(
+                        $user,
+                        RecoveryChallengeService::API_PASSWORD_RESET,
+                        $request->ip()
+                    );
+
+                    $this->getOTP($issued['code'], $user->mobile_no);
+                } catch (Throwable $e) {
+                    // Keep the response indistinguishable for throttled or failed delivery.
+                    Log::notice('API recovery challenge was not issued or delivered.', [
+                        'exception' => get_class($e),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Check sms to reset the password',
+            ], 200);
+        } catch (Throwable $e) {
+            Log::warning('API password recovery initiation failed.', ['exception' => get_class($e)]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Check sms to reset the password',
+            ], 200);
+        }
+    }
+
+    /**
+     * Verify the first OTP step. The challenge remains unconsumed for the
+     * final password-change request, but cannot be used after its expiry.
+     */
+    public function storePassword(Request $request, RecoveryChallengeService $challenges)
+    {
+        $validator = Validator::make($request->all(), [
+            'mobile_no' => 'required|digits:10',
+            'usergroup' => 'required|integer',
+            'password' => 'required|digits:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password Does Not Match',
+            ], 422);
+        }
+
+        try {
+            $user = User::where('mobile_no', $request->mobile_no)
+                ->where('usergroup_id', $request->usergroup)
+                ->first();
+
+            if (!$user || !$challenges->verify(
+                $user,
+                RecoveryChallengeService::API_PASSWORD_RESET,
+                (string) $request->password
+            )) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Password Does Not Match',
+                ], 422);
+            }
+
+            $user->is_reset = 1;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password Reset Successfully',
+            ], 200);
+        } catch (Throwable $e) {
+            Log::warning('API password recovery OTP verification failed.', ['exception' => get_class($e)]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Password Does Not Match',
+            ], 422);
         }
     }
 
     public function checkReset(Request $request)
     {
-        try
-        {
-            //$user = User::where('mobile_no',$request->mobile_no)->first();
-      $user = User::where([['mobile_no',$request->mobile_no],['usergroup_id', $request->usergroup]])->first();  
-            return response()->json([
-                'success'   =>  true,
-                'is_reset'  =>  $user->is_reset
-            ],200);
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
-        }    
+        $user = User::where('mobile_no', $request->mobile_no)
+            ->where('usergroup_id', $request->usergroup)
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'is_reset' => $user ? (int) $user->is_reset : 0,
+        ], 200);
     }
 
-    public function resetChangePassword(ResetChangePasswordRequest $request)
+    /**
+     * Complete recovery only with the same still-valid, previously verified
+     * challenge. Consumption, password update and token revocation are atomic.
+     */
+    public function resetChangePassword(Request $request, RecoveryChallengeService $challenges)
     {
-        try
-        {
-  $user = User::where([['mobile_no',$request->mobile_no],['usergroup_id', $request->usergroup]])->first();          
-           // $user = User::where('mobile_no',$request->mobile_no)->first();
+        $validator = Validator::make($request->all(), [
+            'mobile_no' => 'required|digits:10',
+            'usergroup' => 'required|integer',
+            'oldpassword' => 'required|digits:6',
+            'newpassword' => 'required|string|min:8',
+            'confirmpassword' => 'required|same:newpassword',
+        ]);
 
-            $authentication = Authentication::where([
-                ['user_id',$user->id],
-                ['status',1],
-                ['type','reset'],
-            ])->orderBy('id','DESC')->get();
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Change Password Failed',
+            ], 422);
+        }
 
-            $admin = User::where([['school_id',$user->school_id],['usergroup_id',3]])->first();
+        try {
+            $user = DB::transaction(function () use ($request, $challenges) {
+                $user = User::where('mobile_no', $request->mobile_no)
+                    ->where('usergroup_id', $request->usergroup)
+                    ->lockForUpdate()
+                    ->first();
 
-            if($authentication[0]['token'] == $request->oldpassword)
-            {
-                $user->tokens()->delete();
+                if (!$user || !$challenges->consumeVerified(
+                    $user,
+                    RecoveryChallengeService::API_PASSWORD_RESET,
+                    (string) $request->oldpassword
+                )) {
+                    return null;
+                }
 
-                //Change the password          
-                $user->password         = Hash::make($request->newpassword);
-                $user->platform_token   = NULL;
-                $user->is_reset         = 0;
-
+                $user->password = Hash::make($request->newpassword);
+                $user->platform_token = null;
+                $user->device_id = null;
+                $user->is_reset = 0;
                 $user->save();
 
-                if($user->email != null)
-                {
+                // Revoke only after successful proof, inside the same transaction.
+                $user->tokens()->delete();
+
+                return $user;
+            });
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Change Password Failed',
+                ], 422);
+            }
+
+            try {
+                if ($user->email) {
                     Mail::to($user->email)->queue(new ChangePassword($user));
                 }
-                $success = true;
-                $message = "Changed Password Successfully"; 
-                $error_code = 200; 
 
-                $array=[];
-
-                $array['school_id']  =   $user->school_id;
-                $array['user_id']    =   $user->id;
-                $array['message']    =   'Changed Password Successfully';
-                $array['type']       =   'private message';
-
-                event(new SinglePushEvent($array));
+                event(new SinglePushEvent([
+                    'school_id' => $user->school_id,
+                    'user_id' => $user->id,
+                    'message' => 'Changed Password Successfully',
+                    'type' => 'private message',
+                ]));
+            } catch (Throwable $notificationError) {
+                Log::warning('Password recovery notification dispatch failed.', [
+                    'exception' => get_class($notificationError),
+                ]);
             }
-            else
-            {
-                $success = false;
-                $message = "Change Password Failed";
-                $error_code = 302; 
-            }
+
             return response()->json([
-                'success'   =>  $success,
-                'message'   =>  $message
-            ],$error_code);
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
+                'success' => true,
+                'message' => 'Changed Password Successfully',
+            ], 200);
+        } catch (Throwable $e) {
+            Log::warning('API password recovery completion failed.', ['exception' => get_class($e)]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Change Password Failed',
+            ], 500);
         }
     }
 }
