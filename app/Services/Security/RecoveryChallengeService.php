@@ -94,6 +94,11 @@ class RecoveryChallengeService
                 return false;
             }
 
+            // Once verified, do not let later bad submissions exhaust the challenge.
+            if ($challenge->verified_at) {
+                return Hash::check($code, $challenge->code_hash);
+            }
+
             if ($challenge->attempt_count >= self::VERIFY_ATTEMPT_LIMIT) {
                 return false;
             }
