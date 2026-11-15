@@ -152,7 +152,7 @@ The CI search covered PHP files under `app`, `routes`, and `tests`, and matched 
 1. Implement a dedicated recovery-challenge table/model/service; never place new challenge verifiers in the shared legacy `authentications.token` field.
 2. Migrate the API password-reset flow first. Keep its existing route paths and request field names for mobile compatibility while changing the server-side proof lifecycle. No token revocation at initiation; verify OTP; re-check expiry and purpose at final password update; atomically consume; revoke sessions only after successful completion.
 3. Keep public web registration OTP on the legacy table during this first phase. Harden it separately with missing-record, expiry and replay tests; do not change shared `AuthenticationProcess` semantics as part of the API reset change.
-4. Treat parent and teacher device-wide logout as a separate recovery flow. Existing one-call endpoint has no verified challenge step; do not claim it is fixed by the API password-reset migration. Preserve route contract only after a two-step mobile-app compatibility plan is agreed and tested.
+4. Implement parent and teacher device-wide logout as a purpose-specific, two-step verified recovery flow. The legacy request path now initiates SMS challenge delivery; a new `/confirm` endpoint verifies and atomically consumes the challenge before revoking sessions. Update and test the Android clients against this contract before any production rollout; never retain the old one-call revocation behavior.
 5. Preserve the Laravel password-reset-link flow and authenticated current-password change as separate mechanisms.
 6. Test against disposable SQLite and MySQL CI databases. Do not invoke SMS, revoke live tokens, or touch live accounts during implementation.
 
@@ -165,3 +165,18 @@ rg -n --glob '*.php' 'createAuthentication\s*\(|checkAuthentication\s*\(|Authent
 ```
 
 Record all matches in the PR and expand this inventory if additional call sites appear. A successful test suite without this search is not sufficient evidence of compatibility.
+
+
+## 12. Parent and teacher device recovery implementation (PR #76)
+
+The P0 unauthenticated device-wide logout handlers have been replaced on the implementation branch by a dedicated `DeviceRecoveryController` using the existing `RecoveryChallengeService` and `RecoveryCodeDeliveryService`.
+
+- Parent request: `POST /api/logout/devices`; confirmation: `POST /api/logout/devices/confirm`.
+- Teacher request: `POST /api/teacher/logout/devices`; confirmation: `POST /api/teacher/logout/devices/confirm`.
+- The request accepts the legacy `email` field as a compatibility alias for `mobile_no`, but returns a generic response and does not revoke sessions.
+- Confirmation requires a six-digit SMS code, matching account group (parent 7 / teacher 5), issuing IP, unexpired challenge, and single-use consumption. Token deletion and clearing of device/push-token metadata occur in the same database transaction after proof.
+- Parent and teacher challenges use separate purposes and cannot be replayed across account groups.
+- Legacy controller methods now return HTTP 410 and cannot directly revoke tokens.
+- Feature tests cover parent and teacher recovery, no revocation before proof, wrong-code rejection, successful revocation, replay rejection, and cross-role rejection. Delivery is mocked; CI uses synthetic users only.
+
+**Compatibility / rollout gate:** this intentionally changes the old one-call endpoint from immediate revocation to challenge initiation. The Android parent and teacher clients must be updated to request, collect and submit the OTP before rollout. Until app parity is demonstrated, do not deploy or activate this server change. No live SMS, live accounts, or production token revocation has been used.
