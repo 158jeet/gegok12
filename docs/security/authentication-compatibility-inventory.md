@@ -191,3 +191,18 @@ The implementation branch now changes all three MSG91 cURL call sites to:
 - `CURLOPT_SSL_VERIFYPEER => true`
 
 This prevents SMS API credentials and OTP payloads from being sent over a connection whose server certificate cannot be validated. This change affects the shared SMS trait, so CI must verify syntax and application tests. No live SMS request was made. This does not replace the need to migrate away from direct cURL/env access to centrally managed Laravel HTTP client configuration in a separately reviewed integration-hardening task.
+
+
+## 15 November 2026 — Owner decision implementation update
+
+The Owner's channel and device-recovery decisions are now reflected in the implementation branch:
+
+- API password-recovery delivery uses a dedicated queued ApiPasswordRecoveryCode mailable and the account's own verified email address. The unauthenticated caller cannot provide or override the destination.
+- Missing or unverified email fails closed with the same generic public response; there is no SMS fallback.
+- Recovery challenges default to the email channel and the API reset initiation explicitly records email.
+- The recovery delivery service no longer uses the MSG91 trait. The existing MSG91 transport remains relevant only to other ordinary SMS notifications.
+- Parent/teacher OTP device-recovery controllers, routes and tests have been removed/deferred. The legacy unauthenticated mass-logout paths are mapped to the legacy handlers that return HTTP 410.
+- Authenticated logout and authenticated current-password change remain separate.
+- Synthetic tests cover queued email delivery, unverified-email rejection, email channel persistence, recovery completion and the legacy HTTP 410 boundary. CI must still validate these changes at the exact current head.
+
+Registration/mobile-verification OTP remains a separate legacy workflow and has not been silently changed.
