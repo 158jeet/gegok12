@@ -29,6 +29,8 @@ Route::group([
     Route::get('/designation/list', 'SandboxController@getDesignation');
 
     Route::post('/teacher/login', 'LoginController@login');
+    // Legacy unauthenticated device-wide logout is deliberately disabled (HTTP 410).
+    Route::post('/teacher/logout/devices', 'LoginController@logoutDevices');
 });
 
 // lesson-plan-approval
