@@ -29,7 +29,7 @@ jobs:
       - name: Inventory authentication and OTP call sites
         run: |
           set -o pipefail
-          grep -R -n -E --include='*.php' 'createAuthentication|checkAuthentication|Authentication::|new Authentication|authentications|logoutDevices' app routes tests | tee /tmp/tagore-auth-call-sites.txt
+          grep -R -n -E --include='*.php' -e 'createAuthentication' -e 'checkAuthentication' -e 'Authentication::' -e 'new Authentication' -e 'authentications' -e 'logoutDevices' -e 'tokens\\(\\)->delete' app routes tests | tee /tmp/tagore-auth-call-sites.txt
           test -s /tmp/tagore-auth-call-sites.txt
           {
             echo "## Authentication and OTP call-site inventory"
@@ -40,6 +40,12 @@ jobs:
             cat /tmp/tagore-auth-call-sites.txt
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve authentication call-site inventory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: authentication-call-sites-${{ github.sha }}
+          path: /tmp/tagore-auth-call-sites.txt
+          if-no-files-found: error
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
