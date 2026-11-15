@@ -6,8 +6,6 @@ use App\Http\Controllers\Api\TagoreMobileController;
 
 Route::post('/parent/login', 'Api\TokenController@issueToken');
 
-Route::post('/logout/devices', [\App\Http\Controllers\Api\DeviceRecoveryController::class, 'requestParent'])->middleware('throttle:5,1,parent-device-recovery-init');
-Route::post('/logout/devices/confirm', [\App\Http\Controllers\Api\DeviceRecoveryController::class, 'confirmParent'])->middleware('throttle:5,1,parent-device-recovery-confirm');
 
 //Route::get('/search/users','Api\Search\UserSearchController@index'); --test route hidden
 
