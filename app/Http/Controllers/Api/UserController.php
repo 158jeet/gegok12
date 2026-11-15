@@ -151,7 +151,8 @@ class UserController extends Controller
             if (!$user || !$challenges->verify(
                 $user,
                 RecoveryChallengeService::API_PASSWORD_RESET,
-                (string) $request->password
+                (string) $request->password,
+                $request->ip()
             )) {
                 return response()->json([
                     'success' => false,
