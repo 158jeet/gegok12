@@ -3,7 +3,7 @@
 **Branch:** security/authentication-recovery-hardening  
 **Base:** main at a5806356ad317c8126845a6512b80575376a7f63  
 **Date:** 2026-11-15  
-**Status:** source inspection recorded; code changes intentionally not started until compatibility decisions are reviewed  
+**Status:** repository-wide CI call-site search completed on 2026-11-15; implementation can proceed in isolated phases  
 **Data boundary:** source only and synthetic CI fixtures; no live accounts, production database, SMS or token revocation
 
 ## 1. Scope and evidence standard
@@ -108,6 +108,53 @@ These currently cover web login, role redirects, login throttling, logout, email
 5. Harden the registration OTP FormRequest/controller separately: safe missing-record handling, expiry and single-use completion, no plaintext OTP persistence where a compatible migration path is available.
 6. Add synthetic feature tests before enabling either recovery completion endpoint.
 7. Do not activate live SMS, perform live account revocation, merge or deploy as part of this branch.
+
+## 10. Exact-checkout CI search results (2026-11-15)
+
+The ERP CI backend ran the repository-wide search against the exact PR checkout. The successful job preserved the raw output as the `authentication-call-sites-<commit>` workflow artifact. The artifact for commit `88953f2bd6a2a44992a772096c1f4d167f9aa8f2` contained 35 matching source lines across the following call-site groups.
+
+### Authentication model / OTP / recovery references (26 lines)
+
+| File | Confirmed references |
+|---|---|
+| `app/Traits/AuthenticationProcess.php` | `createAuthentication`, model construction, `checkAuthentication`, latest registration record |
+| `app/Http/Controllers/Auth/RegisterController.php` | Registration OTP creation |
+| `app/Http/Controllers/Api/UserController.php` | Reset OTP creation, verification/status update, final reset lookup |
+| `app/Http/Controllers/Api/LoginController.php` | Parent device-wide logout handler |
+| `app/Http/Controllers/Api/Teacher/LoginController.php` | Teacher device-wide logout handler |
+| `app/Http/Controllers/OTPController.php` | Web registration OTP verification and status update |
+| `app/Http/Middleware/MustBeOTP.php` | Registration verification gate |
+| `app/Http/Requests/OTPRequest.php` | Web registration OTP validation (three custom checks) |
+| `app/Http/Requests/API/OTPRequest.php` | API reset OTP validation (three custom checks) |
+| `app/Http/Requests/API/ResetChangePasswordRequest.php` | Final API reset OTP validation |
+| `app/Models/Authentication.php` | Legacy table binding |
+| `routes/api.php`, `routes/teacherapi.php` | Parent and teacher device-wide logout route declarations |
+
+### Direct Sanctum token revocation references (9 lines)
+
+| File | Classification |
+|---|---|
+| `app/Http/Controllers/Api/UserController.php` | **P0:** reset initiation revokes all tokens before OTP proof; final reset revokes tokens after password change |
+| `app/Http/Controllers/Api/LoginController.php` | Authenticated logout plus unauthenticated parent device-wide recovery |
+| `app/Http/Controllers/Api/Teacher/LoginController.php` | Authenticated logout plus unauthenticated teacher device-wide recovery |
+| `app/Http/Controllers/Admin/UserController.php` | Admin account disable/reset lifecycle; inspect exact operation before changing |
+| `app/Http/Controllers/Admin/UserProfileController.php` | Admin credential update intentionally revokes tokens |
+| `app/Http/Controllers/Api/TokenController.php` | Authenticated token logout/revocation |
+
+The fixed-string token-revocation search is intentionally separate from the regular-expression call-site search so PHP parentheses cannot cause false negatives. It also surfaced administrative credential changes and normal authenticated logout; those are not to be rewritten as OTP recovery.
+
+### Search boundary
+
+The CI search covered PHP files under `app`, `routes`, and `tests`, and matched the named OTP/model/table/logout symbols plus direct `->tokens()->delete` calls. This is strong evidence for these specific patterns in the checked-out tree; it is not a semantic audit of every authentication mechanism, external mobile-app submodule, vendor package, or dynamically constructed query. The downloaded artifact is retained by GitHub Actions for 90 days.
+
+## 11. Implementation sequence and compatibility boundary
+
+1. Implement a dedicated recovery-challenge table/model/service; never place new challenge verifiers in the shared legacy `authentications.token` field.
+2. Migrate the API password-reset flow first. Keep its existing route paths and request field names for mobile compatibility while changing the server-side proof lifecycle. No token revocation at initiation; verify OTP; re-check expiry and purpose at final password update; atomically consume; revoke sessions only after successful completion.
+3. Keep public web registration OTP on the legacy table during this first phase. Harden it separately with missing-record, expiry and replay tests; do not change shared `AuthenticationProcess` semantics as part of the API reset change.
+4. Treat parent and teacher device-wide logout as a separate recovery flow. Existing one-call endpoint has no verified challenge step; do not claim it is fixed by the API password-reset migration. Preserve route contract only after a two-step mobile-app compatibility plan is agreed and tested.
+5. Preserve the Laravel password-reset-link flow and authenticated current-password change as separate mechanisms.
+6. Test against disposable SQLite and MySQL CI databases. Do not invoke SMS, revoke live tokens, or touch live accounts during implementation.
 
 ## 9. CI checkout search gate
 
