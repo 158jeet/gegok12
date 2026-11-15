@@ -94,7 +94,7 @@ class UserController extends Controller
                 $user->status === 'active' &&
                 $user->userprofile &&
                 $user->userprofile->status === 'active' &&
-                (bool) $user->email_verified &&
+                ((bool) $user->email_verified || !empty($user->email_verified_at)) &&
                 filter_var((string) $user->email, FILTER_VALIDATE_EMAIL)
             ) {
                 try {
