@@ -21,6 +21,8 @@ class ApiPasswordRecoveryTest extends TestCase
         $school = School::factory()->create();
         $user = User::factory()->parent()->for($school)->create([
             'mobile_no' => '9876543210',
+            'email' => 'parent@example.test',
+            'email_verified' => true,
             'status' => 'active',
         ]);
 
@@ -39,7 +41,7 @@ class ApiPasswordRecoveryTest extends TestCase
         $delivery = \Mockery::mock(RecoveryCodeDeliveryService::class);
         $delivery->shouldReceive('send')
             ->once()
-            ->andReturnUsing(function ($code, $mobile) use (&$capturedCode) {
+            ->andReturnUsing(function ($code, $user) use (&$capturedCode) {
                 $capturedCode = $code;
             });
 
@@ -66,6 +68,7 @@ class ApiPasswordRecoveryTest extends TestCase
 
         $challenge = DB::table('recovery_challenges')->where('user_id', $user->id)->first();
         $this->assertNotNull($challenge);
+        $this->assertSame('email', $challenge->channel);
         $this->assertNotSame($code, $challenge->code_hash);
         $this->assertTrue(Hash::check($code, $challenge->code_hash));
 
@@ -139,6 +142,26 @@ class ApiPasswordRecoveryTest extends TestCase
         $this->assertFalse(Hash::check('NewSecurePass123', $user->fresh()->password));
     }
 
+
+    public function test_unverified_or_missing_email_fails_closed_without_creating_a_challenge(): void
+    {
+        $user = $this->makeActiveParent();
+        $user->email = null;
+        $user->email_verified = false;
+        $user->email_verified_at = null;
+        $user->save();
+
+        $this->postJson('/api/password/reset', [
+            'mobile_no' => $user->mobile_no,
+            'usergroup' => User::PARENT_USERGROUP_ID,
+        ])->assertOk()->assertJson([
+            'success' => true,
+            'message' => 'If the account is eligible, a recovery code will be sent to its registered email address.',
+        ]);
+
+        $this->assertDatabaseCount('recovery_challenges', 0);
+    }
+
     public function test_unknown_account_receives_same_recovery_initiation_response_without_sms(): void
     {
         $this->postJson('/api/password/reset', [
@@ -146,7 +169,7 @@ class ApiPasswordRecoveryTest extends TestCase
             'usergroup' => User::PARENT_USERGROUP_ID,
         ])->assertOk()->assertJson([
             'success' => true,
-            'message' => 'Check sms to reset the password',
+            'message' => 'If the account is eligible, a recovery code will be sent to its registered email address.',
         ]);
 
         $this->assertDatabaseCount('recovery_challenges', 0);
