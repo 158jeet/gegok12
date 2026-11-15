@@ -258,3 +258,41 @@ Both handlers then call `$user->tokens()->delete()`, clear `platform_token` and 
 4. Keep PRs #74 and #75 isolated pending CI evidence; their current commits report no status checks and no PR-triggered workflow runs in the connector response. Do not treat absent checks as passing.
 
 **Boundary:** no production deployment, live DB access, live endpoint calls, or session revocation was performed.
+
+
+## Verified API and event route details — 2026-11-15 follow-up
+
+The following route declarations and handler bodies were re-opened directly from the research branch. These are confirmed source observations, not live API tests.
+
+### Exact route declarations and middleware context
+
+- `routes/api.php`: `POST /api/logout/devices` → `Api\\LoginController@logoutDevices`. It is declared before the `v2` route group with `auth:sanctum`; therefore the device-wide recovery route is not inside that Sanctum group.
+- `routes/teacherapi.php`: `POST /api/teacher/logout/devices` → `Api\\Teacher\\LoginController@logoutDevices`. It is declared in the outer teacher API namespace before the later `prefix=teacher, middleware=auth:sanctum` group.
+- `routes/api.php`: `GET /api/v2/leave/delete/{id}` → `Api\\LeaveController@destroy`, inside the `auth:sanctum` v2 group.
+- `routes/api.php`: `GET /api/v2/task/delete/{id}` → `Api\\TaskController@destroy`, inside the `auth:sanctum` v2 group.
+- `routes/admin.php`: `GET /admin/event/approve/{id}` → `Admin\\EventsController@eventapprove`.
+
+### Handler evidence refined
+
+**Device-wide logout:** the parent handler selects the first user with submitted `email` matched to `mobile_no`, `device_id != null`, and `usergroup_id=7`; teacher handler does the same with `usergroup_id=5`. Both delete all Sanctum tokens and clear `platform_token` and `device_id`. The request field is named `email` although it is used as a mobile number. Neither handler checks authentication or recovery proof. The route uses POST, so this is not a GET-mutation finding; it is an authorization/recovery-proof failure. Both handlers should also return a generic, consistent response when no matching account exists.
+
+**Parent leave:** `LeaveController@destroy($id)` loads `TeacherLeaveApplication::where('id',$id)->first()`, sets status to `cancelled`, saves, soft-deletes, and records an activity log. The method does not constrain the row by the authenticated user's school, academic year, or the parent/student relationship. The related `show($id)` and `update($id)` methods also use ID-only lookups, so the remediation scope must include read and update authorization, not only deletion. `index($student_id)` does apply school and active academic-year filters, but accepts a student ID and still needs proof that the requested student is linked to the authenticated parent.
+
+**Parent task:** `TaskController@destroy($id)` loads `Task::where('id',$id)->first()`, deletes every `TaskAssignee` for that task, then deletes the task and logs the action. No school, academic-year, authenticated-user, or assignee ownership constraint is applied in this method. The parent API route is GET and is inside Sanctum; both the unsafe verb and missing object-level authorization must be fixed. Its show/edit methods must be checked for the same object-scope weakness.
+
+**Event approval:** the GET route calls `EventsController@eventapprove($id)`, which loads by ID, sets status to active, saves, and emits class- or school-level push/notification events. This is a state transition with external side effects. Convert it to an explicit POST action and enforce that the authenticated approver has approval permission for the event's school. A cross-school event ID must be denied and GET must never trigger notifications.
+
+### Updated implementation order
+
+1. Parent and teacher device-wide logout: verified, single-use recovery challenge and generic responses; no mobile-only revocation.
+2. Parent leave/task API: authorize family/student relationship and school/year scope for index/show/update/destroy; change destructive task route to DELETE; preserve a documented mobile API migration plan.
+3. Event approval: POST-only transition with school-scoped approval policy and notification-side-effect tests.
+4. Continue the remaining GET delete candidate map, with per-role caller and authorization tests before changing each route.
+
+### Current pull-request/CI snapshot
+
+At this follow-up check, PR #72 head `85094f7e6951d9c3c78940ca9dca2aa3dd4e8ebc` has all three pull-request workflows completed successfully: ERP CI run 1026, ERP Full Acceptance Convergence run 616, and TagoreK12 Prototype run 1555. This validates the documentation/research branch CI only; it is not a production deployment or live-data acceptance.
+
+PRs #74 and #75 each remain open and draft. Their current heads have no PR-triggered workflow runs returned by the workflow-run lookup. Both are now reported `mergeable=true` by PR metadata, but their branch comparisons against the updated research base still show one commit behind and diverged from the common base. Do not mark these two code changes validated until their current heads receive explicit passing CI checks.
+
+**Boundary:** no live endpoint, user account, student/family data, production database, session or device token was touched.
