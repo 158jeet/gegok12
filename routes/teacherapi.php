@@ -29,8 +29,8 @@ Route::group([
     Route::get('/designation/list', 'SandboxController@getDesignation');
 
     Route::post('/teacher/login', 'LoginController@login');
-Route::post('/teacher/logout/devices', [\\App\\Http\\Controllers\\Api\\DeviceRecoveryController::class, 'requestTeacher'])->middleware('throttle:5,1,teacher-device-recovery-init');
-    Route::post('/teacher/logout/devices/confirm', [\\App\\Http\\Controllers\\Api\\DeviceRecoveryController::class, 'confirmTeacher'])->middleware('throttle:5,1,teacher-device-recovery-confirm');
+Route::post('/teacher/logout/devices', [\App\Http\Controllers\Api\DeviceRecoveryController::class, 'requestTeacher'])->middleware('throttle:5,1,teacher-device-recovery-init');
+    Route::post('/teacher/logout/devices/confirm', [\App\Http\Controllers\Api\DeviceRecoveryController::class, 'confirmTeacher'])->middleware('throttle:5,1,teacher-device-recovery-confirm');
 });
 
 // lesson-plan-approval
