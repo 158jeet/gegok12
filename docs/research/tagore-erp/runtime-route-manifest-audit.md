@@ -226,3 +226,35 @@ A follow-up read inspected selected handlers and their Blade entry pages:
 - The academic-year index Blade delegates rendering and actions to a Vue component named `list-academic-year`; the events index delegates to `show-event` and `event-popup`; the subject index includes `admin.subject.list`; the teacher assignment index delegates to `list-tab-assignment`. The precise component source and HTTP callers have **not** yet been traced, so caller compatibility remains open. The route audit must follow these component names to their source before implementation.
 
 These are source-level conclusions only. No endpoint was invoked against any database, and no route/controller was changed. The next pass should trace the named Vue components and the remaining controller bodies, then write the GET-no-mutation and tenant-ownership regression tests on disposable fixtures.
+
+
+## Follow-up source pass — public device logout and API mutation boundaries (2026-11-15)
+
+The route declarations and both device-logout handlers were re-opened on the research branch. This is source-level inspection only; no endpoint was invoked and no live account or database was accessed.
+
+### Unauthenticated device-wide logout routes — confirmed
+
+| API route | Route group | Handler | Account selector |
+|---|---|---|---|
+| `POST /api/logout/devices` | API middleware only; declared outside the Sanctum group | `Api\\LoginController@logoutDevices` | Submitted mobile number + `usergroup_id = 7` + non-null device ID |
+| `POST /api/teacher/logout/devices` | API middleware only; declared in `routes/teacherapi.php` outside the authenticated teacher group | `Api\\Teacher\\LoginController@logoutDevices` | Submitted mobile number + `usergroup_id = 5` + non-null device ID |
+
+Both handlers then call `$user->tokens()->delete()`, clear `platform_token` and `device_id`, and save the account. Neither handler checks an authenticated principal, OTP, verified recovery session, current-device token, or other proof that the caller controls the account. The route files confirm these declarations are outside the later `auth:sanctum` groups. This corroborates the earlier P0 source finding: a caller who knows a registered mobile number can attempt to revoke all sessions for the matching parent/teacher account.
+
+**Implementation decision:** do not simply add Sanctum middleware to these endpoints, because their apparent purpose is recovery when a user has lost access to an existing device. Replace the current mobile-number-only trust with a server-side, short-lived, single-use verified recovery challenge. Bind the challenge to account ID, user group and recovery channel; enforce expiry, attempt limits and rate limits; consume it atomically before revoking sessions. Return generic responses for unknown accounts and failed challenges. Keep ordinary logout of the current device authenticated and separate from device-wide recovery. Add synthetic tests for unauthenticated arbitrary numbers, wrong/expired/replayed challenge, cross-role confusion, rate limits, successful verified revocation, and concurrent replay. Do not expose whether a mobile number is registered.
+
+### API mutation route-method and ownership findings reconfirmed
+
+- `POST /api/logout/devices` and `POST /api/teacher/logout/devices` are both unsafe identity operations despite using POST; HTTP method alone does not make them authorized.
+- `GET /api/v2/leave/delete/{id}` and `GET /api/v2/task/delete/{id}` remain inside the `auth:sanctum` group, but their handlers perform state changes. The leave handler uses an ID-only lookup, changes status to cancelled, saves, deletes and logs. The task handler deletes task assignees and then the task using an ID-only task lookup. Authentication does not establish school, academic-year, guardian/student, assignee or task ownership.
+- `routes/teacherapi.php` already uses DELETE for the teacher's own assignment, homework, leave and task deletion routes inside the authenticated teacher group. This is useful precedent, but the controller-level ownership checks still need negative tests.
+- The mobile API route contracts must be inventoried before changing the parent-side GET leave/task delete routes; do not assume the web Vue caller migration is sufficient for mobile clients.
+
+### Immediate priority order
+
+1. P0: redesign and test both unauthenticated device-wide logout flows with verified recovery proof.
+2. P0: add cross-school and non-owner/non-assignee negative tests for API v2 leave/task reads and mutations; scope handlers to the authenticated user's permitted family/role and institution.
+3. P1: continue mapping all 50 GET destroy/delete candidates to exact Blade/Vue/mobile callers and controller authorization before each isolated verb migration.
+4. Keep PRs #74 and #75 isolated pending CI evidence; their current commits report no status checks and no PR-triggered workflow runs in the connector response. Do not treat absent checks as passing.
+
+**Boundary:** no production deployment, live DB access, live endpoint calls, or session revocation was performed.
