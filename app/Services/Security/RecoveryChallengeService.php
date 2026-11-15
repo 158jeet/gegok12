@@ -79,14 +79,18 @@ class RecoveryChallengeService
      * Verify the first recovery step. A successful challenge remains available
      * for the final password-change step, but expires at the original deadline.
      */
-    public function verify(User $user, string $purpose, string $code): bool
+    public function verify(User $user, string $purpose, string $code, ?string $ipAddress = null): bool
     {
         $this->assertPurpose($purpose);
 
-        return DB::transaction(function () use ($user, $purpose, $code) {
+        return DB::transaction(function () use ($user, $purpose, $code, $ipAddress) {
             $challenge = $this->latestChallengeForUpdate($user, $purpose);
 
             if (!$challenge || $challenge->consumed_at || $challenge->expires_at->isPast()) {
+                return false;
+            }
+
+            if ($challenge->ip_address !== null && $challenge->ip_address !== $ipAddress) {
                 return false;
             }
 
