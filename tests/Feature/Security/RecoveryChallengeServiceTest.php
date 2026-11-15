@@ -79,6 +79,27 @@ class RecoveryChallengeServiceTest extends TestCase
         $this->assertFalse($service->verify($user, RecoveryChallengeService::API_PASSWORD_RESET, $issued['code']));
     }
 
+    public function test_initial_verification_requires_the_issuing_ip_address(): void
+    {
+        $user = $this->makeUser();
+        $service = app(RecoveryChallengeService::class);
+        $issued = $service->issue($user, RecoveryChallengeService::API_PASSWORD_RESET, '203.0.113.10');
+
+        $this->assertFalse($service->verify(
+            $user,
+            RecoveryChallengeService::API_PASSWORD_RESET,
+            $issued['code'],
+            '198.51.100.20'
+        ));
+
+        $this->assertTrue($service->verify(
+            $user,
+            RecoveryChallengeService::API_PASSWORD_RESET,
+            $issued['code'],
+            '203.0.113.10'
+        ));
+    }
+
     public function test_expired_challenge_is_rejected(): void
     {
         $user = $this->makeUser();
