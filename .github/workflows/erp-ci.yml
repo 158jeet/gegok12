@@ -30,6 +30,7 @@ jobs:
         run: |
           set -o pipefail
           grep -R -n -E --include='*.php' -e 'createAuthentication' -e 'checkAuthentication' -e 'Authentication::' -e 'new Authentication' -e 'authentications' -e 'logoutDevices' -e 'tokens\\(\\)->delete' app routes tests | tee /tmp/tagore-auth-call-sites.txt
+          grep -R -n -F --include='*.php' -- '->tokens()->delete' app routes tests | tee -a /tmp/tagore-auth-call-sites.txt || true
           test -s /tmp/tagore-auth-call-sites.txt
           {
             echo "## Authentication and OTP call-site inventory"
