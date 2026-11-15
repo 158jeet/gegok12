@@ -26,6 +26,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Inventory authentication and OTP call sites
+        run: |
+          set -o pipefail
+          rg -n --glob '*.php' 'createAuthentication\\s*\\(|checkAuthentication\\s*\\(|Authentication::|new Authentication|authentications|logoutDevices\\s*\\(' app routes tests | tee /tmp/tagore-auth-call-sites.txt
+          test -s /tmp/tagore-auth-call-sites.txt
+          {
+            echo "## Authentication and OTP call-site inventory"
+            echo
+            echo 'The following matches were collected from the exact CI checkout:'
+            echo
+            echo '~~~text'
+            cat /tmp/tagore-auth-call-sites.txt
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
