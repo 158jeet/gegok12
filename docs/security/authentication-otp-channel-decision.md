@@ -37,3 +37,25 @@ The existing public web registration mobile-verification flow uses the legacy OT
 - Existing email reset links, authenticated password changes and registration behavior remain regression-tested.
 - Device-wide recovery remains out of scope until separately approved.
 - PR remains draft until code, tests, and compatibility evidence reflect this decision.
+
+## Owner-account authority and recovery policy (additional owner direction)
+
+1. Tagore ERP has one administrative authority: the **Owner** account belonging to the proprietor. Do not create or introduce a separate general-purpose Admin account or parallel administrator role as part of this work.
+2. Preserve the full administrative rights on the Owner account, including institution/group-wide oversight, configuration, user and role administration, and the ability to change and reset passwords for managed accounts. Do not grant these powers to cashier, accountant, principal, coordinator, or other operational roles by implication.
+3. The Owner must be able to change their own password while authenticated, using the current-password verification flow. A successful password change must be auditable and invalidate other active sessions/tokens according to the established security policy, without locking out the current session unexpectedly.
+4. For Owner password recovery, send the one-time recovery code only to the Owner account's own **registered and verified email address**. Resolve the destination from the uniquely identified Owner account on the server; never accept a destination email from the unauthenticated request, never use SMS, and never fall back to another administrator's email.
+5. Do not hard-code the Owner's email address in source code, documentation, fixtures, or Git history. The production Owner account's verified email is the source of truth. If it is absent or unverified, fail closed and require a secure, authenticated Owner-side email verification/update process; do not disclose account existence or silently use another destination.
+6. Ensure there is exactly one active Owner identity in the configured production tenant/system scope. CI should use synthetic fixtures to test the single-owner invariant and must not read or mutate production users.
+7. The Owner retains the ability to manage passwords for other users through an authenticated, audited owner-only workflow. For a managed user's password reset, notify that user through their own verified email where available; never expose plaintext passwords or allow an operator to choose an arbitrary recovery destination.
+8. This owner-only authority does not reinstate the unsafe unauthenticated device-wide logout endpoint. Parent/teacher device recovery remains deferred and legacy unauthenticated mass-revocation remains HTTP 410.
+
+## Additional acceptance tests required
+
+- A single active Owner account can access all Owner-authorized administration and user/password-management functions.
+- No second generic Admin account/role is provisioned by the new workflow; non-owner roles cannot escalate to Owner.
+- Owner self-service password change succeeds only after current-password verification and is audited.
+- Owner recovery code is delivered only to the Owner account's verified email, with no SMS or caller-supplied destination path.
+- Missing/unverified Owner email fails closed with a generic public response and a clear owner-side remediation path.
+- Owner can initiate an audited password reset for another user; non-owner roles cannot.
+- Password recovery remains hash-stored, short-lived, rate-limited, purpose-bound and atomically single-use.
+
