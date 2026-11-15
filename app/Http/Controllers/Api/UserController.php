@@ -11,7 +11,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Mail\ChangePassword;
 use App\Models\User;
 use App\Services\Security\RecoveryChallengeService;
-use App\Traits\MSG91;
+use App\Services\Security\RecoveryCodeDeliveryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +23,6 @@ use Throwable;
 
 class UserController extends Controller
 {
-    use MSG91;
-
     public function updatetoken(Request $request)
     {
         try {
@@ -71,7 +69,7 @@ class UserController extends Controller
      * Start a mobile API password recovery. Unknown and ineligible accounts
      * receive the same response as eligible accounts to avoid enumeration.
      */
-    public function resetPassword(Request $request, RecoveryChallengeService $challenges)
+    public function resetPassword(Request $request, RecoveryChallengeService $challenges, RecoveryCodeDeliveryService $delivery)
     {
         $validator = Validator::make($request->all(), [
             'mobile_no' => 'required|digits:10',
@@ -104,7 +102,7 @@ class UserController extends Controller
                         $request->ip()
                     );
 
-                    $this->getOTP($issued['code'], $user->mobile_no);
+                    $delivery->send($issued['code'], $user->mobile_no);
                 } catch (Throwable $e) {
                     // Keep the response indistinguishable for throttled or failed delivery.
                     Log::notice('API recovery challenge was not issued or delivered.', [
