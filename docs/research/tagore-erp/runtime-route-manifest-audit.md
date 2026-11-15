@@ -329,3 +329,16 @@ Create a dedicated recovery challenge service rather than reusing the current Au
 9. No exception path calls `dd()` or leaks account existence/OTP data.
 
 **Priority update:** existing OTP expiry/replay flaws raise the recovery-work item from a design-only task to a broader authentication hardening task. Do not ship a new recovery endpoint on top of these primitives without these controls and synthetic tests.
+
+
+## OTP audit precision correction — FormRequest expiry validation (2026-11-15)
+
+A subsequent direct inspection of the three API FormRequest classes on main refined the earlier summary above. The statement that the initial OTP verification path has no expiry check was too broad and is corrected here:
+
+- OTPRequest::rules() registers checkotp_expiry, which compares the newest pending reset record's expires_on with the current time. It also checks the submitted IP address against the record. Therefore storePassword(OTPRequest $request) does receive expiry and IP validation through its FormRequest before the controller executes, assuming normal FormRequest validation is active.
+- That initial verification still compares the OTP against the plaintext authentication.token; the custom validators index $otp[0] without an empty-record guard and dereference $user->id without a safe missing-user path. The controller then marks the record verified but does not consume it.
+- ResetChangePasswordRequest::rules() checks the same plaintext token in the latest verified reset record but does not check expires_on. Consequently the final password-change transition has no expiry enforcement, even though the first verification transition does.
+- storePassword() opens a DB transaction; its mismatch response returns without an explicit rollback. This should be corrected as part of the transactional rewrite.
+- The earlier findings remain: reset initiation revokes Sanctum tokens before OTP proof; OTP generation uses rand(); OTP is stored in plaintext; no explicit bounded attempt/rate limit was found in the inspected flow; final password change does not atomically consume the verified challenge; and exception handlers call dd().
+
+**Implementation acceptance must therefore test expiry at both transitions**, not merely at initial OTP verification. This correction supersedes only the overly broad expiry statement above; it does not reduce the priority of the authentication hardening work.
