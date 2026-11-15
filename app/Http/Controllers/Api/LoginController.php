@@ -92,34 +92,11 @@ class LoginController extends Controller implements ShouldQueue
 
     public function logoutDevices(Request $request)
     {
-
-
-        try
-        {
-             $user = User::where([['mobile_no',$request->email],['device_id','!=',null],['usergroup_id',7]])->first();
-
-            if ($user!=null) 
-               {
-
-                $user->tokens()->delete();
-
-                $user->platform_token  = NULL;
-
-                $user->device_id       = NULL;
-
-                $user->save();
-
-                 return response()->json([
-                'success'   =>  true,
-                'message'   =>  'Logged out from all devices'
-                 ],200);
-             }
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
-
+        // Legacy direct device-wide logout is intentionally disabled. Use the
+        // verified OTP recovery endpoints registered in routes/api.php.
+        return response()->json([
+            'success' => false,
+            'message' => 'Verified device recovery is required.',
+        ], 410);
     }
 }
