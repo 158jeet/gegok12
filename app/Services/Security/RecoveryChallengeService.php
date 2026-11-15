@@ -32,7 +32,7 @@ class RecoveryChallengeService
      *
      * @return array{challenge: RecoveryChallenge, code: string}
      */
-    public function issue(User $user, string $purpose, ?string $ipAddress, string $channel = 'sms'): array
+    public function issue(User $user, string $purpose, ?string $ipAddress, string $channel = 'email'): array
     {
         $this->assertPurpose($purpose);
 
