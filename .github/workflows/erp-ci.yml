@@ -101,40 +101,243 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Prepare disposable E2E database
-        run: touch database/e2e.sqlite
+        run: |
+          rm -f database/e2e.sqlite
+          touch database/e2e.sqlite
+          php artisan key:generate --force --no-interaction
+          php artisan optimize:clear --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Build application assets for Blade rendering
-        run: |
-          npm ci
-          npm run build
+        run: npm install --no-audit --no-fund && npm run production
       - name: Install browser E2E dependencies
-        run: npm install --no-save playwright
+        working-directory: e2e
+        run: npm install --no-audit --no-fund
       - name: Install Chromium
+        working-directory: e2e
         run: npx playwright install --with-deps chromium
       - name: Prepare Laravel runtime directories
-        run: mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+        run: |
+          mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs
+          chmod -R ug+rwX storage bootstrap/cache
+
       - name: Verify tracked dashboard logo survives frontend build
-        run: test -f public/images/logo.png
+        run: |
+          mkdir -p public/uploads
+          git show HEAD:public/uploads/tgi-logo.webp > public/uploads/tgi-logo.webp
+          test -s public/uploads/tgi-logo.webp
+
       - name: Start disposable Laravel server and verify logo asset
         run: |
-          php artisan key:generate --force --no-interaction
-          php artisan migrate --force --no-interaction
-          php artisan db:seed --force --no-interaction
-          php artisan serve --host=127.0.0.1 --port=8000 > /tmp/tagore-e2e-server.log 2>&1 &
-          echo $! > /tmp/tagore-e2e-server.pid
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/login >/dev/null && break; sleep 2; done
-          curl -fsS http://127.0.0.1:8000/images/logo.png >/dev/null
+          nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/tagore-e2e-server.log 2>&1 &
+          ready=0
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/__e2e/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Laravel E2E server did not become ready"
+            cat /tmp/tagore-e2e-server.log
+            exit 1
+          fi
+          logo_ready=0
+          for i in {1..15}; do
+            if curl -fsS http://127.0.0.1:8000/uploads/tgi-logo.webp -o /tmp/tagore-logo.webp; then
+              logo_ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$logo_ready" -ne 1 ] || [ ! -s /tmp/tagore-logo.webp ]; then
+            echo "Dashboard logo is not being served by Laravel"
+            cat /tmp/tagore-e2e-server.log
+            exit 1
+          fi
+          file /tmp/tagore-logo.webp
+          cat /tmp/tagore-e2e-server.log
       - name: Run mutating administrator acceptance against disposable CI database
-        run: php artisan test --filter=AdministratorAcceptance
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+          APP_ENV: testing
+        run: npx playwright test tests/admin-acceptance --project=desktop --workers=1
+
       - name: Run human-style authenticated E2E
-        run: node tests/e2e/run-authenticated.js
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npm run test:ci
       - name: Upload browser report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-e2e-report
-          path: tests/e2e/results
-          if-no-files-found: ignore
+          name: tagore-human-style-e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: warn
+
+
+  production-docker-smoke:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: tagore-ci-${{ github.run_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create production test environment
+        run: |
+          cat > .env.school <<'EOF'
+          APP_NAME="Tagore ERP"
+          APP_ENV=production
+          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1
+          TAGORE_NGINX_CERTS_PATH=./letsencrypt/live
+          TIMEZONE=Asia/Kolkata
+          DB_CONNECTION=mysql
+          DB_HOST=db
+          DB_PORT=3306
+          DB_DATABASE=tagore_erp
+          DB_USERNAME=tagore
+          DB_PASSWORD=TagoreTest@2026
+          TAGORE_DB_ROOT_PASSWORD=TagoreRoot@2026
+          QUEUE_CONNECTION=database
+          CACHE_STORE=file
+          SESSION_DRIVER=file
+          SESSION_SECURE_COOKIE=false
+          LOG_CHANNEL=stderr
+          FILESYSTEM_DISK=local
+          MAIL_MAILER=array
+          REDIS_HOST=redis
+          REDIS_PASSWORD=null
+          REDIS_PORT=6379
+          EOF
+      - name: Validate Windows deployment scripts
+        shell: pwsh
+        run: |
+          $files = @(
+            'deploy/windows/Server-Setup.ps1',
+            'deploy/windows/Renew-TagoreCertificate.ps1',
+            'deploy/windows/Install-TagoreServerTask.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error ($file + ': ' + $_.Message) }
+              exit 1
+            }
+          }
+
+      - name: Build production images
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build
+      - name: Prepare temporary TLS certificate for Nginx smoke test
+        run: |
+          mkdir -p deploy/windows/letsencrypt/live/59.90.66.12 deploy/windows/acme-challenge
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -keyout deploy/windows/letsencrypt/live/59.90.66.12/privkey.pem \
+            -out deploy/windows/letsencrypt/live/59.90.66.12/fullchain.pem \
+            -subj "/CN=59.90.66.12"
+      - name: Start production services
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d db redis app worker web
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db mysqladmin ping -h localhost -u root -p'TagoreRoot@2026' --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs db
+          exit 1
+      - name: Verify persistent Laravel storage
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app sh -lc 'test -d /var/www/html/storage/framework/views && test -d /var/www/html/storage/framework/cache && test -d /var/www/html/bootstrap/cache'
+
+      - name: Verify Laravel migrations
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan migrate --force --no-interaction
+
+      - name: Verify Laravel optimization
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan optimize:clear --no-interaction
+
+      - name: Verify Laravel config cache
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache --no-interaction
+
+      - name: Verify Laravel route cache
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan route:cache --no-interaction
+
+      - name: Verify Laravel view cache
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan view:cache --no-interaction
+
+      - name: Verify Nginx configuration
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web nginx -t
+
+      - name: Verify production HTTPS response
+        run: |
+          set +e
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T web sh -lc 'wget -S -O /tmp/tagore-home.html --no-check-certificate https://127.0.0.1/' 2>&1
+          code=$?
+          echo "HTTP smoke exit code: $code"
+          echo "--- Laravel logs ---"
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs --no-color app --tail=200 || true
+          echo "--- Nginx logs ---"
+          docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml logs --no-color web --tail=200 || true
+          exit $code
+      - name: Cleanup
+        if: always()
+        run: docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml down -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build frontend
+        run: npm run build
+
+  acceptance-gate:
+    name: Acceptance gate (release blocking)
+    if: always()
+    needs: [backend, browser-e2e, production-docker-smoke, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish commit-specific acceptance decision
+        env:
+          BACKEND: ${{ needs.backend.result }}
+          BROWSER_E2E: ${{ needs.browser-e2e.result }}
+          PRODUCTION_SMOKE: ${{ needs.production-docker-smoke.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Tagore ERP acceptance decision"
+            echo
+            echo "- Candidate commit: \`$CANDIDATE_SHA\`"
+            echo "- Backend and Laravel tests: **$BACKEND**"
+            echo "- Authenticated browser acceptance: **$BROWSER_E2E**"
+            echo "- Production Docker/HTTPS smoke: **$PRODUCTION_SMOKE**"
+            echo "- Frontend build: **$FRONTEND**"
+            echo
+            echo "A release is accepted only when every required result is success for this exact commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$BACKEND" != "success" || "$BROWSER_E2E" != "success" || "$PRODUCTION_SMOKE" != "success" || "$FRONTEND" != "success" ]]; then
+            echo "::error::Acceptance blocked for $CANDIDATE_SHA. A failed, skipped, cancelled, or pending required job is not a pass."
+            exit 1
+          fi
+
+          echo "Acceptance gate passed for $CANDIDATE_SHA."
