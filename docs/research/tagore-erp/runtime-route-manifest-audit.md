@@ -296,3 +296,36 @@ At this follow-up check, PR #72 head `85094f7e6951d9c3c78940ca9dca2aa3dd4e8ebc` 
 PRs #74 and #75 each remain open and draft. Their current heads have no PR-triggered workflow runs returned by the workflow-run lookup. Both are now reported `mergeable=true` by PR metadata, but their branch comparisons against the updated research base still show one commit behind and diverged from the common base. Do not mark these two code changes validated until their current heads receive explicit passing CI checks.
 
 **Boundary:** no live endpoint, user account, student/family data, production database, session or device token was touched.
+
+
+## Password-reset OTP workflow audit — verified source follow-up (2026-11-15)
+
+The device-wide logout recovery design must not reuse the current password-reset OTP implementation without remediation. The following controller/trait bodies were inspected on the research branch.
+
+### Confirmed defects in existing mobile OTP reset flow
+
+- `AuthenticationProcess::createAuthentication()` generates a six-digit value with PHP `rand(100000, 999999)`, stores the OTP directly in `authentication.token`, and sets `expires_on = now + 5 minutes`. It sends the OTP by SMS. This is not a cryptographically secure generator and the stored verifier is not hashed.
+- `UserController::resetPassword()` finds the account by mobile number and user-group, deletes all existing Sanctum tokens immediately, clears `platform_token`, and only then starts OTP creation. Therefore a reset request can sign out the user before the OTP has been proven.
+- `UserController::storePassword()` selects the newest `status=0,type=reset` authentication record and compares the submitted OTP, but does not check `expires_on`. On success it changes status to 1. The OTP is still stored in plaintext.
+- `UserController::resetChangePassword()` selects the newest `status=1,type=reset` record and accepts the same OTP again as `oldpassword`. It does not check expiry and does not consume/invalidate the verified authentication record after changing the password. Reuse/replay can therefore remain possible; this is a source-level conclusion, not a live exploit test.
+- The reset change-password action revokes tokens again, but that happens only after password change. There is no explicit rate/attempt limiting visible in these inspected methods.
+- `checkReset()` returns the account's `is_reset` flag for a supplied mobile number and user-group; it is a separate account-state disclosure surface and should use a generic response.
+- Both OTP completion methods use collection index `[0]` without a safe empty-record branch; exception handlers log then call `dd()`, which can expose debug output or terminate the request unexpectedly. The controller also uses a second lookup by mobile number alone when updating `is_reset`, rather than retaining the already role-scoped user.
+
+### Required design before implementing device recovery
+
+Create a dedicated recovery challenge service rather than reusing the current Authentication status flag. Use a cryptographically secure random challenge, store only a keyed/hash verifier, bind it to user ID + role + purpose + channel, enforce expiry during every transition, cap attempts and issue frequency, and consume the challenge atomically exactly once. Only after a verified recovery challenge should the service revoke all account tokens and clear device metadata. Password reset and device recovery should share hardened primitives only if their purpose and authorization state remain cryptographically separated.
+
+### Regression coverage required
+
+1. OTP/challenge generated securely and never persisted in plaintext.
+2. Expired challenge rejected at both verification and final action.
+3. Wrong challenge increments bounded attempts; rate limits apply per account and source.
+4. Verified challenge is atomically single-use; replay and concurrent replay fail.
+5. Reset request does not revoke sessions before proof succeeds.
+6. Parent and teacher groups cannot cross-use challenges.
+7. Unknown mobile and wrong role receive indistinguishable responses.
+8. Device recovery revokes all target account tokens only after successful proof; password reset has its own explicit post-verification policy.
+9. No exception path calls `dd()` or leaks account existence/OTP data.
+
+**Priority update:** existing OTP expiry/replay flaws raise the recovery-work item from a design-only task to a broader authentication hardening task. Do not ship a new recovery endpoint on top of these primitives without these controls and synthetic tests.
