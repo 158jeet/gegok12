@@ -59,3 +59,16 @@ The existing public web registration mobile-verification flow uses the legacy OT
 - Owner can initiate an audited password reset for another user; non-owner roles cannot.
 - Password recovery remains hash-stored, short-lived, rate-limited, purpose-bound and atomically single-use.
 
+## Explicit prohibition on additional Admin accounts/roles
+
+The Owner has clarified that there must be **no other Admin account or separate Admin role** in the current system. This is not a request to rename existing operational roles.
+
+- The only top-level administrative authority is the existing Owner account.
+- Continue using the existing operational roles/accounts: Principal, Accounts, Cashier, Coordinator, Teacher, Parent, Student and other established non-admin roles as applicable.
+- Do not create, seed, expose, or provision a generic Admin/Super Admin account, a second Owner, or an Admin role in user-management screens, migrations, seeders, fixtures intended to represent production setup, or onboarding flows.
+- Do not convert Principal, Accounts, Cashier or any other existing role into Admin. Their permissions remain role-specific and least-privilege.
+- Owner retains the system-wide administrative capabilities. No other user receives those capabilities by virtue of job title or institution role.
+- If a genuine future need arises for another administrator, it requires a new explicit decision by the Owner and a separately designed, reviewed and tested authorization change. It is not part of the current scope.
+
+Acceptance must verify the role catalogue and provisioning paths do not introduce a generic Admin role/account, while preserving all existing operational roles and their intended permissions.
+
