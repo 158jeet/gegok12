@@ -13,7 +13,7 @@ class CreateRecoveryChallengesTable extends Migration
             $table->unsignedInteger('user_id');
             $table->unsignedInteger('usergroup_id');
             $table->string('purpose', 50);
-            $table->string('channel', 20)->default('sms');
+            $table->string('channel', 20)->default('email');
             $table->string('code_hash', 255);
             $table->string('ip_address', 45)->nullable();
             $table->timestamp('expires_at');
