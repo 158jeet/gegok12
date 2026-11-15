@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\TagoreMobileController;
 
 Route::post('/parent/login', 'Api\TokenController@issueToken');
 
+// Legacy unauthenticated device-wide logout is deliberately disabled (HTTP 410).
+Route::post('/logout/devices', 'Api\\LoginController@logoutDevices');
+
 
 //Route::get('/search/users','Api\Search\UserSearchController@index'); --test route hidden
 
