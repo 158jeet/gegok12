@@ -180,3 +180,14 @@ The P0 unauthenticated device-wide logout handlers have been replaced on the imp
 - Feature tests cover parent and teacher recovery, no revocation before proof, wrong-code rejection, successful revocation, replay rejection, and cross-role rejection. Delivery is mocked; CI uses synthetic users only.
 
 **Compatibility / rollout gate:** this intentionally changes the old one-call endpoint from immediate revocation to challenge initiation. The Android parent and teacher clients must be updated to request, collect and submit the OTP before rollout. Until app parity is demonstrated, do not deploy or activate this server change. No live SMS, live accounts, or production token revocation has been used.
+
+
+## 13. MSG91 transport security review
+
+During review of the newly used `RecoveryCodeDeliveryService`, its delegated `MSG91::getOTP()` implementation was found to disable TLS peer and hostname verification. The same insecure cURL options were present in the trait's standard SMS and emergency SMS methods.
+
+The implementation branch now changes all three MSG91 cURL call sites to:
+- `CURLOPT_SSL_VERIFYHOST => 2`
+- `CURLOPT_SSL_VERIFYPEER => true`
+
+This prevents SMS API credentials and OTP payloads from being sent over a connection whose server certificate cannot be validated. This change affects the shared SMS trait, so CI must verify syntax and application tests. No live SMS request was made. This does not replace the need to migrate away from direct cURL/env access to centrally managed Laravel HTTP client configuration in a separately reviewed integration-hardening task.
