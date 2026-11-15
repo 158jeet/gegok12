@@ -25,8 +25,10 @@ class DeviceRecoveryTest extends TestCase
     private function makeUser(int $group): User
     {
         $school = School::factory()->create();
-        return User::factory()->for($school)->create([
-            'usergroup_id' => $group,
+        $factory = User::factory()->for($school);
+        $factory = $group === User::PARENT_USERGROUP_ID ? $factory->parent() : $factory->teacher();
+
+        return $factory->create([
             'mobile_no' => '9876543210',
             'status' => 'active',
             'platform_token' => 'push-token',
