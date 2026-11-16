@@ -35,6 +35,9 @@
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
     <a class="tg-side-link" href="{{ route('tagore.staff.leave') }}"><span class="tg-side-icon">◷</span>People & leave</a>
   @endif
+  @if($roles->contains('CASHIER'))
+    <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">▣</span>Cashier counter</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.manage') }}"><span class="tg-side-icon">₹</span>Fee management</a>
   @endif
@@ -74,6 +77,9 @@
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
         <a class="tg-btn" href="{{ route('tagore.tasks.index') }}">Create task</a>
+      @endif
+      @if($roles->contains('CASHIER'))
+        <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Open cashier counter</a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Open accounts</a>
