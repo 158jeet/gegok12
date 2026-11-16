@@ -27,11 +27,11 @@ class RecoveryChallengeService
      *
      * @return array{challenge: RecoveryChallenge, code: string}
      */
-    public function issue(User $user, string $purpose, ?string $ipAddress, string $channel = 'email'): array
+    public function issue(User $user, string $purpose, ?string $ipAddress): array
     {
         $this->assertPurpose($purpose);
 
-        return DB::transaction(function () use ($user, $purpose, $ipAddress, $channel) {
+        return DB::transaction(function () use ($user, $purpose, $ipAddress) {
             $lockedUser = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
             $windowStart = now()->subMinutes(self::ISSUE_WINDOW_MINUTES);
 
@@ -59,7 +59,7 @@ class RecoveryChallengeService
                 'user_id' => $lockedUser->id,
                 'usergroup_id' => $lockedUser->usergroup_id,
                 'purpose' => $purpose,
-                'channel' => $channel,
+                'channel' => 'email',
                 'code_hash' => Hash::make($code),
                 'ip_address' => $ipAddress,
                 'expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
