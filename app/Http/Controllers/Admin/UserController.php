@@ -102,6 +102,7 @@ class UserController extends Controller
     {
       $user = User::where('id', $id)->firstOrFail();
       abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
 
       try
       {
