@@ -25,8 +25,8 @@ class AdmissionsController extends Controller
 
         if($request->filled('status')) $query->where('status',$request->string('status')->toString());
         if($request->filled('assigned_to')) $query->where('assigned_to',(int)$request->input('assigned_to'));
-        if($request->input('follow_up')==='due') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<=',now());
-        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now());
+        if($request->input('follow_up')==='due') $query->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->whereNotIn('status',['admitted','lost']);
+        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost']);
         if($request->input('source')) $query->where('source',$request->string('source')->toString());
         if($request->input('campaign')) $query->where('campaign',$request->string('campaign')->toString());
 
@@ -49,7 +49,7 @@ class AdmissionsController extends Controller
             'new'=>(clone $base)->where('status','new')->count(),
             'follow_up'=>(clone $base)->where('status','follow_up')->count(),
             'due_today'=>(clone $base)->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->count(),
-            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost'])->count(),
+            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost'])->count(),
             'qualified'=>(clone $base)->where('status','qualified')->count(),
             'admitted'=>(clone $base)->where('status','admitted')->count(),
             'lost'=>(clone $base)->where('status','lost')->count(),
@@ -64,7 +64,8 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
         $institutions=DB::table('tagore_institutions')->whereIn('id',$ids)->where('status','active')->orderBy('display_name')->get(['id','display_name']);
-        return view('tagore.admissions.create',compact('institutions'));
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        return view('tagore.admissions.create',compact('institutions','staff'));
     }
 
     public function store(Request $request)
@@ -115,6 +116,70 @@ class AdmissionsController extends Controller
         abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
         $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         return view('tagore.admissions.show',compact('lead','staff'));
+    }
+
+    public function convert(Request $request, int $leadId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+
+        $lead = TagoreAdmissionLead::findOrFail($leadId);
+        abort_unless(in_array((int) $lead->institution_id, $this->institutionIds($userId, $roles), true), 403);
+
+        $data = $request->validate(['student_id' => ['required', 'integer']]);
+        $institution = DB::table('tagore_institutions')->where('id', $lead->institution_id)->first();
+        abort_unless($institution, 422, 'Institution not found.');
+
+        $student = DB::table('users')->where('id', (int) $data['student_id'])
+            ->where('usergroup_id', 6)->where('school_id', $institution->school_id)
+            ->whereNull('deleted_at')->first();
+        abort_unless($student, 422, 'Select an active student account belonging to this institution.');
+
+        DB::transaction(function () use ($lead, $student, $userId, $institution) {
+            $lockedLead = TagoreAdmissionLead::whereKey($lead->id)->lockForUpdate()->firstOrFail();
+            if ($lockedLead->converted_student_id && (int) $lockedLead->converted_student_id !== (int) $student->id) {
+                abort(422, 'This enquiry is already linked to a different student account.');
+            }
+
+            $alreadyLinked = (int) $lockedLead->converted_student_id === (int) $student->id;
+            $lockedLead->update([
+                'converted_student_id' => $student->id,
+                'status' => 'admitted',
+                'converted_at' => $lockedLead->converted_at ?: now(),
+                'lost_reason' => null,
+            ]);
+
+            if (!$alreadyLinked) {
+                TagoreAdmissionActivity::create([
+                    'lead_id' => $lockedLead->id,
+                    'user_id' => $userId,
+                    'type' => 'note',
+                    'outcome' => 'enrolment_linked',
+                    'notes' => 'CRM enquiry linked to enrolled student account #' . $student->id,
+                    'completed_at' => now(),
+                ]);
+
+                if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+                    DB::table('tagore_audit_events')->insert([
+                        'user_id' => $userId,
+                        'action' => 'admissions.convert',
+                        'entity_type' => 'Student',
+                        'entity_id' => $student->id,
+                        'old_values_json' => null,
+                        'new_values_json' => json_encode([
+                            'lead_id' => $lockedLead->id,
+                            'student_id' => $student->id,
+                            'institution_id' => $institution->id,
+                        ]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Enquiry linked to the enrolled student account.');
     }
 
     public function linkFamily(Request $request, int $leadId)
@@ -180,6 +245,9 @@ class AdmissionsController extends Controller
             'status'=>['nullable','in:new,contacted,follow_up,qualified,admitted,lost'],'next_follow_up_at'=>['nullable','date'],
             'lost_reason'=>['nullable','string','max:120'],
         ]);
+        if (($data['status'] ?? null) === 'admitted' && !$lead->converted_student_id) {
+            abort(422, 'Link the enrolled student account before marking this enquiry admitted.');
+        }
         DB::transaction(function() use($lead,$data,$userId){
             TagoreAdmissionActivity::create([
                 'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>$data['type'],'outcome'=>$data['outcome']??null,
