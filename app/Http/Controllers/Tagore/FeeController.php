@@ -78,21 +78,15 @@ class FeeController extends Controller
         abort_unless($roles->intersect(['COORDINATOR', 'TEACHER'])->isNotEmpty(), 403);
         abort_if($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
 
-        $classIds = collect();
+        $coordinatorClassIds = collect();
         if ($roles->contains('COORDINATOR')) {
             $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
             if ($feeViewId) {
-                $classIds = $classIds->merge(DB::table('tagore_user_scopes')
+                $coordinatorClassIds = DB::table('tagore_user_scopes')
                     ->where('user_id', $userId)->where('scope_type', 'standard_link')
-                    ->where('permission_id', $feeViewId)->pluck('scope_id'));
+                    ->where('permission_id', $feeViewId)->pluck('scope_id');
             }
         }
-        if ($roles->contains('TEACHER')) {
-            $classIds = $classIds->merge(DB::table('class_teacher_links')
-                ->where('teacher_id', $userId)->where('status', 1)->whereNull('deleted_at')
-                ->pluck('standardLink_id'));
-        }
-        $classIds = $classIds->filter()->unique()->values();
         $institutionIds = DB::table('tagore_user_roles')->where('user_id', $userId)
             ->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id');
         $latestAcademicRows = DB::table('student_academics')->whereNull('deleted_at')
@@ -107,82 +101,32 @@ class FeeController extends Controller
             ->leftJoinSub($feeTotals, 'fees', function ($join) {
                 $join->on('fees.student_id', '=', 'u.id')->on('fees.institution_id', '=', 'i.id');
             })
-            ->whereIn('sa.id', $latestAcademicRows)->whereIn('sa.standardLink_id', $classIds)
+            ->whereIn('sa.id', $latestAcademicRows)
+            ->where(function ($query) use ($roles, $coordinatorClassIds, $userId) {
+                if ($roles->contains('COORDINATOR')) {
+                    $query->whereIn('sa.standardLink_id', $coordinatorClassIds);
+                }
+                if ($roles->contains('TEACHER')) {
+                    $teacherAssignment = function ($assignment) use ($userId) {
+                        $assignment->selectRaw('1')->from('class_teacher_links as ctl')
+                            ->whereColumn('ctl.standardLink_id', 'sa.standardLink_id')
+                            ->whereColumn('ctl.academic_year_id', 'sa.academic_year_id')
+                            ->whereColumn('ctl.school_id', 'u.school_id')
+                            ->where('ctl.teacher_id', $userId)->where('ctl.status', 1)
+                            ->whereNull('ctl.deleted_at');
+                    };
+                    if ($roles->contains('COORDINATOR')) {
+                        $query->orWhereExists($teacherAssignment);
+                    } else {
+                        $query->whereExists($teacherAssignment);
+                    }
+                }
+            })
             ->whereIn('i.id', $institutionIds)->whereNull('u.deleted_at')->orderBy('u.name')
             ->get(['u.id','u.name','i.display_name as institution','sa.standardLink_id as class_id','sa.academic_year_id',
                 DB::raw('COALESCE(fees.payable, 0) as payable'),DB::raw('COALESCE(fees.paid, 0) as paid'),DB::raw('COALESCE(fees.outstanding, 0) as outstanding')]);
 
         return view('tagore.fees.class-status', compact('students'));
-    }
-
-    /**
-     * Dedicated cashier counter: find students with an outstanding balance,
-     * collect offline payments, and surface today's posted receipts.
-     */
-    public function cashier(Request $request): View
-    {
-        $userId = (int) $request->user()->id;
-        $roles = $this->roles($userId);
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
-
-        $institutionsQuery = DB::table('tagore_institutions as i')
-            ->join('schools as s', 's.id', '=', 'i.school_id')
-            ->where('i.status', 'active');
-        $this->scopeInstitutions($institutionsQuery, $userId, $roles);
-        $institutionIds = $institutionsQuery->pluck('i.id');
-
-        $studentsQuery = DB::table('tagore_fee_obligations as o')
-            ->join('users as u', 'u.id', '=', 'o.student_id')
-            ->join('tagore_institutions as i', 'i.id', '=', 'o.institution_id')
-            ->whereIn('o.institution_id', $institutionIds)
-            ->where('o.outstanding_amount', '>', 0)
-            ->where('u.usergroup_id', 6)
-            ->whereNull('u.deleted_at')
-            ->groupBy('u.id', 'u.name', 'u.mobile_no', 'i.id', 'i.display_name')
-            ->selectRaw('u.id as student_id, u.name as student_name, u.mobile_no, i.id as institution_id, i.display_name as institution, SUM(o.outstanding_amount) as outstanding, COUNT(o.id) as open_items, SUM(CASE WHEN o.due_date < ? THEN o.outstanding_amount ELSE 0 END) as overdue_amount, SUM(CASE WHEN o.due_date = ? THEN o.outstanding_amount ELSE 0 END) as due_today_amount', [now()->toDateString(), now()->toDateString()])
-            ->orderBy('u.name');
-
-        if ($request->filled('q')) {
-            $needle = trim($request->string('q')->toString());
-            $studentsQuery->where(function ($query) use ($needle) {
-                $query->where('u.name', 'like', "%{$needle}%")
-                    ->orWhere('u.mobile_no', 'like', "%{$needle}%");
-                if (ctype_digit($needle)) {
-                    $query->orWhere('u.id', (int) $needle);
-                }
-            });
-        }
-
-        $students = $studentsQuery->paginate(25)->withQueryString();
-        $today = now()->toDateString();
-        $totalOutstanding = DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->where('outstanding_amount', '>', 0)->sum('outstanding_amount');
-        $overdueQuery = DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->where('outstanding_amount', '>', 0)->whereNotNull('due_date')->whereDate('due_date', '<', $today);
-        $overdueAmount = (clone $overdueQuery)->sum('outstanding_amount');
-        $overdueCount = (clone $overdueQuery)->count();
-        $dueTodayAmount = DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->where('outstanding_amount', '>', 0)->whereDate('due_date', $today)->sum('outstanding_amount');
-        $pendingOnlineQuery = DB::table('tagore_payments')->whereIn('institution_id', $institutionIds)->whereIn('gateway', ['razorpay', 'online'])->where('status', 'pending');
-        $pendingOnlineCount = (clone $pendingOnlineQuery)->count();
-        $pendingOnlineAmount = (clone $pendingOnlineQuery)->sum('amount');
-        $todayCollection = DB::table('tagore_payments')
-            ->whereIn('institution_id', $institutionIds)
-            ->where('status', 'success')
-            ->whereDate('paid_at', now()->toDateString())
-            ->sum('amount');
-        $todayCount = DB::table('tagore_payments')
-            ->whereIn('institution_id', $institutionIds)
-            ->where('status', 'success')
-            ->whereDate('paid_at', now()->toDateString())
-            ->count();
-        $recent = DB::table('tagore_payments as p')
-            ->join('users as u', 'u.id', '=', 'p.student_id')
-            ->whereIn('p.institution_id', $institutionIds)
-            ->where('p.status', 'success')
-            ->orderByDesc('p.paid_at')
-            ->orderByDesc('p.id')
-            ->limit(12)
-            ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.payment_mode', 'p.paid_at', 'u.name as student_name']);
-
-        return view('tagore.fees.cashier', compact('students', 'todayCollection', 'todayCount', 'totalOutstanding', 'overdueAmount', 'overdueCount', 'dueTodayAmount', 'pendingOnlineCount', 'pendingOnlineAmount', 'recent', 'roles'));
     }
 
     public function accounts(Request $request): View
