@@ -50,9 +50,38 @@ class AdministrationController extends Controller
             ->where('ur.status', 'active')
             ->orderBy('u.name')
             ->limit(250)
-            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
+            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'u.status', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
-        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
+        $coordinators = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->join('users as u', 'u.id', '=', 'ur.user_id')
+            ->where('r.code', 'COORDINATOR')->where('ur.status', 'active')->where('u.status', 'active')
+            ->whereNull('u.deleted_at')->orderBy('u.name')->get(['u.id', 'u.name', 'u.email', 'u.school_id']);
+        $classScopes = DB::table('standards_link as sl')
+            ->join('standards as st', 'st.id', '=', 'sl.standard_id')
+            ->join('sections as se', 'se.id', '=', 'sl.section_id')
+            ->join('tagore_institutions as i', 'i.school_id', '=', 'sl.school_id')
+            ->where('sl.status', 1)->whereNull('sl.deleted_at')->where('i.status', 'active')
+            ->orderBy('i.display_name')->orderBy('st.order')->orderBy('se.name')
+            ->get(['sl.id', 'sl.school_id', 'sl.academic_year_id', 'i.display_name as institution', 'st.name as standard_name', 'se.name as section_name']);
+        $feeViewPermissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $scopeAssignments = DB::table('tagore_user_scopes as us')
+            ->join('users as u', 'u.id', '=', 'us.user_id')
+            ->join('tagore_permissions as p', 'p.id', '=', 'us.permission_id')
+            ->join('standards_link as sl', 'sl.id', '=', 'us.scope_id')
+            ->join('standards as st', 'st.id', '=', 'sl.standard_id')
+            ->join('sections as se', 'se.id', '=', 'sl.section_id')
+            ->where('us.scope_type', 'standard_link')->where('p.code', 'fee.view')
+            ->orderBy('u.name')->orderBy('sl.id')
+            ->get(['us.id', 'us.user_id', 'u.name as user_name', 'u.email', 'us.scope_id', 'st.name as standard_name', 'se.name as section_name', 'sl.academic_year_id']);
+        $scopeAudits = DB::table('tagore_user_admin_audits as a')
+            ->join('users as actor', 'actor.id', '=', 'a.actor_id')
+            ->leftJoin('users as target', 'target.id', '=', 'a.target_user_id')
+            ->whereIn('a.action', ['fee_scope_granted', 'fee_scope_revoked'])
+            ->orderByDesc('a.created_at')->limit(50)
+            ->get(['a.id', 'a.action', 'a.metadata', 'a.created_at', 'actor.name as actor_name', 'target.name as target_name']);
+
+        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff', 'coordinators', 'classScopes', 'feeViewPermissionId', 'scopeAssignments', 'scopeAudits'));
     }
 
     public function storeUser(Request $request)
