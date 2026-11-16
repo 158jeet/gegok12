@@ -71,6 +71,50 @@ class FeeController extends Controller
         return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles', 'familyBalances'));
     }
 
+    public function classStatus(Request $request): View
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(['COORDINATOR', 'TEACHER'])->isNotEmpty(), 403);
+        abort_if($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+
+        $classIds = collect();
+        if ($roles->contains('COORDINATOR')) {
+            $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+            if ($feeViewId) {
+                $classIds = $classIds->merge(DB::table('tagore_user_scopes')
+                    ->where('user_id', $userId)->where('scope_type', 'standard_link')
+                    ->where('permission_id', $feeViewId)->pluck('scope_id'));
+            }
+        }
+        if ($roles->contains('TEACHER')) {
+            $classIds = $classIds->merge(DB::table('class_teacher_links')
+                ->where('teacher_id', $userId)->where('status', 1)->whereNull('deleted_at')
+                ->pluck('standardLink_id'));
+        }
+        $classIds = $classIds->filter()->unique()->values();
+        $institutionIds = DB::table('tagore_user_roles')->where('user_id', $userId)
+            ->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id');
+        $latestAcademicRows = DB::table('student_academics')->whereNull('deleted_at')
+            ->selectRaw('MAX(id)')->groupBy('user_id');
+        $feeTotals = DB::table('tagore_fee_obligations')
+            ->selectRaw('student_id, institution_id, SUM(net_amount) as payable, SUM(paid_amount) as paid, SUM(outstanding_amount) as outstanding')
+            ->groupBy('student_id', 'institution_id');
+
+        $students = DB::table('student_academics as sa')
+            ->join('users as u', 'u.id', '=', 'sa.user_id')
+            ->join('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')
+            ->leftJoinSub($feeTotals, 'fees', function ($join) {
+                $join->on('fees.student_id', '=', 'u.id')->on('fees.institution_id', '=', 'i.id');
+            })
+            ->whereIn('sa.id', $latestAcademicRows)->whereIn('sa.standardLink_id', $classIds)
+            ->whereIn('i.id', $institutionIds)->whereNull('u.deleted_at')->orderBy('u.name')
+            ->get(['u.id','u.name','i.display_name as institution','sa.standardLink_id as class_id','sa.academic_year_id',
+                DB::raw('COALESCE(fees.payable, 0) as payable'),DB::raw('COALESCE(fees.paid, 0) as paid'),DB::raw('COALESCE(fees.outstanding, 0) as outstanding')]);
+
+        return view('tagore.fees.class-status', compact('students'));
+    }
+
     public function accounts(Request $request): View
     {
         $userId = (int) $request->user()->id;
