@@ -28,7 +28,7 @@ Delete/restore/forceDelete methods in these files currently return no explicit a
 
 ## Adjacent Gate callback defect
 
-The `post_reply` Gate callback in `AuthServiceProvider` originally accepted a parameter named `$post` but dereferenced `$post_reply`. This was corrected on this branch to accept `$post_reply`, and `tests/Feature/AuthorizationGateRegressionTest.php` now verifies same-school allow and cross-school deny. The focused test is awaiting exact-head CI.
+The `post_reply` Gate callback in `AuthServiceProvider` originally accepted a parameter named `$post` but dereferenced `$post_reply`. This was corrected on this branch to accept `$post_reply`, and `tests/Feature/AuthorizationGateRegressionTest.php` now verifies same-school allow and cross-school deny. Both this regression and the full exact-head workflow suite passed on commit `3a41d6649e9c4f48f2ec942e556e6b123f785021`.
 
 ## What is not yet established
 
@@ -56,3 +56,12 @@ The separate Tagore administration controller now protects its own Owner-only op
 ## Safety boundary
 
 Audit and tests use synthetic CI fixtures only. No production accounts, sessions, database records, email/SMS channels, deployments or live endpoints are changed by this document.
+
+
+## Follow-up: Owner-managed account token revocation
+
+A code review of `AdministrationController::resetUserPassword` and `updateUserStatus` found that both paths previously cleared `remember_token` but did not delete the target user's Sanctum personal access tokens. Because the core `User` model uses Sanctum's `HasApiTokens` trait, this left existing API tokens usable after an Owner reset or disable action.
+
+The follow-up now deletes the target user's Sanctum tokens inside the same database transaction before completing an Owner password reset, and when disabling an account. Re-enabling an account does not need to revoke tokens again. Synthetic feature tests assert token deletion and the corresponding audit record. This change does not claim browser-session invalidation: session-driver behavior and the Owner's own password-change/session lifecycle remain a separate audit item.
+
+The exact-head CI pass recorded above applies to the prior commit only. The new token-revocation commit must complete all exact-head workflows before this follow-up is considered validated.
