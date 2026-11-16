@@ -1,9 +1,13 @@
 name: ERP CI
 
+concurrency:
+  group: erp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'work/**', 'workstream/**']
+    branches: [main, 'work/**']
   pull_request:
     branches: [main, 'integration/erp-7day']
 
