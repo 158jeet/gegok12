@@ -2,9 +2,9 @@ name: TagoreK12 Prototype
 
 on:
   push:
-    branches: [main, 'tagore/**']
+    branches: [main, 'tagore/**', 'workstream/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/erp-7day']
 
 jobs:
   test:
