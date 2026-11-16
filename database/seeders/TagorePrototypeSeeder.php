@@ -37,8 +37,11 @@ class TagorePrototypeSeeder extends Seeder
         foreach(DB::table('schools')->whereNull('deleted_at')->orderBy('id')->limit(3)->get() as $school){
             $institutionId=DB::table('tagore_institutions')->where('school_id',$school->id)->value('id');
             if(!$institutionId)$institutionId=DB::table('tagore_institutions')->insertGetId(['tagore_group_id'=>$groupId,'school_id'=>$school->id,'code'=>'TAGORE-'.$school->id,'display_name'=>$school->name,'type'=>'school','status'=>'active','created_at'=>$now,'updated_at'=>$now]);
-            foreach(DB::table('users')->where('school_id',$school->id)->whereNull('deleted_at')->get(['id','usergroup_id']) as $user){
-                // Legacy SiteAdmin/SiteSubadmin/SchoolAdmin groups must never auto-grant Tagore OWNER.\n                // The Owner identity is provisioned explicitly; legacy SchoolAdmin maps to the operational Principal role.\n                $roleCode=match((int)$user->usergroup_id){3,4=>'PRINCIPAL',5=>'TEACHER',6=>'STUDENT',7=>'PARENT',11=>'ACCOUNTS',default=>null};
+            foreach(DB::table('users')->where('school_id',$school->id)->whereNull('deleted_at')->get(['id','usergroup_id','email']) as $user){
+                // Legacy SiteAdmin/SiteSubadmin groups never auto-grant Tagore OWNER. The explicit Owner fixture is seeded separately.
+                // Legacy SchoolAdmin maps to the operational Principal role.
+                if ($user->email === 'owner@tagore-demo.local') continue;
+                $roleCode=match((int)$user->usergroup_id){3,4=>'PRINCIPAL',5=>'TEACHER',6=>'STUDENT',7=>'PARENT',11=>'ACCOUNTS',default=>null};
                 if($roleCode){$roleId=DB::table('tagore_roles')->where('code',$roleCode)->value('id');DB::table('tagore_user_roles')->updateOrInsert(['user_id'=>$user->id,'role_id'=>$roleId,'institution_id'=>$institutionId],['status'=>'active','updated_at'=>$now,'created_at'=>$now]);}
             }
         }
