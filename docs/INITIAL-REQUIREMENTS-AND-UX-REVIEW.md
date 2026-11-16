@@ -98,3 +98,15 @@ The candidate is not release-ready until the exact current SHA has all required 
 - Suggested implementation phases: (1) schema, authorization, audit, form template/version engine; (2) web form builder and staff web submission; (3) admission lead pipeline and reporting; (4) entrance-test authoring, delivery, scoring and pipeline link; (5) discount approval; (6) multi-institution leave routing; (7) mobile offline drafts/sync and client parity.
 - Treat each phase as incomplete until migrations, API/UI behavior, negative authorization tests, responsive browser tests, and synthetic end-to-end workflows pass on the same candidate commit. Do not deploy partial screens as completed functionality.
 
+### Existing-code baseline for the new requirements (repository inspection)
+
+Inspected on the current requirements commit:
+- `TagoreAdmissionLead`, `TagoreAdmissionActivity`, the Tagore admissions controller, and the September 2026 admission migrations already provide a lead/activity foundation, including institution, source/campaign, assignment, follow-up, consent and conversion fields. The inspected Tagore admissions controller currently admits OWNER, PRINCIPAL and COORDINATOR roles; assigned field staff/teachers do not yet have the requested field-submission workflow.
+- `TagoreExaminationController` and the October 2026 examination-engine migration provide an institution/class academic-exam foundation. This is not evidence of a complete prospective-candidate entrance campaign, field launch, timed test delivery, candidate consent, or admission-lead result linkage.
+- Legacy `TeacherLeaveApplication` and teacher leave controllers exist, but the inspected model is school-scoped and does not demonstrate the requested multi-institution Principal approval routing.
+- The inspected repository path inventory did not reveal a dedicated discount/concession request-and-Owner-approval module. Treat this as a new workflow; do not reuse fee-editor privileges as an approval shortcut.
+- The inventory search did not identify a reusable dynamic fieldwork form-builder/campaign/submission engine. Confirm with a deeper schema/route audit before designing migrations; do not assume Filament's installed form UI assets constitute a business form platform.
+- Existing examination controller role constants include `IT_ADMIN`. Any future Technology Controller capability must be explicitly scoped and reconciled with the established single-Owner rule; it must not create a second Owner or implicitly grant global Owner powers.
+
+Implementation order is therefore: first map current admission/exam/leave routes, policies, migrations and institution membership; then design the versioned campaign/form/submission core with authorization and audit; then connect admissions and entrance assessments; then add discount and leave approval workflows; finally deliver mobile offline/sync parity. Reuse existing tables only where their invariants and scope are proven by tests.
+
