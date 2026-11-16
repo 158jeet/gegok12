@@ -49,7 +49,6 @@ class AdministrationController extends Controller
             ->leftJoin('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
             ->where('ur.status', 'active')
             ->orderBy('u.name')
-            ->limit(250)
             ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'u.status', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
         $coordinators = DB::table('tagore_user_roles as ur')
