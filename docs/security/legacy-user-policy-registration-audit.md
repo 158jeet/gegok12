@@ -124,3 +124,13 @@ Regression coverage now includes:
 - The legacy status-update controller rejects a cross-school target before mutation and asserts the target remains active.
 
 Scope limitation: this closes the specifically confirmed cross-school status-update path. It does not establish complete institution/class/family scoping for other legacy user endpoints, nor does it resolve the duplicate User policy registration. The wider route/controller call-site audit remains open.
+
+## Follow-up remediation: legacy password, verification and credential endpoints
+
+The same-school boundary has now been extended to the adjacent legacy account-management routes:
+
+- `GET /admin/user/resetPassword/{id}` and `GET /admin/user/{id}/verificationcode` resolve an existing target with `firstOrFail()` and require the existing `member` Gate before performing the action. Cross-school targets are rejected with HTTP 403; missing targets fail with HTTP 404.
+- `GET /admin/credentials/get/{name}` and `POST /admin/credentials/add/{name}` already scoped target lookups by the actor's `school_id`; those lookups now fail closed with `firstOrFail()` instead of dereferencing a null target inside a broad exception handler.
+- Regression coverage exercises cross-school password reset and email-verification denial, cross-school credential lookup non-disclosure, and the previously added status-update denial.
+
+This remains a bounded remediation, not a declaration that all legacy account-management flows are secure. Credential update still uses the existing legacy request/validation and token-reset behavior; broader audit is needed for privilege/group changes, email/mobile verification state, and other controller routes.
