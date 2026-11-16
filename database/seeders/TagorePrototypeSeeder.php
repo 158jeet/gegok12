@@ -22,8 +22,8 @@ class TagorePrototypeSeeder extends Seeder
             $codes=match($code){
                 'OWNER'=>DB::table('tagore_permissions')->pluck('code')->all(),
                 'PRINCIPAL'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','fee.view','fee.manage','payment.view','result.view','result.manage','result.publish','feedback.view','feedback.respond','report.view','report.export','task.view','task.manage'],
-                'COORDINATOR'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','result.view','result.manage','feedback.view','feedback.respond','report.view','task.view','task.manage'],
-                'TEACHER'=>['dashboard.view','student.view','attendance.view','attendance.manage','result.view','result.manage','feedback.view','report.view','task.view','task.manage'],
+                'COORDINATOR'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','fee.view','result.view','result.manage','feedback.view','feedback.respond','report.view','task.view','task.manage'],
+                'TEACHER'=>['dashboard.view','student.view','attendance.view','attendance.manage','fee.view','result.view','result.manage','feedback.view','report.view','task.view','task.manage'],
                 'PARENT'=>['dashboard.view','student.view','attendance.view','fee.view','payment.view','result.view','feedback.view','feedback.submit'],
                 'STUDENT'=>['dashboard.view','attendance.view','result.view','feedback.view'],
                 'ACCOUNTS'=>['dashboard.view','student.view','fee.view','fee.manage','payment.view','payment.reconcile','report.view','report.export','task.view','task.manage'],
