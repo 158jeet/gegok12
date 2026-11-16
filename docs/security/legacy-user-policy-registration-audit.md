@@ -65,3 +65,31 @@ A code review of `AdministrationController::resetUserPassword` and `updateUserSt
 The follow-up now deletes the target user's Sanctum tokens inside the same database transaction before completing an Owner password reset, and when disabling an account. Re-enabling an account does not need to revoke tokens again. Synthetic feature tests assert token deletion and the corresponding audit record. This change does not claim browser-session invalidation: session-driver behavior and the Owner's own password-change/session lifecycle remain a separate audit item.
 
 The exact-head CI pass recorded above applies to the prior commit only. The new token-revocation commit must complete all exact-head workflows before this follow-up is considered validated.
+
+
+## Route/controller consumer mapping — follow-up 2026-11-16
+
+The following route evidence was inspected directly from this branch. This is a targeted, verified inventory, not yet a complete repository-wide call-site census.
+
+| Route surface | Route/action | Observed authorization behavior | Relationship to User policy |
+|---|---|---|---|
+| Legacy admin | `POST /user/updateStatus/{name}` → `Admin\\UserController@updateStatus` | Loads target by name and updates both `users.status` and `userprofiles.status`; no explicit `Gate::allows`, `authorize()` or policy call appears in the method body inspected. Route-group middleware still needs full confirmation. | No direct User-policy call found in this action. |
+| Legacy admin | `GET /user/resetPassword/{id}` → `Admin\\UserController@resetPassword` | Calls `Gate::allows('member', $user)`; the `member` Gate callback compares actor and target `school_id`. | Uses a named Gate callback, not `UserPolicy`. |
+| Legacy admin | `GET /user/{id}/verificationcode` → `Admin\\UserController@emailVerification` | Calls the same `member` Gate callback before dispatching verification mail. | Uses a named Gate callback, not `UserPolicy`. |
+| Legacy admin | `GET /credentials/get/{name}`, `POST /credentials/add/{name}` → `UserProfileController` | Route entries identified; controller authorization still requires inspection. | Userprofile controller/model, not established as User-policy usage. |
+| Tagore administration | `POST /tagore/admin/users`, `POST /tagore/admin/users/{userId}/password`, `PATCH /tagore/admin/users/{userId}/status` → `Tagore\\AdministrationController` | Group is behind `auth`; controller methods call the explicit Owner guard. | Explicit Owner guard, not UserPolicy. |
+| API recovery | `POST /password/reset`, `POST /password/store`, `POST /reset/check`, `POST /reset/change/password` → `Api\\UserController` | Public recovery endpoints with throttles; challenge service governs proof and completion. | Recovery-specific controls, not UserPolicy. |
+| Authenticated API account actions | `GET /updatetoken`, `POST /password/change` → `Api\\UserController` | Defined within authenticated API route group; controller uses current authenticated user. | No User-policy call observed in the inspected methods. |
+
+### Interpretation and remaining checks
+
+- The legacy `member` Gate is only a same-`school_id` check. It is not a substitute for Tagore's role-specific institution, class, parent-family or finance scope rules.
+- The legacy `updateStatus` action is especially important: the inspected method contains no local authorization check, so its actual protection depends on the enclosing route middleware and any global/controller middleware. That middleware must be confirmed before deciding whether this is an exploitable gap.
+- The Tagore administration routes are protected by `auth` at the route group and the inspected controller methods separately apply an Owner guard. This is distinct from the legacy `Admin\\UserController` surface.
+- The API recovery routes are intentionally unauthenticated and must remain governed by the challenge flow, not a generic User policy.
+
+### Bounded search limitations
+
+The route files inspected included `admin.php`, `api.php`, `tagore.php`, `tagore_api.php`, `web.php`, `superadmin.php`, `teacher.php`, `student.php`, `accountant.php` and `receptionist.php`. The repository contains 19 route files; the remaining route files and all controller, view, resource, package and service call sites still require a reproducible full-tree scan. Connected GitHub code search returned zero matches for several authorization-call patterns, so those results are not used as proof of absence.
+
+**Decision:** Do not change the duplicate User policy registration or permissive policy bodies yet. First complete the route middleware and full-tree call-site inventory, then add role/record-scope tests.
