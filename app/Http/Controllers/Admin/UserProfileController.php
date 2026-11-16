@@ -198,9 +198,12 @@ class UserProfileController extends Controller
 
     public function getCredentials($name)
     {
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+        $user = User::where([['name',$name],['school_id',$actor->school_id]])->firstOrFail();
+
       try
-        {  
-        $user = User::where([['name',$name],['school_id',Auth::user()->school_id]])->first();
+        {
         $array=[];
 
         if(Auth::user())
@@ -221,10 +224,12 @@ class UserProfileController extends Controller
 
     public function updateCredentials(CredentialsUpdateRequest $request,$name)
     {
-        //dd($name);
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+        $user = User::where([['name',$name],['usergroup_id',$request->user_group],['school_id',$actor->school_id]])->firstOrFail();
+
         try
         {
-        $user = User::where([['name',$name],['usergroup_id',$request->user_group],['school_id',Auth::user()->school_id]])->first();
          $user->tokens()->delete();
         //dd($user);
         $user->email=$request->email;
