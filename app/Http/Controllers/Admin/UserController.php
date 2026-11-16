@@ -10,6 +10,7 @@ use App\Traits\ResetPasswordProcess;
 use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EmailVerification;
 use Illuminate\Http\Request;
@@ -35,6 +36,7 @@ class UserController extends Controller
       // only checks the actor's role; it does not scope the target record to the same school.
       $user = User::where('name',$name)->firstOrFail();
       abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
 
       $userprofile = Userprofile::where('user_id',$user->id)->firstOrFail();
 
@@ -71,6 +73,7 @@ class UserController extends Controller
     {
       $user = User::where('id', $id)->firstOrFail();
       abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
 
       try
       {
@@ -126,6 +129,29 @@ class UserController extends Controller
       {
         //dd($e->getMessage());
       }
+    }
+
+    private function protectOwnerAccount(User $target): void
+    {
+      $targetIsOwner = DB::table('tagore_user_roles as ur')
+        ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+        ->where('ur.user_id', $target->id)
+        ->where('ur.status', 'active')
+        ->where('r.code', 'OWNER')
+        ->exists();
+
+      if (!$targetIsOwner) {
+        return;
+      }
+
+      $actorIsOwner = DB::table('tagore_user_roles as ur')
+        ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+        ->where('ur.user_id', Auth::id())
+        ->where('ur.status', 'active')
+        ->where('r.code', 'OWNER')
+        ->exists();
+
+      abort_unless($actorIsOwner, 403);
     }
 
     public function reset_token(User $user)
