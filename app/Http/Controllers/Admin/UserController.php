@@ -30,21 +30,22 @@ class UserController extends Controller
 
     public function updateStatus(Request $request,$name)
     {
+      // Resolve and authorize the target before performing any token or status mutation.
+      // The legacy route is protected by the SchoolAdmin middleware, but that middleware
+      // only checks the actor's role; it does not scope the target record to the same school.
+      $user = User::where('name',$name)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+
+      $userprofile = Userprofile::where('user_id',$user->id)->firstOrFail();
+
       try
       {
-        $user = User::where('name',$name)->first();
-
         $this->reset_token($user);
 
         $user->status = $request->status;
-        
         $user->save();
-        
-        $userprofile = Userprofile::where('user_id',$user->id)->first();
 
         $userprofile->status = $request->status;
-        
-        $userprofile->save();
 
         $message=trans('messages.update_status_success_msg',['module' => 'Student']);
 
