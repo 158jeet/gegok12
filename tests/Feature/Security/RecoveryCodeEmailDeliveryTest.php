@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature\\Security;
+namespace Tests\Feature\Security;
 
-use App\\Mail\\ApiPasswordRecoveryCode;
-use App\\Models\\School;
-use App\\Models\\User;
-use App\\Services\\Security\\RecoveryCodeDeliveryService;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Illuminate\\Support\\Facades\\Mail;
-use Tests\\TestCase;
+use App\Mail\ApiPasswordRecoveryCode;
+use App\Models\School;
+use App\Models\User;
+use App\Services\Security\RecoveryCodeDeliveryService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Tests\TestCase;
 
 class RecoveryCodeEmailDeliveryTest extends TestCase
 {
@@ -44,7 +44,7 @@ class RecoveryCodeEmailDeliveryTest extends TestCase
         try {
             app(RecoveryCodeDeliveryService::class)->send('123456', $user);
             $this->fail('Unverified email must not receive a recovery code.');
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             $this->assertSame('A verified account email is required for recovery.', $exception->getMessage());
         }
 
