@@ -50,7 +50,7 @@ class AdministrationController extends Controller
             ->where('ur.status', 'active')
             ->orderBy('u.name')
             ->limit(250)
-            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
+            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'u.status as status', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
         return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
     }
