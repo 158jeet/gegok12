@@ -2,9 +2,9 @@ name: ERP Full Acceptance Convergence
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/erp-7day']
   push:
-    branches: [main, 'work/**']
+    branches: [main, 'work/**', 'workstream/**']
   workflow_dispatch:
 
 permissions:
