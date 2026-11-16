@@ -112,4 +112,47 @@ class TagoreFeeScopeAuthorizationTest extends TestCase
 
         $this->actingAs($teacher)->get(route('tagore.fees.student', $student->id))->assertOk();
     }
+
+    public function test_owner_can_grant_and_revoke_coordinator_fee_scope_with_audit(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        [, , , $standardLinkId] = $this->academicFixture();
+
+        $this->actingAs($owner)->post(route('tagore.admin.fee-scopes.grant'), [
+            'user_id' => $coordinator->id,
+            'standard_link_id' => $standardLinkId,
+            'reason' => 'Assigned fee follow-up for this class',
+        ])->assertRedirect();
+
+        $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $scope = DB::table('tagore_user_scopes')->where('user_id', $coordinator->id)
+            ->where('scope_type', 'standard_link')->where('scope_id', $standardLinkId)
+            ->where('permission_id', $permissionId)->first();
+        $this->assertNotNull($scope);
+        $this->assertDatabaseHas('tagore_user_admin_audits', [
+            'actor_id' => $owner->id, 'target_user_id' => $coordinator->id, 'action' => 'fee_scope_granted',
+        ]);
+
+        $this->actingAs($owner)->delete(route('tagore.admin.fee-scopes.revoke', $scope->id), [
+            'reason' => 'Coordinator assignment has ended',
+        ])->assertRedirect();
+
+        $this->assertDatabaseMissing('tagore_user_scopes', ['id' => $scope->id]);
+        $this->assertDatabaseHas('tagore_user_admin_audits', [
+            'actor_id' => $owner->id, 'target_user_id' => $coordinator->id, 'action' => 'fee_scope_revoked',
+        ]);
+    }
+
+    public function test_non_owner_cannot_grant_or_revoke_fee_scopes(): void
+    {
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        [, , , $standardLinkId] = $this->academicFixture();
+
+        $this->actingAs($coordinator)->post(route('tagore.admin.fee-scopes.grant'), [
+            'user_id' => $coordinator->id,
+            'standard_link_id' => $standardLinkId,
+            'reason' => 'Unauthorized scope attempt',
+        ])->assertForbidden();
+    }
 }
