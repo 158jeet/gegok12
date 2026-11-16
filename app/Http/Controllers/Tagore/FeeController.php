@@ -258,21 +258,20 @@ class FeeController extends Controller
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
 
-        // Owner, Principal and Accounts retain institution-level fee visibility.
-        // Coordinator access is limited to explicitly assigned grade/class scopes.
+        // Elevated institution-wide roles take precedence if an account has multiple roles.
+        if ($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty()) {
+            return;
+        }
+
+        // Coordinator access requires the exact read-only permission on an assigned class.
         if ($roles->contains('COORDINATOR')) {
             $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
-            $allowed = DB::table('student_academics as sa')
+            $allowed = $feeViewId && DB::table('student_academics as sa')
                 ->join('tagore_user_scopes as scope', function ($join) use ($userId, $feeViewId) {
                     $join->on('scope.scope_id', '=', 'sa.standardLink_id')
                         ->where('scope.user_id', '=', $userId)
                         ->where('scope.scope_type', '=', 'standard_link')
-                        ->where(function ($query) use ($feeViewId) {
-                            $query->whereNull('scope.permission_id');
-                            if ($feeViewId) {
-                                $query->orWhere('scope.permission_id', $feeViewId);
-                            }
-                        });
+                        ->where('scope.permission_id', '=', $feeViewId);
                 })
                 ->where('sa.user_id', $studentId)
                 ->whereNull('sa.deleted_at')
