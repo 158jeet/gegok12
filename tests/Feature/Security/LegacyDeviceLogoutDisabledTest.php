@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\\Feature\\Security;
+namespace Tests\Feature\Security;
 
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class LegacyDeviceLogoutDisabledTest extends TestCase
 {
