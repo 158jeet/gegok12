@@ -134,3 +134,9 @@ The same-school boundary has now been extended to the adjacent legacy account-ma
 - Regression coverage exercises cross-school password reset and email-verification denial, cross-school credential lookup non-disclosure, and the previously added status-update denial.
 
 This remains a bounded remediation, not a declaration that all legacy account-management flows are secure. Credential update still uses the existing legacy request/validation and token-reset behavior; broader audit is needed for privilege/group changes, email/mobile verification state, and other controller routes.
+
+### Sole-Owner protection in legacy account routes
+
+A further role-boundary issue was identified: the Tagore Owner fixture uses legacy user group 3, which is also admitted by the legacy SchoolAdmin middleware. Same-school checks alone would therefore allow another legacy SchoolAdmin to target the Owner account. The legacy status, password-reset, email-verification and credential read/update controllers now additionally check the active Tagore OWNER assignment. A non-Owner actor receives HTTP 403 when the target is the protected Owner account; the Owner retains access to the existing workflows. A regression test covers status, reset, verification and credential-read denial for a synthetic Owner fixture.
+
+This is a targeted safeguard for the sole Owner account. It does not replace the broader legacy role/permission redesign or the outstanding route-wide authorization audit.
