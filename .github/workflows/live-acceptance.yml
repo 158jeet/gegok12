@@ -8,7 +8,7 @@ on:
       - 'e2e/**'
       - 'docs/ACCEPTANCE_SYSTEM.md'
   push:
-    branches: [main, 'work/**']
+    branches: [main]
   workflow_dispatch:
     inputs:
       base_url:
