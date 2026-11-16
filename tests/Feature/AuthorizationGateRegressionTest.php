@@ -79,9 +79,9 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->actingAs($actor);
 
         try {
-            app(\\App\\Http\\Controllers\\Admin\\UserProfileController::class)->getCredentials($target->name);
+            app(\App\Http\Controllers\Admin\UserProfileController::class)->getCredentials($target->name);
             $this->fail('Credential lookup must not resolve a user from another school.');
-        } catch (\\Illuminate\\Database\\Eloquent\\ModelNotFoundException $exception) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             $this->assertNotEmpty($exception->getModel());
         }
     }
@@ -135,7 +135,7 @@ class AuthorizationGateRegressionTest extends TestCase
         }
 
         try {
-            app(\\App\\Http\\Controllers\\Admin\\UserProfileController::class)->getCredentials($owner->name);
+            app(\App\Http\Controllers\Admin\UserProfileController::class)->getCredentials($owner->name);
             $this->fail('A SchoolAdmin must not read the Owner account credentials.');
         } catch (HttpException $exception) {
             $this->assertSame(403, $exception->getStatusCode());
