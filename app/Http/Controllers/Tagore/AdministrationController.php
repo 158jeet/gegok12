@@ -157,7 +157,7 @@ class AdministrationController extends Controller
             if ($data['status'] === 'disabled') {
                 $target->tokens()->delete();
             }
-            DB::table('users')->where('id',$userId)->update(['status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
+            DB::table('users')->where('id',$userId)->update(['status'=>$data['status']==='disabled'?'inactive':'active','remember_token'=>null,'updated_at'=>now()]);
             DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
         });
         return back()->with('success','User account status updated.');
