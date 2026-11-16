@@ -12,6 +12,18 @@ class AuthorizationGateRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_member_gate_restricts_legacy_user_targets_to_the_same_school(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $sameSchoolMember = User::factory()->for($school)->create();
+        $otherSchoolMember = User::factory()->for($otherSchool)->create();
+
+        $this->assertTrue(Gate::forUser($actor)->allows('member', $sameSchoolMember));
+        $this->assertFalse(Gate::forUser($actor)->allows('member', $otherSchoolMember));
+    }
+
     public function test_post_reply_gate_checks_the_parent_post_school(): void
     {
         $school = School::factory()->create();
