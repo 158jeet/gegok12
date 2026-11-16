@@ -69,11 +69,11 @@ class UserController extends Controller
 
     public function resetPassword($id)
     {
+      $user = User::where('id', $id)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+
       try
       {
-        $user = User::where('id', $id)->first();
-        if(Gate::allows('member',$user))
-        {
           $this->resetPasswordToUser($user);
 
           $message= trans('messages.password_reset_success_msg');
@@ -102,11 +102,11 @@ class UserController extends Controller
 
     public function emailVerification($id)
     {
+      $user = User::where('id', $id)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+
       try
       {
-        $user = User::where('id', $id)->first();
-        if(Gate::allows('member',$user))
-        {
           if(env('MAIL_STATUS') == 'on')
           {
             event(new VerificationMailEvent($user));
