@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, 'integration/erp-7day']
   push:
-    branches: [main, 'work/**', 'workstream/**']
+    branches: [main, 'work/**']
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: erp-full-acceptance-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   full-acceptance:
