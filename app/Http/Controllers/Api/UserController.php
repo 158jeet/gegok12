@@ -101,8 +101,7 @@ class UserController extends Controller
                     $issued = $challenges->issue(
                         $user,
                         RecoveryChallengeService::API_PASSWORD_RESET,
-                        $request->ip(),
-                        'email'
+                        $request->ip()
                     );
 
                     $delivery->send($issued['code'], $user);
