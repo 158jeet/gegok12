@@ -105,3 +105,12 @@ Therefore, the inspected legacy `Admin\\UserController@updateStatus` method is n
 The Tagore routes use a different group: `auth` plus `TagorePerformance`, with explicit Owner checks inside the Owner-only AdministrationController methods. The API route group uses `api`; the password recovery endpoints are additionally throttled and use the recovery challenge service.
 
 **Confirmed gap to test:** legacy SchoolAdmin may be able to update a user status outside the actor's school if the controller lookup by globally unique `name` is not constrained and no downstream middleware adds record scoping. Before changing this endpoint, add synthetic cross-school deny tests and inspect `MustBeSchoolAdmin`/privilege middleware behavior. Do not assume the role middleware itself enforces target-record ownership.
+
+
+### Middleware source inspection — confirmed record-scope limitation
+
+The `MustBeSchoolAdmin` middleware checks only `Auth::user()->isAdmin()` before allowing the legacy admin route group through. It does not inspect the target user or compare the target's `school_id` with the actor's school. The subsequent `MustBePrivilege` middleware checks whether the actor's own school has an academic year and at least one standard; it also does not scope the requested target record.
+
+Consequently, for `Admin\\UserController@updateStatus`, the route middleware establishes an authenticated legacy SchoolAdmin-type portal boundary but does not establish target-user same-school ownership. The action looks up the target globally by `name` and updates the account and profile status without invoking the existing `member` Gate. This is a concrete cross-school authorization risk, not merely an unverified possibility.
+
+The existing `member` Gate callback already compares actor and target `school_id` and is used by the legacy reset-password and email-verification actions. The next implementation should apply equivalent record-level authorization to `updateStatus`, with synthetic same-school allow and cross-school deny endpoint tests. Before changing the method, verify the route's exact middleware and test fixture setup in CI; do not broaden access or alter the role middleware.
