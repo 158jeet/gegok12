@@ -140,3 +140,26 @@ This remains a bounded remediation, not a declaration that all legacy account-ma
 A further role-boundary issue was identified: the Tagore Owner fixture uses legacy user group 3, which is also admitted by the legacy SchoolAdmin middleware. Same-school checks alone would therefore allow another legacy SchoolAdmin to target the Owner account. The legacy status, password-reset, email-verification and credential read/update controllers now additionally check the active Tagore OWNER assignment. A non-Owner actor receives HTTP 403 when the target is the protected Owner account; the Owner retains access to the existing workflows. A regression test covers status, reset, verification and credential-read denial for a synthetic Owner fixture.
 
 This is a targeted safeguard for the sole Owner account. It does not replace the broader legacy role/permission redesign or the outstanding route-wide authorization audit.
+
+
+## Follow-up: legacy impersonation route audit — 2026-11-16
+
+Direct inspection of `routes/web.php` and `app/Http/Controllers/Auth/ImpersonateController.php` found four legacy impersonation routes implemented as GET requests:
+
+- `GET /teacher/{id}/impersonate`, `GET /library/{id}/impersonate`, and `GET /student/{id}/impersonate` are protected by `auth` and the legacy `schooladmin` middleware.
+- `GET /schooladmin/{id}/impersonate` is protected by `auth` and the legacy `superadmin` middleware.
+- The first three controller actions load the target with an unscoped `User::find($id)`, check only the target's legacy `is_admin` classification, and call `setImpersonating($user->id)` without an explicit same-school `member` Gate check.
+- The school-admin impersonation action also uses an unscoped target lookup and has no explicit Tagore Owner guard in the inspected method.
+
+This is a confirmed route/controller authorization and HTTP-method design concern. The route middleware authenticates and role-gates the actor, but the inspected actions do not demonstrate target-school scoping. Because impersonation changes the authenticated session, GET also permits a state-changing action to be triggered by a cross-site navigation from an already authenticated browser; the exact exploitability depends on cookie SameSite settings and the application's session configuration, which have not yet been verified.
+
+### Required remediation before changing behavior
+
+1. Inventory all Blade links, forms, JavaScript calls and tests that invoke these four routes so a verb change does not silently break legacy navigation.
+2. Inspect `Common::is_admin`, the impersonation trait/session implementation, cookie SameSite/session configuration, and the exact legacy role semantics.
+3. Add synthetic same-school allow, cross-school deny, missing-target 404, and protected-Owner deny tests for each applicable route.
+4. Convert the session-changing actions to POST with CSRF protection after updating every caller; do not keep a GET alias that still mutates the session.
+5. Ensure stop-impersonation restores the original actor and cannot be invoked to alter another user's session.
+6. Run the complete exact-head CI and browser acceptance workflows.
+
+**Current decision:** no impersonation code or route was changed in this audit-only step. Do not infer that the three legacy middleware groups provide target-record authorization. This finding is added to the outstanding legacy authorization remediation queue; implementation must follow the call-site and compatibility inventory above.
