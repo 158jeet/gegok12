@@ -252,6 +252,17 @@ class TagoreRoleAccessMatrixTest extends TestCase
         $this->actingAs($accounts)->get(route('tagore.fees.accounts'))->assertOk();
     }
 
+    public function test_coordinator_and_teacher_have_a_separate_read_only_class_fee_status_entry_point(): void
+    {
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $teacher = User::query()->where('email', 'teacher@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+
+        $this->actingAs($coordinator)->get(route('tagore.fees.class-status'))->assertOk()->assertSee('Class fee status');
+        $this->actingAs($teacher)->get(route('tagore.fees.class-status'))->assertOk()->assertSee('Class fee status');
+        $this->actingAs($coordinator)->get(route('tagore.fees.accounts'))->assertForbidden();
+        $this->actingAs($teacher)->get(route('tagore.fees.accounts'))->assertForbidden();
+    }
+
     public function test_owner_console_displays_disabled_user_account_status(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
