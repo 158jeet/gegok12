@@ -217,7 +217,7 @@ class FeeController extends Controller
     private function authorizeAccounts($roles): void
     {
         // Coordinators may view the Accounts workspace but cannot record financial transactions.
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
     }
 
     private function authorizePaymentRecording($roles): void
