@@ -257,5 +257,46 @@ class FeeController extends Controller
         $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
+
+        // Owner, Principal and Accounts retain institution-level fee visibility.
+        // Coordinator access is limited to explicitly assigned grade/class scopes.
+        if ($roles->contains('COORDINATOR')) {
+            $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+            $allowed = DB::table('student_academics as sa')
+                ->join('tagore_user_scopes as scope', function ($join) use ($userId, $feeViewId) {
+                    $join->on('scope.scope_id', '=', 'sa.standardLink_id')
+                        ->where('scope.user_id', '=', $userId)
+                        ->where('scope.scope_type', '=', 'standard_link')
+                        ->where(function ($query) use ($feeViewId) {
+                            $query->whereNull('scope.permission_id');
+                            if ($feeViewId) {
+                                $query->orWhere('scope.permission_id', $feeViewId);
+                            }
+                        });
+                })
+                ->where('sa.user_id', $studentId)
+                ->whereNull('sa.deleted_at')
+                ->exists();
+            abort_unless($allowed, 403);
+            return;
+        }
+
+        // Teachers may see fee status only for students in their currently assigned classes.
+        if ($roles->contains('TEACHER') && !$roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty()) {
+            $schoolId = DB::table('users')->where('id', $studentId)->value('school_id');
+            $allowed = DB::table('student_academics as sa')
+                ->join('class_teacher_links as ctl', function ($join) use ($userId, $schoolId) {
+                    $join->on('ctl.standardLink_id', '=', 'sa.standardLink_id')
+                        ->on('ctl.academic_year_id', '=', 'sa.academic_year_id')
+                        ->where('ctl.teacher_id', '=', $userId)
+                        ->where('ctl.school_id', '=', $schoolId)
+                        ->where('ctl.status', '=', 1)
+                        ->whereNull('ctl.deleted_at');
+                })
+                ->where('sa.user_id', $studentId)
+                ->whereNull('sa.deleted_at')
+                ->exists();
+            abort_unless($allowed, 403);
+        }
     }
 }
