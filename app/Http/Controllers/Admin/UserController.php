@@ -86,12 +86,7 @@ class UserController extends Controller
             LOGNAME_RESET_PASSWORD,
             $message
           );
-          return redirect()->back(); 
-        }
-        else
-        {
-          abort(403);
-        } 
+          return redirect()->back();
       }
       catch(Exception $e)
       {
@@ -126,11 +121,6 @@ class UserController extends Controller
 
           \Session::put('failmessage',trans('messages.verification_failure_msg')); 
           return redirect()->back();
-        }
-        else
-        {
-          abort(403);
-        } 
       }
       catch(Exception $e)
       {
