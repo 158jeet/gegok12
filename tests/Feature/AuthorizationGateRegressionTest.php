@@ -24,6 +24,28 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->assertFalse(Gate::forUser($actor)->allows('member', $otherSchoolMember));
     }
 
+    public function test_legacy_status_update_rejects_cross_school_target_before_mutation(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($otherSchool)->create();
+
+        $this->actingAs($actor);
+
+        try {
+            app(UserController::class)->updateStatus(
+                Request::create('/admin/user/updateStatus/'.$target->name, 'POST', ['status' => 'inactive']),
+                $target->name
+            );
+            $this->fail('A SchoolAdmin must not change a user status in another school.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+
+        $this->assertSame('active', $target->fresh()->status);
+    }
+
     public function test_post_reply_gate_checks_the_parent_post_school(): void
     {
         $school = School::factory()->create();
