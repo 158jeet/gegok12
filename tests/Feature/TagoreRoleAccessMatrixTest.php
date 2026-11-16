@@ -135,6 +135,23 @@ class TagoreRoleAccessMatrixTest extends TestCase
         ]);
     }
 
+
+    public function test_owner_cannot_create_another_owner_account(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        $institutionId = DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+
+        $this->actingAs($owner)->post('/tagore/admin/users', [
+            'name' => 'Unauthorized Second Owner',
+            'email' => 'second-owner@tagore-demo.local',
+            'role_id' => $ownerRoleId,
+            'institution_id' => $institutionId,
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('users', ['email' => 'second-owner@tagore-demo.local']);
+    }
+
     public function test_owner_role_assignment_is_not_mutable_through_operational_role_assignment(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
