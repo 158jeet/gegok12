@@ -192,6 +192,70 @@ class AdministrationController extends Controller
         return back()->with('success','User account status updated.');
     }
 
+    public function grantFeeScope(Request $request)
+    {
+        $this->owner($request);
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'standard_link_id' => ['required', 'integer'],
+            'reason' => ['required', 'string', 'min:8', 'max:250'],
+        ]);
+        $target = DB::table('users')->where('id', $data['user_id'])->whereNull('deleted_at')->first(['id', 'school_id']);
+        abort_unless($target && DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $target->id)->where('ur.status', 'active')->where('r.code', 'COORDINATOR')->exists(), 422,
+            'Select an active Coordinator account.');
+        $class = DB::table('standards_link')->where('id', $data['standard_link_id'])
+            ->where('school_id', $target->school_id)->where('status', 1)->whereNull('deleted_at')
+            ->first(['id', 'school_id']);
+        abort_unless($class, 422, 'The selected class must belong to the Coordinator school and be active.');
+        $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        abort_unless($permissionId, 422, 'The read-only fee permission is not configured.');
+
+        DB::transaction(function () use ($request, $data, $target, $class, $permissionId) {
+            $exists = DB::table('tagore_user_scopes')->where('user_id', $target->id)
+                ->where('scope_type', 'standard_link')->where('scope_id', $class->id)
+                ->where('permission_id', $permissionId)->exists();
+            if ($exists) return;
+            DB::table('tagore_user_scopes')->insert([
+                'user_id' => $target->id, 'scope_type' => 'standard_link',
+                'scope_id' => $class->id, 'permission_id' => $permissionId,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id, 'target_user_id' => $target->id,
+                'action' => 'fee_scope_granted',
+                'metadata' => json_encode(['scope_type' => 'standard_link', 'scope_id' => $class->id, 'permission' => 'fee.view', 'reason' => trim($data['reason'])]),
+                'created_at' => now(),
+            ]);
+        });
+        return back()->with('success', 'Read-only fee visibility scope saved.');
+    }
+
+    public function revokeFeeScope(Request $request, int $scopeId)
+    {
+        $this->owner($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:250']]);
+        $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $scope = DB::table('tagore_user_scopes')->where('id', $scopeId)
+            ->where('scope_type', 'standard_link')->where('permission_id', $permissionId)->first();
+        abort_unless($scope, 404);
+        abort_unless(DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $scope->user_id)->where('ur.status', 'active')->where('r.code', 'COORDINATOR')->exists(), 422,
+            'Only Coordinator fee-view scopes can be revoked here.');
+
+        DB::transaction(function () use ($request, $scope, $data) {
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id, 'target_user_id' => $scope->user_id,
+                'action' => 'fee_scope_revoked',
+                'metadata' => json_encode(['scope_type' => 'standard_link', 'scope_id' => $scope->scope_id, 'permission' => 'fee.view', 'reason' => trim($data['reason'])]),
+                'created_at' => now(),
+            ]);
+            DB::table('tagore_user_scopes')->where('id', $scope->id)->delete();
+        });
+        return back()->with('success', 'Fee visibility scope revoked and audited.');
+    }
+
     public function storeInstitution(Request $request)
     {
         $this->owner($request);
