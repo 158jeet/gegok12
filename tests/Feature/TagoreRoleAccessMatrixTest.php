@@ -214,7 +214,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->id]);
-        $this->assertDatabaseHas('users', ['id' => $principal->id, 'status' => 'disabled']);
+        $this->assertDatabaseHas('users', ['id' => $principal->id, 'status' => 'inactive']);
         $this->assertDatabaseHas('tagore_user_admin_audits', [
             'actor_id' => $owner->id,
             'target_user_id' => $principal->id,
