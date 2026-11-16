@@ -166,6 +166,27 @@ class TagoreRoleAccessMatrixTest extends TestCase
         ])->assertStatus(422);
     }
 
+
+    public function test_owner_operational_role_assignment_creates_an_audit_record(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $coordinatorRoleId = DB::table('tagore_roles')->where('code', 'COORDINATOR')->value('id');
+        $institutionId = DB::table('tagore_institutions')->where('school_id', $principal->school_id)->value('id');
+
+        $this->actingAs($owner)->post('/tagore/admin/role', [
+            'user_id' => $principal->id,
+            'role_id' => $coordinatorRoleId,
+            'institution_id' => $institutionId,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_user_admin_audits', [
+            'actor_id' => $owner->id,
+            'target_user_id' => $principal->id,
+            'action' => 'role_assigned',
+        ]);
+    }
+
     public function test_fee_management_route_matches_the_declared_role_permission_matrix(): void
     {
         $expected = [
