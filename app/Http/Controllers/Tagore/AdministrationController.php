@@ -277,10 +277,23 @@ class AdministrationController extends Controller
             abort_unless($schoolId, 422, 'Select an active institution.');
             abort_unless(DB::table('users')->where('id', $data['user_id'])->where('school_id', $schoolId)->exists(), 422, 'User must belong to the selected institution school.');
         }
-        DB::table('tagore_user_roles')->updateOrInsert(
-            ['user_id' => $data['user_id'], 'role_id' => $data['role_id'], 'institution_id' => $data['institution_id']],
-            ['status' => 'active', 'updated_at' => now(), 'created_at' => now()]
-        );
+        DB::transaction(function () use ($request, $data, $role) {
+            DB::table('tagore_user_roles')->updateOrInsert(
+                ['user_id' => $data['user_id'], 'role_id' => $data['role_id'], 'institution_id' => $data['institution_id']],
+                ['status' => 'active', 'updated_at' => now(), 'created_at' => now()]
+            );
+
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id,
+                'target_user_id' => $data['user_id'],
+                'action' => 'role_assigned',
+                'metadata' => json_encode([
+                    'role_code' => $role->code,
+                    'institution_id' => $data['institution_id'],
+                ]),
+                'created_at' => now(),
+            ]);
+        });
         return back()->with('success', 'Role assignment saved.');
     }
 
