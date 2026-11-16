@@ -251,4 +251,4 @@ class TagoreRoleAccessMatrixTest extends TestCase
         $this->actingAs($teacher)->get(route('tagore.fees.accounts'))->assertForbidden();
         $this->actingAs($accounts)->get(route('tagore.fees.accounts'))->assertOk();
     }
-}\n
+}
