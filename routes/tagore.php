@@ -103,6 +103,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
     Route::post('/child/{studentId}/fees/pay', [OnlinePaymentController::class, 'initiate'])->whereNumber('studentId')->name('tagore.payments.initiate');
     Route::post('/payments/confirm', [OnlinePaymentController::class, 'confirm'])->name('tagore.payments.confirm');
+    Route::get('/cashier', [FeeController::class, 'cashier'])->name('tagore.cashier.index');
     Route::get('/fees/class-status', [FeeController::class, 'classStatus'])->name('tagore.fees.class-status');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
