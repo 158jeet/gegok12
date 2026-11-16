@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tagore;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -122,6 +123,8 @@ class AdministrationController extends Controller
         abort_unless($user, 404);
         $password = 'Tg!' . \Illuminate\Support\Str::random(5) . '-' . \Illuminate\Support\Str::random(8);
         DB::transaction(function () use ($request, $userId, $password) {
+            $target = User::query()->whereKey($userId)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
+            $target->tokens()->delete();
             DB::table('users')->where('id', $userId)->update([
                 'password' => Hash::make($password),
                 'remember_token' => null,
@@ -150,6 +153,10 @@ class AdministrationController extends Controller
         abort_if((int)$userId===(int)$request->user()->id,422,'You cannot disable your own account.');
         abort_unless(DB::table('users')->where('id',$userId)->whereNull('deleted_at')->exists(),404);
         DB::transaction(function () use ($request, $userId, $data) {
+            $target = User::query()->whereKey($userId)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
+            if ($data['status'] === 'disabled') {
+                $target->tokens()->delete();
+            }
             DB::table('users')->where('id',$userId)->update(['status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
             DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
         });
