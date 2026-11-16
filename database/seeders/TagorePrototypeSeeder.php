@@ -38,7 +38,16 @@ class TagorePrototypeSeeder extends Seeder
         foreach(DB::table('schools')->whereNull('deleted_at')->orderBy('id')->limit(3)->get() as $school){
             $institutionId=DB::table('tagore_institutions')->where('school_id',$school->id)->value('id');
             if(!$institutionId)$institutionId=DB::table('tagore_institutions')->insertGetId(['tagore_group_id'=>$groupId,'school_id'=>$school->id,'code'=>'TAGORE-'.$school->id,'display_name'=>$school->name,'type'=>'school','status'=>'active','created_at'=>$now,'updated_at'=>$now]);
-            foreach(DB::table('users')->where('school_id',$school->id)->whereNull('deleted_at')->get(['id','usergroup_id']) as $user){
+            foreach(DB::table('users')->where('school_id',$school->id)->whereNull('deleted_at')->get(['id','usergroup_id','email']) as $user){
+                // The synthetic Cashier account uses legacy usergroup 11 for compatibility,
+                // but its Tagore authority must remain CASHIER, never ACCOUNTS.
+                if($user->email === 'cashier@tagore-demo.local'){
+                    $cashierRoleId=DB::table('tagore_roles')->where('code','CASHIER')->value('id');
+                    $accountsRoleId=DB::table('tagore_roles')->where('code','ACCOUNTS')->value('id');
+                    if($accountsRoleId) DB::table('tagore_user_roles')->where('user_id',$user->id)->where('institution_id',$institutionId)->where('role_id',$accountsRoleId)->delete();
+                    if($cashierRoleId) DB::table('tagore_user_roles')->updateOrInsert(['user_id'=>$user->id,'role_id'=>$cashierRoleId,'institution_id'=>$institutionId],['status'=>'active','updated_at'=>$now,'created_at'=>$now]);
+                    continue;
+                }
                 $roleCode=match((int)$user->usergroup_id){1,2,3=>'OWNER',4=>'PRINCIPAL',5=>'TEACHER',6=>'STUDENT',7=>'PARENT',11=>'ACCOUNTS',default=>null};
                 if($roleCode){$roleId=DB::table('tagore_roles')->where('code',$roleCode)->value('id');DB::table('tagore_user_roles')->updateOrInsert(['user_id'=>$user->id,'role_id'=>$roleId,'institution_id'=>$institutionId],['status'=>'active','updated_at'=>$now,'created_at'=>$now]);}
             }
