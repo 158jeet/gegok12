@@ -65,7 +65,7 @@ class AdministrationController extends Controller
             'institution_id' => ['required', 'integer', 'exists:tagore_institutions,id'],
         ]);
         $role = DB::table('tagore_roles')->where('id', $data['role_id'])->where('status', 'active')->first(['id', 'code']);
-        abort_unless($role && $role->code !== 'OWNER', 422, 'Additional owner accounts require separate approval.');
+        abort_unless($role && $role->code !== 'OWNER', 422, 'The Owner role is reserved for the existing Owner account and cannot be assigned here.');
         $institution = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->first(['id', 'school_id']);
         abort_unless($institution, 422);
         $group = match ($role->code) {
@@ -261,10 +261,17 @@ class AdministrationController extends Controller
         ]);
         $role = DB::table('tagore_roles')->where('id', $data['role_id'])->where('status', 'active')->first(['id', 'code']);
         abort_unless($role, 422, 'Select an active role.');
-        if ($role->code === 'OWNER') $data['institution_id'] = null;
-        if ($role->code !== 'OWNER') {
-            abort_unless(!empty($data['institution_id']), 422, 'An institution is required for this role.');
-        }
+        abort_unless($role->code !== 'OWNER', 422, 'The Owner role is reserved for the existing Owner account and cannot be assigned here.');
+
+        $targetIsOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $data['user_id'])
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->exists();
+        abort_unless(!$targetIsOwner, 422, 'The existing Owner account role assignment is protected.');
+
+        abort_unless(!empty($data['institution_id']), 422, 'An institution is required for this role.');
         if ($data['institution_id']) {
             $schoolId = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->value('school_id');
             abort_unless($schoolId, 422, 'Select an active institution.');
