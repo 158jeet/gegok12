@@ -73,7 +73,7 @@ Route::post( '/schooldetails/update/{school_id}', 'SchoolDetailsController@updat
 	Route::post( '/academic/updateStatus', 'AcademicYearController@updateStatus' );
 
 	//delete
-	Route::get( '/academic/delete/{id}', 'AcademicYearController@destroy' );
+	Route::delete( '/academic/delete/{id}', 'AcademicYearController@destroy' );
 
 //holidays
 	//index

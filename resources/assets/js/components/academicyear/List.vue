@@ -169,9 +169,11 @@
                 }).then(function(isConfirm) {
                     if (isConfirm) 
                     {
-                        axios.get(thisswal.url+'/admin/academic/delete/'+ id).then(response => {
+                        axios.delete(thisswal.url+'/admin/academic/delete/'+ id).then(response => {
                             thisswal.success = response.data.success;
                             window.location.reload();
+                        }).catch(() => {
+                            swal('Unable to delete academic year', 'Please refresh and try again.', 'error');
                         }); 
                     }
                     else 
