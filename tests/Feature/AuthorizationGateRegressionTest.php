@@ -49,6 +49,42 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->assertSame('active', $target->fresh()->status);
     }
 
+    public function test_legacy_password_reset_and_email_verification_reject_cross_school_targets(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($otherSchool)->create();
+
+        $this->actingAs($actor);
+
+        foreach (['resetPassword', 'emailVerification'] as $method) {
+            try {
+                app(UserController::class)->{$method}($target->id);
+                $this->fail("The {$method} endpoint must reject a target in another school.");
+            } catch (HttpException $exception) {
+                $this->assertSame(403, $exception->getStatusCode());
+            }
+        }
+    }
+
+    public function test_legacy_credential_lookup_returns_not_found_for_cross_school_target(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($otherSchool)->create();
+
+        $this->actingAs($actor);
+
+        try {
+            app(\\App\\Http\\Controllers\\Admin\\UserProfileController::class)->getCredentials($target->name);
+            $this->fail('Credential lookup must not resolve a user from another school.');
+        } catch (\\Illuminate\\Database\\Eloquent\\ModelNotFoundException $exception) {
+            $this->assertNotEmpty($exception->getModel());
+        }
+    }
+
     public function test_post_reply_gate_checks_the_parent_post_school(): void
     {
         $school = School::factory()->create();
