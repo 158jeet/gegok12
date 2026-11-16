@@ -68,6 +68,16 @@ class TagoreFeeScopeAuthorizationTest extends TestCase
         [$student, , , $standardLinkId] = $this->academicFixture();
         $this->actingAs($coordinator)->get(route('tagore.fees.student', $student->id))->assertForbidden();
 
+        DB::table('tagore_user_scopes')->insert([
+            'user_id' => $coordinator->id,
+            'scope_type' => 'standard_link',
+            'scope_id' => $standardLinkId,
+            'permission_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAs($coordinator)->get(route('tagore.fees.student', $student->id))->assertForbidden();
+
         $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
         $this->assertNotNull($permissionId);
         DB::table('tagore_user_scopes')->insert([
