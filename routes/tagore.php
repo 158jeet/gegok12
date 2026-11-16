@@ -62,6 +62,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/users', [AdministrationController::class, 'storeUser'])->name('tagore.admin.users.store');
     Route::post('/admin/users/{userId}/password', [AdministrationController::class, 'resetUserPassword'])->whereNumber('userId')->name('tagore.admin.users.password');
     Route::patch('/admin/users/{userId}/status', [AdministrationController::class, 'updateUserStatus'])->whereNumber('userId')->name('tagore.admin.users.status');
+    Route::post('/admin/fee-scopes', [AdministrationController::class, 'grantFeeScope'])->name('tagore.admin.fee-scopes.grant');
+    Route::delete('/admin/fee-scopes/{scopeId}', [AdministrationController::class, 'revokeFeeScope'])->whereNumber('scopeId')->name('tagore.admin.fee-scopes.revoke');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
     Route::patch('/staff/me/leave/{leaveId}/cancel', [\App\Http\Controllers\Tagore\StaffController::class, 'cancelOwnLeave'])->whereNumber('leaveId')->name('tagore.staff.self.leave.cancel');
