@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AuthorizationGateRegressionTest extends TestCase
@@ -82,6 +83,62 @@ class AuthorizationGateRegressionTest extends TestCase
             $this->fail('Credential lookup must not resolve a user from another school.');
         } catch (\\Illuminate\\Database\\Eloquent\\ModelNotFoundException $exception) {
             $this->assertNotEmpty($exception->getModel());
+        }
+    }
+
+    public function test_legacy_school_admin_cannot_change_the_protected_owner_account(): void
+    {
+        $school = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $owner = User::factory()->for($school)->schoolAdmin()->create();
+
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        if (!$ownerRoleId) {
+            $ownerRoleId = DB::table('tagore_roles')->insertGetId([
+                'name' => 'Owner',
+                'code' => 'OWNER',
+                'is_system' => true,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $owner->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($actor);
+
+        foreach (['resetPassword', 'emailVerification'] as $method) {
+            try {
+                app(UserController::class)->{$method}($owner->id);
+                $this->fail("A SchoolAdmin must not run {$method} against the Owner account.");
+            } catch (HttpException $exception) {
+                $this->assertSame(403, $exception->getStatusCode());
+            }
+        }
+
+        try {
+            app(UserController::class)->updateStatus(
+                Request::create('/admin/user/updateStatus/'.$owner->name, 'POST', ['status' => 'inactive']),
+                $owner->name
+            );
+            $this->fail('A SchoolAdmin must not change the Owner account status.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+
+        try {
+            app(\\App\\Http\\Controllers\\Admin\\UserProfileController::class)->getCredentials($owner->name);
+            $this->fail('A SchoolAdmin must not read the Owner account credentials.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
         }
     }
 
