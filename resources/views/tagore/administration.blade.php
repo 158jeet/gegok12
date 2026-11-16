@@ -89,7 +89,7 @@
             <form method="post" action="{{ url('/tagore/admin/role') }}">
                 @csrf
                 <label>User ID</label><input type="number" name="user_id" placeholder="GegoK12 user ID" required>
-                <label>Role</label><select name="role_id" required>@foreach($rolesList as $r)<option value="{{ $r->id }}">{{ $r->name }} ({{ $r->code }})</option>@endforeach</select>
+                <label>Role</label><select name="role_id" required>@foreach($rolesList->where('code','!=','OWNER') as $r)<option value="{{ $r->id }}">{{ $r->name }} ({{ $r->code }})</option>@endforeach</select>
                 <label>Institution</label><select name="institution_id"><option value="">Group-wide / none</option>@foreach($institutions as $i)<option value="{{ $i->id }}" data-school="{{ $i->school_id }}">{{ $i->display_name }}</option>@endforeach</select>
                 <button>Save role assignment</button>
             </form>
