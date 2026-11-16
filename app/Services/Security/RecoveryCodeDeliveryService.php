@@ -1,10 +1,10 @@
 <?php
 
-namespace App\\Services\\Security;
+namespace App\Services\Security;
 
-use App\\Mail\\ApiPasswordRecoveryCode;
-use App\\Models\\User;
-use Illuminate\\Support\\Facades\\Mail;
+use App\Mail\ApiPasswordRecoveryCode;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use InvalidArgumentException;
 
 class RecoveryCodeDeliveryService
