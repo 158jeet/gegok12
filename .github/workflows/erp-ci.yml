@@ -3,9 +3,9 @@ name: ERP CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'work/**']
+    branches: [main, 'work/**', 'workstream/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/erp-7day']
 
 permissions:
   contents: read
