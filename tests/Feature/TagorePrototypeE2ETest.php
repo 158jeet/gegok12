@@ -25,7 +25,7 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_seeded_owner_can_access_tagore_dashboard_and_administration(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
 
         $this->assertDatabaseHas('tagore_user_roles', ['user_id' => $owner->id, 'status' => 'active']);
         $this->assertDatabaseHas('tagore_user_roles', [
@@ -186,7 +186,7 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_owner_can_view_accounts_and_seeded_fee_data_exists(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
 
         $this->assertGreaterThan(
             0,
@@ -199,7 +199,7 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_owner_cannot_create_duplicate_institution_for_same_gegok12_school(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $schoolId = DB::table('tagore_institutions')->where('code', 'TAGORE-1')->value('school_id');
 
         $this->actingAs($owner)->post(route('tagore.admin.institution'), [
@@ -214,7 +214,7 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_offline_payment_updates_fee_ledger_and_creates_receipt_and_transaction(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $obligation = DB::table('tagore_fee_obligations')->where('outstanding_amount', '>', 0)->orderBy('id')->first();
         $this->assertNotNull($obligation);
 
@@ -247,7 +247,7 @@ class TagorePrototypeE2ETest extends TestCase
 
     public function test_fee_service_rejects_cross_institution_student_obligation(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $student = DB::table('users')->where('usergroup_id', 6)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $otherInstitution = DB::table('tagore_institutions')->where('school_id', '!=', $student->school_id)->first();
 
