@@ -72,3 +72,16 @@ The Owner has clarified that there must be **no other Admin account or separate 
 
 Acceptance must verify the role catalogue and provisioning paths do not introduce a generic Admin role/account, while preserving all existing operational roles and their intended permissions.
 
+
+
+## Owner-only enforcement — implementation update (2026-11-16)
+
+The following application changes have been added to PR #76:
+
+- The Tagore Owner-only role-assignment endpoint now rejects every attempt to assign the OWNER role, including to another user. It also protects the existing Owner account from receiving operational roles through this endpoint.
+- The account-creation path continues to reject OWNER; the administration screen now omits Owner from both account-creation and role-assignment selectors.
+- Owner-issued operational role assignments are written with an audit event containing actor, target, role code and institution scope.
+- The Tagore prototype seeder no longer promotes legacy SiteAdmin or SiteSubadmin user groups to Tagore Owner. Legacy SchoolAdmin/SchoolSubadmin group IDs map to the operational Principal role; the explicit synthetic Owner fixture is excluded from automatic role mapping and is seeded separately.
+- Added synthetic feature tests for the single Owner fixture, rejected Owner-role assignment, rejected second-Owner creation, protected Owner role assignment and audit logging of operational role assignment.
+
+Important boundary: this is application-level enforcement in the Tagore administration workflow, not yet proof that every legacy GegoK12 user-management route, import, API or direct database path has been audited. The wider role matrix and route inventory in PR #72 remain the required audit scope. Exact-head CI is still required before acceptance.
