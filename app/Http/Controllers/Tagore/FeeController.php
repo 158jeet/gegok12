@@ -78,21 +78,15 @@ class FeeController extends Controller
         abort_unless($roles->intersect(['COORDINATOR', 'TEACHER'])->isNotEmpty(), 403);
         abort_if($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
 
-        $classIds = collect();
+        $coordinatorClassIds = collect();
         if ($roles->contains('COORDINATOR')) {
             $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
             if ($feeViewId) {
-                $classIds = $classIds->merge(DB::table('tagore_user_scopes')
+                $coordinatorClassIds = DB::table('tagore_user_scopes')
                     ->where('user_id', $userId)->where('scope_type', 'standard_link')
-                    ->where('permission_id', $feeViewId)->pluck('scope_id'));
+                    ->where('permission_id', $feeViewId)->pluck('scope_id');
             }
         }
-        if ($roles->contains('TEACHER')) {
-            $classIds = $classIds->merge(DB::table('class_teacher_links')
-                ->where('teacher_id', $userId)->where('status', 1)->whereNull('deleted_at')
-                ->pluck('standardLink_id'));
-        }
-        $classIds = $classIds->filter()->unique()->values();
         $institutionIds = DB::table('tagore_user_roles')->where('user_id', $userId)
             ->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id');
         $latestAcademicRows = DB::table('student_academics')->whereNull('deleted_at')
@@ -107,7 +101,27 @@ class FeeController extends Controller
             ->leftJoinSub($feeTotals, 'fees', function ($join) {
                 $join->on('fees.student_id', '=', 'u.id')->on('fees.institution_id', '=', 'i.id');
             })
-            ->whereIn('sa.id', $latestAcademicRows)->whereIn('sa.standardLink_id', $classIds)
+            ->whereIn('sa.id', $latestAcademicRows)
+            ->where(function ($query) use ($roles, $coordinatorClassIds, $userId) {
+                if ($roles->contains('COORDINATOR')) {
+                    $query->whereIn('sa.standardLink_id', $coordinatorClassIds);
+                }
+                if ($roles->contains('TEACHER')) {
+                    $teacherAssignment = function ($assignment) use ($userId) {
+                        $assignment->selectRaw('1')->from('class_teacher_links as ctl')
+                            ->whereColumn('ctl.standardLink_id', 'sa.standardLink_id')
+                            ->whereColumn('ctl.academic_year_id', 'sa.academic_year_id')
+                            ->whereColumn('ctl.school_id', 'u.school_id')
+                            ->where('ctl.teacher_id', $userId)->where('ctl.status', 1)
+                            ->whereNull('ctl.deleted_at');
+                    };
+                    if ($roles->contains('COORDINATOR')) {
+                        $query->orWhereExists($teacherAssignment);
+                    } else {
+                        $query->whereExists($teacherAssignment);
+                    }
+                }
+            })
             ->whereIn('i.id', $institutionIds)->whereNull('u.deleted_at')->orderBy('u.name')
             ->get(['u.id','u.name','i.display_name as institution','sa.standardLink_id as class_id','sa.academic_year_id',
                 DB::raw('COALESCE(fees.payable, 0) as payable'),DB::raw('COALESCE(fees.paid, 0) as paid'),DB::raw('COALESCE(fees.outstanding, 0) as outstanding')]);
