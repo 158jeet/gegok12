@@ -187,6 +187,41 @@ class TagoreRoleAccessMatrixTest extends TestCase
         ]);
     }
 
+    public function test_owner_password_reset_revokes_target_sanctum_tokens(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $token = $principal->createToken('owner-reset-revocation')->accessToken;
+
+        $this->actingAs($owner)->post('/tagore/admin/users/'.$principal->id.'/password')->assertRedirect();
+
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->id]);
+        $this->assertDatabaseHas('tagore_user_admin_audits', [
+            'actor_id' => $owner->id,
+            'target_user_id' => $principal->id,
+            'action' => 'password_reset',
+        ]);
+    }
+
+    public function test_owner_disabling_user_revokes_target_sanctum_tokens(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $token = $principal->createToken('owner-disable-revocation')->accessToken;
+
+        $this->actingAs($owner)->patch('/tagore/admin/users/'.$principal->id.'/status', [
+            'status' => 'disabled',
+        ])->assertRedirect();
+
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $token->id]);
+        $this->assertDatabaseHas('users', ['id' => $principal->id, 'status' => 'disabled']);
+        $this->assertDatabaseHas('tagore_user_admin_audits', [
+            'actor_id' => $owner->id,
+            'target_user_id' => $principal->id,
+            'action' => 'disabled',
+        ]);
+    }
+
     public function test_fee_management_route_matches_the_declared_role_permission_matrix(): void
     {
         $expected = [
