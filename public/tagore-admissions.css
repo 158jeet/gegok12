@@ -32,3 +32,9 @@ body>.tg-admissions,.tg-admissions{width:100%;min-width:0;max-width:100%;}
 
 /* The standalone CRM pages do not use the shared application body reset. */
 html,body{margin:0;padding:0}
+
+/* Keep the Admissions pipeline table within a real horizontal scroller on mobile. */
+.tg-ad-section{min-width:0;max-width:100%;overflow:hidden}
+.tg-ad-section>.tg-ad-tablewrap{display:block;position:relative;width:100%;max-width:100%;min-width:0;overflow-x:auto!important;overflow-y:hidden;contain:inline-size;}
+.tg-ad-section>.tg-ad-tablewrap>.tg-ad-table{display:table;width:max-content;min-width:760px;max-width:none;}
+@media(min-width:701px){.tg-ad-section>.tg-ad-tablewrap>.tg-ad-table{min-width:980px}}
