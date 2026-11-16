@@ -114,3 +114,13 @@ The `MustBeSchoolAdmin` middleware checks only `Auth::user()->isAdmin()` before 
 Consequently, for `Admin\\UserController@updateStatus`, the route middleware establishes an authenticated legacy SchoolAdmin-type portal boundary but does not establish target-user same-school ownership. The action looks up the target globally by `name` and updates the account and profile status without invoking the existing `member` Gate. This is a concrete cross-school authorization risk, not merely an unverified possibility.
 
 The existing `member` Gate callback already compares actor and target `school_id` and is used by the legacy reset-password and email-verification actions. The next implementation should apply equivalent record-level authorization to `updateStatus`, with synthetic same-school allow and cross-school deny endpoint tests. Before changing the method, verify the route's exact middleware and test fixture setup in CI; do not broaden access or alter the role middleware.
+
+## Follow-up remediation: legacy user status endpoint
+
+The legacy `POST /admin/user/updateStatus/{name}` endpoint has now been hardened in the authentication-recovery branch. The controller resolves the target with `firstOrFail()`, then checks the existing `member` Gate before revoking tokens or changing either the user or profile status. A target outside the authenticated SchoolAdmin's school receives HTTP 403; a missing target/profile fails closed with HTTP 404. The route remains behind the existing authenticated SchoolAdmin and privilege middleware.
+
+Regression coverage now includes:
+- `member` Gate allows a same-school target and denies a different-school target.
+- The legacy status-update controller rejects a cross-school target before mutation and asserts the target remains active.
+
+Scope limitation: this closes the specifically confirmed cross-school status-update path. It does not establish complete institution/class/family scoping for other legacy user endpoints, nor does it resolve the duplicate User policy registration. The wider route/controller call-site audit remains open.
