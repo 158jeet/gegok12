@@ -22,11 +22,11 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'lacks' => ['user.manage', 'scope.manage'],
             ],
             'COORDINATOR' => [
-                'has' => ['dashboard.view', 'attendance.manage', 'result.manage', 'task.manage'],
+                'has' => ['dashboard.view', 'attendance.manage', 'fee.view', 'result.manage', 'task.manage'],
                 'lacks' => ['fee.manage', 'user.manage'],
             ],
             'TEACHER' => [
-                'has' => ['dashboard.view', 'attendance.manage', 'result.manage', 'task.manage'],
+                'has' => ['dashboard.view', 'attendance.manage', 'fee.view', 'result.manage', 'task.manage'],
                 'lacks' => ['fee.manage', 'fee.edit', 'user.manage'],
             ],
             'PARENT' => [
