@@ -101,6 +101,54 @@ class TagoreRoleAccessMatrixTest extends TestCase
         }
     }
 
+
+    public function test_only_the_explicit_owner_fixture_has_the_owner_role(): void
+    {
+        $owners = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->join('users as u', 'u.id', '=', 'ur.user_id')
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->distinct()
+            ->pluck('u.email');
+
+        $this->assertSame(['owner@tagore-demo.local'], $owners->sort()->values()->all());
+    }
+
+    public function test_owner_cannot_assign_the_owner_role_to_another_account(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        $institutionId = DB::table('tagore_institutions')->where('school_id', $principal->school_id)->value('id');
+
+        $this->actingAs($owner)->post('/tagore/admin/role', [
+            'user_id' => $principal->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => $institutionId,
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('tagore_user_roles', [
+            'user_id' => $principal->id,
+            'role_id' => $ownerRoleId,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_owner_role_assignment_is_not_mutable_through_operational_role_assignment(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principalRoleId = DB::table('tagore_roles')->where('code', 'PRINCIPAL')->value('id');
+        $institutionId = DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+
+        $this->actingAs($owner)->post('/tagore/admin/role', [
+            'user_id' => $owner->id,
+            'role_id' => $principalRoleId,
+            'institution_id' => $institutionId,
+        ])->assertStatus(422);
+    }
+
     public function test_fee_management_route_matches_the_declared_role_permission_matrix(): void
     {
         $expected = [
