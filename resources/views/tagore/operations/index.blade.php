@@ -194,10 +194,11 @@
     let visible = 0;
     rows.forEach(row => {
       // Search rendered record cells only, excluding hidden edit forms and actions.
-      const rowText = Array.from(row.cells || [])
-        .slice(0, -1)
-        .map(cell => String(cell.textContent || cell.innerText || ''))
-        .join(' ')
+      // Use the row's complete text content rather than relying on the
+      // table-cell collection. Some mobile browser/table accessibility
+      // layouts expose cells differently while the row itself remains
+      // searchable and visible to the user.
+      const rowText = String(row.textContent || row.innerText || '')
         .normalize('NFKC')
         .replace(/\s+/g, ' ')
         .trim()
