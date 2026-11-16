@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\School;
 use App\Models\User;
+use App\Http\Controllers\Admin\UserController;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
