@@ -1,8 +1,12 @@
 name: TagoreK12 Prototype
 
+concurrency:
+  group: tagore-prototype-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
-    branches: [main, 'tagore/**', 'workstream/**']
+    branches: [main, 'tagore/**']
   pull_request:
     branches: [main, 'integration/erp-7day']
 
