@@ -46,6 +46,7 @@ class UserController extends Controller
         $user->save();
 
         $userprofile->status = $request->status;
+        $userprofile->save();
 
         $message=trans('messages.update_status_success_msg',['module' => 'Student']);
 
