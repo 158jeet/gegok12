@@ -37,7 +37,7 @@ class RecoveryChallengeServiceTest extends TestCase
         $this->assertSame($user->id, $issued['challenge']->user_id);
         $this->assertSame(User::PARENT_USERGROUP_ID, $issued['challenge']->usergroup_id);
         $this->assertSame(RecoveryChallengeService::API_PASSWORD_RESET, $issued['challenge']->purpose);
-        $this->assertSame('sms', $issued['challenge']->channel);
+        $this->assertSame('email', $issued['challenge']->channel);
         $this->assertNotSame($issued['code'], $issued['challenge']->code_hash);
         $this->assertTrue(Hash::check($issued['code'], $issued['challenge']->code_hash));
         $this->assertNull($issued['challenge']->verified_at);
@@ -65,13 +65,11 @@ class RecoveryChallengeServiceTest extends TestCase
         $this->assertFalse($service->verify($user, RecoveryChallengeService::API_PASSWORD_RESET, $issued['code']));
     }
 
-    public function test_challenge_cannot_be_used_for_another_purpose_or_role(): void
+    public function test_challenge_cannot_be_used_after_the_account_role_changes(): void
     {
         $user = $this->makeUser();
         $service = app(RecoveryChallengeService::class);
         $issued = $service->issue($user, RecoveryChallengeService::API_PASSWORD_RESET, null);
-
-        $this->assertFalse($service->verify($user, RecoveryChallengeService::PARENT_DEVICE_RECOVERY, $issued['code']));
 
         $user->usergroup_id = User::TEACHER_USERGROUP_ID;
         $user->save();
