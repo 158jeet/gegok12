@@ -28,7 +28,7 @@ Delete/restore/forceDelete methods in these files currently return no explicit a
 
 ## Adjacent Gate callback defect
 
-The `post_reply` Gate callback in `AuthServiceProvider` accepts a parameter named `$post` but dereferences `$post_reply`. The latter is undefined in that closure. This needs a focused regression test and correction.
+The `post_reply` Gate callback in `AuthServiceProvider` originally accepted a parameter named `$post` but dereferenced `$post_reply`. This was corrected on this branch to accept `$post_reply`, and `tests/Feature/AuthorizationGateRegressionTest.php` now verifies same-school allow and cross-school deny. The focused test is awaiting exact-head CI.
 
 ## What is not yet established
 
