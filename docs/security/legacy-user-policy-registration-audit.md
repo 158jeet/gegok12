@@ -93,3 +93,15 @@ The following route evidence was inspected directly from this branch. This is a 
 The route files inspected included `admin.php`, `api.php`, `tagore.php`, `tagore_api.php`, `web.php`, `superadmin.php`, `teacher.php`, `student.php`, `accountant.php` and `receptionist.php`. The repository contains 19 route files; the remaining route files and all controller, view, resource, package and service call sites still require a reproducible full-tree scan. Connected GitHub code search returned zero matches for several authorization-call patterns, so those results are not used as proof of absence.
 
 **Decision:** Do not change the duplicate User policy registration or permissive policy bodies yet. First complete the route middleware and full-tree call-site inventory, then add role/record-scope tests.
+
+### Route middleware confirmation
+
+The enclosing legacy admin route group is registered in `app/Providers/RouteServiceProvider.php` as:
+
+`/admin` + `web`, `auth`, `schooladmin`, `privilegeconditions`.
+
+Therefore, the inspected legacy `Admin\\UserController@updateStatus` method is not an unauthenticated public route: it inherits authentication, the legacy SchoolAdmin middleware and the academic privilege-condition middleware. It still has no per-target same-school Gate check in its own method, unlike the reset-password and email-verification actions. The middleware boundary is coarse and must not be confused with record-level authorization.
+
+The Tagore routes use a different group: `auth` plus `TagorePerformance`, with explicit Owner checks inside the Owner-only AdministrationController methods. The API route group uses `api`; the password recovery endpoints are additionally throttled and use the recovery challenge service.
+
+**Confirmed gap to test:** legacy SchoolAdmin may be able to update a user status outside the actor's school if the controller lookup by globally unique `name` is not constrained and no downstream middleware adds record scoping. Before changing this endpoint, add synthetic cross-school deny tests and inspect `MustBeSchoolAdmin`/privilege middleware behavior. Do not assume the role middleware itself enforces target-record ownership.
