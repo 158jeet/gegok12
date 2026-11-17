@@ -7,7 +7,7 @@ body{font-family:Arial,sans-serif;background:#eef2f5;color:#182431;margin:0}.top
 <main class="wrap"><section class="panel">
 @foreach($questions as $i=>$item)
 <div class="q {{ $i===0?'active':'' }}" data-index="{{ $i }}" data-id="{{ $item['id'] }}" data-type="{{ $item['question']['question_type'] }}" data-marked="{{ $item['marked_for_review'] ? '1' : '0' }}">
-<div class="muted">Question {{ $i+1 }} · +{{ $item['marks'] }} / −{{ $item['negative_marks'] }}</div>
+<div class="muted">{{ $item['section_title'] }} · Question {{ $i+1 }} · +{{ $item['marks'] }} / −{{ $item['negative_marks'] }} @if($item['required_answer_count'] && $item['required_answer_count'] < $item['section_question_count']) · Answer any {{ $item['required_answer_count'] }} of {{ $item['section_question_count'] }} in this section; only the first {{ $item['required_answer_count'] }} attempted are scored @endif</div>
 <h2>{{ $item['question']['subject'] }} · {{ $item['question']['chapter'] }}</h2><p style="white-space:pre-wrap;font-size:18px">{{ $item['question']['stem'] }}</p>
 @if(in_array($item['question']['question_type'],['single_choice','assertion_reason']))
 @foreach($item['question']['options']??[] as $key=>$option)<label class="choice"><input type="radio" name="answer-{{ $item['id'] }}" value="{{ $key }}" {{ (string)$item['answer']===(string)$key?'checked':'' }}> <strong>{{ $key }}.</strong> {{ $option }}</label>@endforeach
