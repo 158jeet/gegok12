@@ -26,6 +26,7 @@ use App\Http\Controllers\Tagore\ExaminationController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
+use App\Http\Controllers\Tagore\FieldworkFormController;
 use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
