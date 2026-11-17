@@ -47,9 +47,12 @@ class DailyDiaryController extends Controller
         $entries = DB::table('tagore_daily_diary')->whereIn('student_id', $childIds)
             ->whereBetween('diary_date', [now()->parse($date)->copy()->subDays(30)->toDateString(), $date])
             ->orderByDesc('diary_date')->get()->groupBy('student_id');
-        $auditEntries = DB::table('tagore_daily_diary_audits')->whereIn('student_id', $childIds)
-            ->whereBetween('diary_date', [now()->parse($date)->copy()->subDays(30)->toDateString(), $date])
-            ->orderByDesc('created_at')->limit(500)->get()->groupBy('student_id');
+        $auditEntries = DB::table('tagore_daily_diary_audits as audit')
+            ->leftJoin('users as actor', 'actor.id', '=', 'audit.actor_id')
+            ->whereIn('audit.student_id', $childIds)
+            ->whereBetween('audit.diary_date', [now()->parse($date)->copy()->subDays(30)->toDateString(), $date])
+            ->orderByDesc('audit.created_at')->limit(500)
+            ->select('audit.*', 'actor.name as actor_name')->get()->groupBy('student_id');
 
         return view('tagore.diary.index', compact('children', 'entries', 'auditEntries', 'date', 'isParent', 'isSchool'));
     }
