@@ -16,7 +16,13 @@ class FieldworkFormController extends Controller
         [$userId, $roles, $institutions] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
 
+        $staff = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->join('users as u', 'u.id', '=', 'ur.user_id')
+            ->whereIn('ur.institution_id', $institutions)->where('ur.status', 'active')
+            ->whereIn('r.code', ['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')
+            ->select('u.id', 'u.name', 'ur.institution_id')->distinct()->orderBy('u.name')->get();
         return response()->json([
+            'staff' => $staff,
+            'institutions' => DB::table('tagore_institutions')->whereIn('id', $institutions)->where('status', 'active')->orderBy('display_name')->get(['id','display_name']),
             'templates' => DB::table('tagore_form_templates')->whereIn('institution_id', $institutions)->orderByDesc('id')->limit(100)->get(),
             'campaigns' => DB::table('tagore_form_campaigns as c')
                 ->join('tagore_form_versions as v', 'v.id', '=', 'c.form_version_id')
@@ -173,6 +179,26 @@ class FieldworkFormController extends Controller
             return $id;
         });
         return response()->json(['submission_id' => $id, 'status' => ($data['finalize'] ?? false) ? 'submitted' : 'draft'], 201);
+    }
+
+    public function studio(Request $request)
+    {
+        [, $roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        return view('tagore.fieldwork.studio');
+    }
+
+    public function myCampaigns(Request $request)
+    {
+        $userId = (int) $request->user()->id;
+        $campaigns = DB::table('tagore_form_campaigns as c')
+            ->join('tagore_form_campaign_assignments as a', 'a.campaign_id', '=', 'c.id')
+            ->join('tagore_form_versions as v', 'v.id', '=', 'c.form_version_id')
+            ->where('a.user_id', $userId)->where('c.status', 'active')
+            ->where(function ($q) { $q->whereNull('c.starts_at')->orWhere('c.starts_at', '<=', now()); })
+            ->where(function ($q) { $q->whereNull('c.ends_at')->orWhere('c.ends_at', '>=', now()); })
+            ->orderBy('c.name')->get(['c.id', 'c.name', 'c.institution_id', 'c.form_version_id', 'v.fields']);
+        return response()->json(['campaigns' => $campaigns]);
     }
 
     private function validatePayload(array $payload, array $fields, bool $finalize): void
