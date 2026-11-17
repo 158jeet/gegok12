@@ -48,6 +48,7 @@ class FieldworkFormController extends Controller
             'institution_id' => $data['institution_id'],
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
+            'draft_fields' => json_encode($data['fields'], JSON_THROW_ON_ERROR),
             'status' => 'draft',
             'created_by' => $userId,
             'created_at' => now(),
