@@ -97,15 +97,17 @@ class DailyDiaryController extends Controller
         ]);
 
         $key = ['student_id' => $studentId, 'diary_date' => $data['diary_date']];
-        $entry = DB::table('tagore_daily_diary')->where($key)->first();
-
         $values = [];
+        $ownedFields = [];
+        $actorRole = $isSchool ? 'school' : 'parent';
+
         if ($isParent && !$isSchool) {
             $values += [
                 'study_hours' => $data['study_hours'] ?? null,
                 'parent_feedback' => $data['parent_feedback'] ?? null,
                 'parent_updated_by' => $userId,
             ];
+            $ownedFields = ['study_hours', 'parent_feedback'];
         }
         if ($isSchool) {
             $values += [
@@ -113,14 +115,49 @@ class DailyDiaryController extends Controller
                 'homework' => $data['homework'] ?? null,
                 'school_updated_by' => $userId,
             ];
+            $ownedFields = ['school_feedback', 'homework'];
         }
         $values += ['institution_id' => (int) $student->institution_id, 'updated_at' => now()];
 
-        if ($entry) {
-            DB::table('tagore_daily_diary')->where('id', $entry->id)->update($values);
-        } else {
-            DB::table('tagore_daily_diary')->insert($values + $key + ['created_at' => now()]);
-        }
+        DB::transaction(function () use ($key, $values, $ownedFields, $actorRole, $userId, $studentId, $student, $data) {
+            $entry = DB::table('tagore_daily_diary')->where($key)->lockForUpdate()->first();
+            $oldValues = [];
+            foreach ($ownedFields as $field) {
+                $oldValues[$field] = $entry?->{$field};
+            }
+
+            if ($entry) {
+                DB::table('tagore_daily_diary')->where('id', $entry->id)->update($values);
+                $diaryId = (int) $entry->id;
+            } else {
+                $diaryId = (int) DB::table('tagore_daily_diary')->insertGetId(
+                    $values + $key + ['created_at' => now()]
+                );
+            }
+
+            $auditRows = [];
+            foreach ($ownedFields as $field) {
+                $newValue = $data[$field] ?? null;
+                $oldValue = $oldValues[$field] ?? null;
+                if ($oldValue !== $newValue) {
+                    $auditRows[] = [
+                        'diary_id' => $diaryId,
+                        'institution_id' => (int) $student->institution_id,
+                        'student_id' => $studentId,
+                        'diary_date' => $data['diary_date'],
+                        'actor_id' => $userId,
+                        'actor_role' => $actorRole,
+                        'field_name' => $field,
+                        'old_value' => $oldValue === null ? null : (string) $oldValue,
+                        'new_value' => $newValue === null ? null : (string) $newValue,
+                        'created_at' => now(),
+                    ];
+                }
+            }
+            if ($auditRows) {
+                DB::table('tagore_daily_diary_audits')->insert($auditRows);
+            }
+        });
 
         return redirect()->route('tagore.diary.index', ['student_id' => $studentId, 'date' => $data['diary_date']])->with('success', 'Daily diary saved.');
     }
