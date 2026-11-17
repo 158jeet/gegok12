@@ -104,6 +104,19 @@ class TagoreCoachingCbtTest extends TestCase
         $this->assertSame(1, (int) $result->rank);
         $this->assertSame('100.0000', number_format((float) $result->percentile, 4, '.', ''));
         $this->assertDatabaseHas('tagore_cbt_events', ['attempt_id' => $attemptId, 'event' => 'attempt_submitted']);
+        $this->assertDatabaseHas('tagore_cbt_attempt_topic_stats', [
+            'attempt_id' => $attemptId,
+            'subject' => 'PHYSICS',
+            'chapter' => 'Units and particles',
+            'topic' => 'Fundamentals',
+            'total_questions' => 2,
+            'attempted_count' => 2,
+            'scored_count' => 2,
+            'correct_count' => 1,
+            'incorrect_count' => 1,
+            'unattempted_count' => 0,
+            'score' => '3.00',
+        ]);
     }
 
     public function test_optional_section_scores_only_the_required_number_of_attempted_questions(): void
