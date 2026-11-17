@@ -93,7 +93,7 @@ class CoachingCbtController extends Controller
             'sections.*.title' => 'required|string|max:100',
             'sections.*.question_limit' => 'nullable|integer|min:1|max:200',
             'sections.*.required_answer_count' => 'nullable|integer|min:1|max:200',
-            'sections.*.section_type' => 'nullable|in:single_choice,multiple_choice,numerical,mixed',
+            'sections.*.section_type' => 'nullable|in:single_choice,multiple_choice,numerical,assertion_reason,mixed',
         ]);
         abort_unless(in_array((int) $data['institution_id'], $institutionIds, true), 403);
         $id = $service->createPaper((int) $data['institution_id'], (int) $request->user()->id, $data);
