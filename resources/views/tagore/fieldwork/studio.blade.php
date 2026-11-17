@@ -7,6 +7,7 @@ body{margin:0;background:#f3f6fb;color:#172033;font:15px system-ui}.shell{max-wi
 <body class="tg-app"><main class="shell">
 <header class="panel"><strong>Tagore ERP · Admissions Fieldwork Studio</strong><p class="muted">Build reusable forms, publish immutable versions, assign campaigns and submit field enquiries.</p><a href="{{ route('tagore.dashboard') }}">← Dashboard</a></header>
 <div id="notice" class="panel hidden" role="status"></div>
+@if($canManage)
 <section class="panel"><h2>Form template</h2>
 <div class="grid"><div class="field"><label>Institution</label><select id="institution"></select></div><div class="field"><label>Template name</label><input id="name" maxlength="150"></div></div>
 <div class="field"><label>Description</label><input id="description" maxlength="2000"></div>
@@ -14,6 +15,7 @@ body{margin:0;background:#f3f6fb;color:#172033;font:15px system-ui}.shell{max-wi
 <div class="stack"><button id="save">Save draft</button><select id="template"><option value="">Choose template</option></select><button id="publish">Publish new version</button></div></section>
 <section class="panel"><h2>Campaign assignment</h2><div class="grid"><div class="field"><label>Campaign name</label><input id="campaignName"></div><div class="field"><label>Published version</label><select id="version"><option value="">Choose version</option></select></div><div class="field"><label>Starts</label><input id="starts" type="datetime-local"></div><div class="field"><label>Ends</label><input id="ends" type="datetime-local"></div></div>
 <div class="field"><label>Staff assignments</label><div id="staff" class="stack"></div></div><button id="createCampaign">Create campaign</button><div id="campaigns"></div></section>
+@endif
 <section class="panel"><h2>My assigned fieldwork</h2><div id="mine" class="muted">Loading…</div><div id="entry" class="hidden"></div></section>
 </main>
 <script>
@@ -21,7 +23,7 @@ const csrf=@json(csrf_token()), root='/tagore/fieldwork', $=id=>document.getElem
 function msg(t,error=false){$('notice').textContent=t;$('notice').className='panel'+(error?' error':'');}
 async function api(path,method='GET',body=null){const r=await fetch(root+path,{method,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf,'X-Requested-With':'XMLHttpRequest'},body:body?JSON.stringify(body):null});const d=await r.json().catch(()=>({message:'Invalid server response'}));if(!r.ok)throw Error(d.message||'Request failed '+r.status);return d;}
 function option(text,value){const o=document.createElement('option');o.textContent=text;o.value=value;return o;}
-async function load(){const [m,a]=await Promise.all([api('/forms'),api('/my-campaigns')]);state=m;state.mine=a.campaigns||[];
+async function load(){const a=await api('/my-campaigns');let m={institutions:[],staff:[],templates:[],versions:[],campaigns:[]};if(@json($canManage)){m=await api('/forms');}state=m;state.mine=a.campaigns||[];
 $('institution').replaceChildren(...m.institutions.map(x=>option(x.display_name,x.id)));
 $('template').replaceChildren(option('Choose template',''),...(m.templates||[]).map(x=>option(x.name+' · '+x.status,x.id)));
 $('version').replaceChildren(option('Choose version',''),...(m.versions||[]).map(x=>option('Template #'+x.template_id+' · v'+x.version,x.id)));
