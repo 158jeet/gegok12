@@ -98,6 +98,37 @@ class TagoreFieldworkFormTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_principal_cannot_manage_fieldwork_in_an_institution_where_they_only_have_teacher_scope(): void
+    {
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principalRoleId = (int) DB::table('tagore_roles')->where('code', 'PRINCIPAL')->value('id');
+        $teacherRoleId = (int) DB::table('tagore_roles')->where('code', 'TEACHER')->value('id');
+        $managerInstitutionIds = DB::table('tagore_user_roles')
+            ->where('user_id', $principal->id)->where('role_id', $principalRoleId)
+            ->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->all();
+        $otherInstitutionId = DB::table('tagore_institutions')->where('status', 'active')
+            ->whereNotIn('id', $managerInstitutionIds)->value('id');
+
+        if (!$otherInstitutionId || !$managerInstitutionIds) {
+            $this->markTestSkipped('The fixture requires a second active institution to exercise cross-institution scope.');
+        }
+
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $principal->id,
+            'role_id' => $teacherRoleId,
+            'institution_id' => $otherInstitutionId,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($principal)->postJson(route('tagore.fieldwork.forms.store'), [
+            'institution_id' => $otherInstitutionId,
+            'name' => 'Cross-institution attempt',
+            'fields' => [['key' => 'student_name', 'label' => 'Student name', 'type' => 'text']],
+        ])->assertForbidden();
+    }
+
     public function test_form_schema_rejects_duplicate_keys_and_invalid_conditional_references(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
