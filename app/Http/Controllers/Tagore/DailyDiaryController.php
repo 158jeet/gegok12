@@ -139,6 +139,10 @@ class DailyDiaryController extends Controller
             foreach ($ownedFields as $field) {
                 $newValue = $data[$field] ?? null;
                 $oldValue = $oldValues[$field] ?? null;
+                if ($field === 'study_hours') {
+                    $oldValue = $oldValue === null ? null : number_format((float) $oldValue, 2, '.', '');
+                    $newValue = $newValue === null ? null : number_format((float) $newValue, 2, '.', '');
+                }
                 if ($oldValue !== $newValue) {
                     $auditRows[] = [
                         'diary_id' => $diaryId,
