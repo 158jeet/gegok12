@@ -189,7 +189,14 @@ class CoachingCbtController extends Controller
         $attempts = DB::table('tagore_cbt_attempts as a')->join('users as u', 'u.id', '=', 'a.student_id')
             ->where('a.paper_id', $paperId)->whereIn('a.status', ['submitted', 'expired'])
             ->orderBy('a.rank')->get(['a.student_id', 'u.name', 'a.score', 'a.max_score', 'a.correct_count', 'a.incorrect_count', 'a.unanswered_count', 'a.rank', 'a.percentile', 'a.submitted_at']);
-        return view('tagore.coaching.cbt.analytics', compact('paper', 'attempts'));
+        $topicStats = DB::table('tagore_cbt_attempt_topic_stats as ts')
+            ->join('tagore_cbt_attempts as a', 'a.id', '=', 'ts.attempt_id')
+            ->where('a.paper_id', $paperId)->whereIn('a.status', ['submitted', 'expired'])
+            ->select('ts.subject', 'ts.chapter', 'ts.topic')
+            ->selectRaw('SUM(ts.total_questions) as total_questions, SUM(ts.attempted_count) as attempted_count, SUM(ts.scored_count) as scored_count, SUM(ts.correct_count) as correct_count, SUM(ts.incorrect_count) as incorrect_count, SUM(ts.unattempted_count) as unattempted_count, SUM(ts.score) as score')
+            ->groupBy('ts.subject', 'ts.chapter', 'ts.topic')
+            ->orderBy('ts.subject')->orderBy('ts.chapter')->orderBy('ts.topic')->get();
+        return view('tagore.coaching.cbt.analytics', compact('paper', 'attempts', 'topicStats'));
     }
 
     private function availablePapersForStudent(Request $request)
