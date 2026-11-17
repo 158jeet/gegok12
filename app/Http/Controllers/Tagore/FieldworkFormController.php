@@ -23,6 +23,7 @@ class FieldworkFormController extends Controller
         return response()->json([
             'staff' => $staff,
             'institutions' => DB::table('tagore_institutions')->whereIn('id', $institutions)->where('status', 'active')->orderBy('display_name')->get(['id','display_name']),
+            'versions' => DB::table('tagore_form_versions as v')->join('tagore_form_templates as t', 't.id', '=', 'v.template_id')->whereIn('t.institution_id', $institutions)->orderByDesc('v.id')->get(['v.id','v.template_id','v.version']),
             'templates' => DB::table('tagore_form_templates')->whereIn('institution_id', $institutions)->orderByDesc('id')->limit(100)->get(),
             'campaigns' => DB::table('tagore_form_campaigns as c')
                 ->join('tagore_form_versions as v', 'v.id', '=', 'c.form_version_id')
