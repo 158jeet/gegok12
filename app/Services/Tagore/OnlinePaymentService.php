@@ -29,15 +29,29 @@ class OnlinePaymentService
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
-            $outstanding = round((float) $obligations->sum('outstanding_amount'), 2);
-            if ($amount <= 0 || $amount > $outstanding + 0.009) {
-                throw ValidationException::withMessages(['amount' => 'Payment amount must be positive and cannot exceed outstanding fees.']);
+            $reserved = DB::table('tagore_payment_order_allocations as a')
+                ->join('tagore_payment_orders as o', 'o.id', '=', 'a.payment_order_id')
+                ->whereIn('o.status', ['created', 'payment_initiated'])
+                ->where('o.expires_at', '>', now())
+                ->whereIn('a.fee_obligation_id', $obligations->pluck('id'))
+                ->groupBy('a.fee_obligation_id')
+                ->select('a.fee_obligation_id', DB::raw('SUM(a.amount) as reserved_amount'))
+                ->pluck('reserved_amount', 'a.fee_obligation_id');
+            $availableByObligation = [];
+            $availableTotal = 0.0;
+            foreach ($obligations as $obligation) {
+                $available = max(0, round((float) $obligation->outstanding_amount - (float) ($reserved[$obligation->id] ?? 0), 2));
+                $availableByObligation[$obligation->id] = $available;
+                $availableTotal = round($availableTotal + $available, 2);
+            }
+            if ($amount <= 0 || $amount > $availableTotal + 0.009) {
+                throw ValidationException::withMessages(['amount' => 'Payment amount exceeds the fee balance available after other active checkouts. Please refresh the fee statement and try again.']);
             }
             $orderId = DB::table('tagore_payment_orders')->insertGetId(['student_id'=>$studentId,'parent_user_id'=>$parentUserId,'institution_id'=>$institutionId,'amount'=>$amount,'currency'=>'INR','purpose'=>'School fee payment','status'=>'created','gateway'=>config('tagore.payment_gateway'),'expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now()]);
             $remaining = $amount;
             foreach ($obligations as $obligation) {
                 if ($remaining <= 0.009) break;
-                $allocate = min($remaining, (float) $obligation->outstanding_amount);
+                $allocate = min($remaining, $availableByObligation[$obligation->id]);
                 DB::table('tagore_payment_order_allocations')->insert(['payment_order_id'=>$orderId,'fee_obligation_id'=>$obligation->id,'amount'=>round($allocate,2),'created_at'=>now(),'updated_at'=>now()]);
                 $remaining = round($remaining - $allocate, 2);
             }
