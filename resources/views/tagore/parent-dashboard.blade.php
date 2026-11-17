@@ -3,6 +3,8 @@
 <body class="tg-app"><div class="tg-shell">
 <header class="tg-topbar"><a class="tg-brand" href="{{ route('tagore.parent.dashboard') }}" style="text-decoration:none"><img class="tg-logo" src="/uploads/tgi-logo.webp" alt="Tagore Group of Institutions"><div><strong>Tagore ERP</strong><span>Parent workspace</span></div></a><div class="tg-top-actions"><div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'P',0,1)) }}</div><span>{{ auth()->user()->name ?? 'Parent' }}</span></div></div></header>
 <main class="tg-main">
+@if(session('success'))<div class="tg-card" role="status" style="margin-bottom:14px">{{ session('success') }}</div>@endif
+@if(session('error'))<div class="tg-card" role="alert" style="margin-bottom:14px;border-color:#e5a6a6;color:#9b1c1c">{{ session('error') }}</div>@endif
 <section class="tg-hero"><h1>Your family's school at a glance.</h1><p>Attendance, results, fees and school communication are organised around your children — not around ERP modules.</p><div class="tg-hero-actions"><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP home</a><a class="tg-btn" href="{{ route('tagore.diary.index') }}">Open daily diary</a></div></section>
 @if($cards->isEmpty())
 <div class="tg-card tg-empty"><strong>No children linked yet</strong><span>Ask the school office to link this parent account with the student's school account.</span></div>
@@ -18,6 +20,28 @@
 <div><div class="tg-kpi-label">Balance remaining</div><strong style="font-size:21px;display:block;margin-top:5px">₹{{ number_format($familySummary->outstanding, 2) }}</strong></div>
 </div>
 </section>
+@if($feeObligations->isNotEmpty())
+<section class="tg-card" style="margin-bottom:20px">
+<div class="tg-section-head"><div><h2>Pay selected fee balances</h2><p>Select any combination of children and edit each amount to make partial payments in one family checkout.</p></div></div>
+<form method="POST" action="{{ route('tagore.payments.family.initiate') }}" id="family-checkout-form">
+@csrf
+<div class="tg-table-wrap"><table><thead><tr><th>Select</th><th>Child</th><th>Institution</th><th>Due date</th><th>Outstanding</th><th>Pay now (₹)</th></tr></thead><tbody>
+@foreach($feeObligations as $index=>$obligation)
+<tr data-family-allocation-row>
+<td><input type="checkbox" checked class="family-allocation-toggle" aria-label="Include {{ $obligation->student_name }} fee balance" style="width:auto"></td>
+<td>{{ $obligation->student_name }}<input type="hidden" data-allocation-input name="allocations[{{ $index }}][fee_obligation_id]" value="{{ $obligation->fee_obligation_id }}"></td>
+<td>{{ $obligation->institution }}</td>
+<td>{{ $obligation->due_date ?: '—' }}</td>
+<td>₹{{ number_format($obligation->outstanding_amount,2) }}</td>
+<td><input data-allocation-input name="allocations[{{ $index }}][amount]" type="number" min="0.01" max="{{ number_format($obligation->outstanding_amount,2,'.','') }}" step="0.01" value="{{ number_format($obligation->outstanding_amount,2,'.','') }}" required style="max-width:150px"></td>
+</tr>
+@endforeach
+</tbody></table></div>
+<p style="margin-top:12px;color:var(--tg-muted,#64748b)">Each amount is capped at the current outstanding balance. Active checkouts reserve those balances temporarily to prevent duplicate payments.</p>
+<button class="tg-btn primary" type="submit">Continue to secure family payment</button>
+</form>
+</section>
+@endif
 <div class="tg-section-head"><div><h2>Your children</h2><p>Each child's attendance, results and fee details are shown below; family totals above combine all linked children.</p></div></div>
 <div class="tg-grid">
 @foreach($cards as $card)
@@ -34,5 +58,17 @@
 </div>
 @endif
 </main>
+<script>
+document.querySelectorAll('[data-family-allocation-row]').forEach(row=>{
+ const toggle=row.querySelector('.family-allocation-toggle');
+ const inputs=row.querySelectorAll('[data-allocation-input]');
+ const sync=()=>inputs.forEach(input=>input.disabled=!toggle.checked);
+ toggle.addEventListener('change',sync);sync();
+});
+document.getElementById('family-checkout-form')?.addEventListener('submit',event=>{
+ const selected=[...document.querySelectorAll('[data-family-allocation-row] .family-allocation-toggle')].some(toggle=>toggle.checked);
+ if(!selected){event.preventDefault();alert('Select at least one fee balance to continue.');}
+});
+</script>
 <nav class="tg-mobile-nav"><a href="{{ route('tagore.parent.dashboard') }}"><b>⌂</b>Home</a><a href="{{ route('tagore.dashboard') }}"><b>⋮</b>ERP</a></nav>
 </div></body></html>
