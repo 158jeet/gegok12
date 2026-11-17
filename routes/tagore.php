@@ -23,6 +23,7 @@ use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
 use App\Http\Controllers\Tagore\ExaminationController;
+use App\Http\Controllers\Tagore\CbtController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
@@ -130,6 +131,18 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    Route::get('/cbt', [CbtController::class, 'index'])->name('tagore.cbt.index');
+    Route::post('/cbt/questions', [CbtController::class, 'storeQuestion'])->name('tagore.cbt.questions.store');
+    Route::patch('/cbt/questions/{questionId}/approve', [CbtController::class, 'approveQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.approve');
+    Route::post('/cbt/tests', [CbtController::class, 'storeTest'])->name('tagore.cbt.tests.store');
+    Route::post('/cbt/tests/{testId}/sections', [CbtController::class, 'storeSection'])->whereNumber('testId')->name('tagore.cbt.sections.store');
+    Route::post('/cbt/sections/{sectionId}/questions', [CbtController::class, 'attachQuestions'])->whereNumber('sectionId')->name('tagore.cbt.sections.questions');
+    Route::post('/cbt/tests/{testId}/publish', [CbtController::class, 'publishTest'])->whereNumber('testId')->name('tagore.cbt.tests.publish');
+    Route::post('/cbt/tests/{testId}/start', [CbtController::class, 'startAttempt'])->whereNumber('testId')->name('tagore.cbt.tests.start');
+    Route::put('/cbt/attempts/{attemptId}/questions/{questionId}', [CbtController::class, 'saveAnswer'])->whereNumber('attemptId')->whereNumber('questionId')->name('tagore.cbt.answers.save');
+    Route::post('/cbt/attempts/{attemptId}/submit', [CbtController::class, 'submitAttempt'])->whereNumber('attemptId')->name('tagore.cbt.attempts.submit');
+    Route::get('/cbt/attempts/{attemptId}/result', [CbtController::class, 'attemptResult'])->whereNumber('attemptId')->name('tagore.cbt.attempts.result');
+
     Route::get('/examinations', [ExaminationController::class, 'index'])->name('tagore.examinations.index');
     Route::get('/results/student/{studentId}', [ExaminationController::class, 'studentResults'])->whereNumber('studentId')->name('tagore.results.student');
     Route::post('/examinations', [ExaminationController::class, 'store'])->name('tagore.examinations.store');
