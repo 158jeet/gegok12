@@ -19,18 +19,20 @@ body{margin:0;background:#f3f6fb;color:#172033;font:15px system-ui}.shell{max-wi
 <section class="panel"><h2>My assigned fieldwork</h2><div id="mine" class="muted">Loading…</div><div id="entry" class="hidden"></div></section>
 </main>
 <script>
-const csrf=@json(csrf_token()), root='/tagore/fieldwork', $=id=>document.getElementById(id);let state={};
+const csrf=@json(csrf_token()), root='/tagore/fieldwork', $=id=>document.getElementById(id), canManage=@json($canManage);let state={};
 function msg(t,error=false){$('notice').textContent=t;$('notice').className='panel'+(error?' error':'');}
 async function api(path,method='GET',body=null){const r=await fetch(root+path,{method,credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf,'X-Requested-With':'XMLHttpRequest'},body:body?JSON.stringify(body):null});const d=await r.json().catch(()=>({message:'Invalid server response'}));if(!r.ok)throw Error(d.message||'Request failed '+r.status);return d;}
 function option(text,value){const o=document.createElement('option');o.textContent=text;o.value=value;return o;}
-async function load(){const a=await api('/my-campaigns');let m={institutions:[],staff:[],templates:[],versions:[],campaigns:[]};if(@json($canManage)){m=await api('/forms');}state=m;state.mine=a.campaigns||[];
+async function load(){const a=await api('/my-campaigns');let m={institutions:[],staff:[],templates:[],versions:[],campaigns:[]};if(canManage){m=await api('/forms');}state=m;state.mine=a.campaigns||[];
+if(canManage){
 $('institution').replaceChildren(...m.institutions.map(x=>option(x.display_name,x.id)));
 $('template').replaceChildren(option('Choose template',''),...(m.templates||[]).map(x=>option(x.name+' · '+x.status,x.id)));
 $('version').replaceChildren(option('Choose version',''),...(m.versions||[]).map(x=>option('Template #'+x.template_id+' · v'+x.version,x.id)));
 renderStaff();$('institution').onchange=renderStaff;
 $('campaigns').replaceChildren(...(m.campaigns||[]).map(x=>{const d=document.createElement('div');d.className='item';d.textContent=x.name+' · '+x.status+' · version '+x.form_version;return d;}));
-$('mine').replaceChildren(...state.mine.map(x=>{const d=document.createElement('div');d.className='item';const b=document.createElement('button');b.textContent='Open '+x.name;b.onclick=()=>openEntry(x);d.append(document.createTextNode(x.name+' · version '+x.form_version_id+' '),b);return d;}));}
-function renderStaff(){$('staff').replaceChildren(...(state.staff||[]).filter(x=>String(x.institution_id)===$('institution').value).map(x=>{const l=document.createElement('label');l.className='stack';const c=document.createElement('input');c.type='checkbox';c.value=x.id;c.dataset.staff='1';l.append(c,document.createTextNode(x.name));return l;}));}
+}
+$('mine').replaceChildren(...state.mine.map(x=>{const d=document.createElement('div');d.className='item';const b=document.createElement('button');b.textContent='Open '+x.name;b.onclick=()=>openEntry(x);d.append(document.createTextNode(x.name+' · form version '+x.form_version_id+' '),b);return d;}));}
+function renderStaff(){if(!canManage)return;$('staff').replaceChildren(...(state.staff||[]).filter(x=>String(x.institution_id)===$('institution').value).map(x=>{const l=document.createElement('label');l.className='stack';const c=document.createElement('input');c.type='checkbox';c.value=x.id;c.dataset.staff='1';l.append(c,document.createTextNode(x.name));return l;}));}
 $('save').onclick=async()=>{try{const d=await api('/forms','POST',{institution_id:+$('institution').value,name:$('name').value,description:$('description').value,fields:JSON.parse($('fields').value)});msg('Draft saved: #'+d.id);await load();$('template').value=d.id;}catch(e){msg(e.message,true);}};
 $('publish').onclick=async()=>{try{const id=+$('template').value;if(!id)throw Error('Select a template');const d=await api('/forms/'+id+'/publish','POST',{fields:JSON.parse($('fields').value)});msg('Published immutable version #'+d.form_version_id);await load();}catch(e){msg(e.message,true);}};
 $('createCampaign').onclick=async()=>{try{const assignees=[...document.querySelectorAll('[data-staff]:checked')].map(x=>+x.value);const v=+$('version').value;if(!v||!assignees.length)throw Error('Select a published version and at least one staff member');const template=(state.versions||[]).find(x=>x.id===v);const d=await api('/campaigns','POST',{institution_id:+$('institution').value,template_id:template.template_id,form_version_id:v,name:$('campaignName').value,starts_at:$('starts').value||null,ends_at:$('ends').value||null,assigned_user_ids:assignees});msg('Campaign created #'+d.campaign_id+'; '+d.assigned_count+' staff assigned');await load();}catch(e){msg(e.message,true);}};
