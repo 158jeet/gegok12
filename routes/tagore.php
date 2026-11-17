@@ -23,6 +23,7 @@ use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
 use App\Http\Controllers\Tagore\ExaminationController;
+use App\Http\Controllers\Tagore\CoachingCbtController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
@@ -130,6 +131,20 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    // Separate coaching CBT engine for JEE Main, JEE Advanced and NEET.
+    Route::get('/coaching/cbt', [CoachingCbtController::class, 'index'])->name('tagore.cbt.index');
+    Route::post('/coaching/cbt/questions', [CoachingCbtController::class, 'storeQuestion'])->name('tagore.cbt.questions.store');
+    Route::patch('/coaching/cbt/questions/{questionId}/approve', [CoachingCbtController::class, 'approveQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.approve');
+    Route::post('/coaching/cbt/papers', [CoachingCbtController::class, 'storePaper'])->name('tagore.cbt.papers.store');
+    Route::post('/coaching/cbt/papers/{paperId}/questions', [CoachingCbtController::class, 'addQuestion'])->whereNumber('paperId')->name('tagore.cbt.papers.questions.store');
+    Route::patch('/coaching/cbt/papers/{paperId}/publish', [CoachingCbtController::class, 'publishPaper'])->whereNumber('paperId')->name('tagore.cbt.papers.publish');
+    Route::post('/coaching/cbt/papers/{paperId}/start', [CoachingCbtController::class, 'start'])->whereNumber('paperId')->name('tagore.cbt.start');
+    Route::get('/coaching/cbt/attempts/{attemptId}', [CoachingCbtController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.player');
+    Route::post('/coaching/cbt/attempts/{attemptId}/answer', [CoachingCbtController::class, 'answer'])->whereNumber('attemptId')->name('tagore.cbt.answer');
+    Route::post('/coaching/cbt/attempts/{attemptId}/submit', [CoachingCbtController::class, 'submit'])->whereNumber('attemptId')->name('tagore.cbt.submit');
+    Route::get('/coaching/cbt/attempts/{attemptId}/result', [CoachingCbtController::class, 'result'])->whereNumber('attemptId')->name('tagore.cbt.result');
+    Route::get('/coaching/cbt/papers/{paperId}/analytics', [CoachingCbtController::class, 'analytics'])->whereNumber('paperId')->name('tagore.cbt.analytics');
+
     Route::get('/examinations', [ExaminationController::class, 'index'])->name('tagore.examinations.index');
     Route::get('/results/student/{studentId}', [ExaminationController::class, 'studentResults'])->whereNumber('studentId')->name('tagore.results.student');
     Route::post('/examinations', [ExaminationController::class, 'store'])->name('tagore.examinations.store');
