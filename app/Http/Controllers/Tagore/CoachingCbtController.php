@@ -22,7 +22,9 @@ class CoachingCbtController extends Controller
         $papers = $isStudent
             ? $this->availablePapersForStudent($request)
             : DB::table('tagore_cbt_papers')->whereIn('institution_id', $institutionIds)->orderByDesc('id')->limit(100)->get();
-        return view('tagore.coaching.cbt.index', compact('roles', 'institutions', 'questions', 'papers', 'isStudent'));
+        $sections = $isStudent ? collect() : DB::table('tagore_cbt_sections as s')->join('tagore_cbt_papers as p', 'p.id', '=', 's.paper_id')->whereIn('p.institution_id', $institutionIds)->orderBy('s.sort_order')->get(['s.*']);
+        $approvedQuestions = $isStudent ? collect() : DB::table('tagore_cbt_questions')->whereIn('institution_id', $institutionIds)->where('status', 'approved')->whereNull('deleted_at')->orderBy('subject')->orderBy('chapter')->get(['id', 'institution_id', 'question_code', 'subject', 'chapter', 'difficulty']);
+        return view('tagore.coaching.cbt.index', compact('roles', 'institutions', 'questions', 'papers', 'sections', 'approvedQuestions', 'isStudent'));
     }
 
     public function storeQuestion(Request $request, CoachingCbtService $service)
