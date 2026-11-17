@@ -185,8 +185,10 @@ class FieldworkFormController extends Controller
     public function studio(Request $request)
     {
         [, $roles] = $this->context($request);
-        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
-        return view('tagore.fieldwork.studio');
+        $allowed = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER'])->isNotEmpty();
+        abort_unless($allowed, 403);
+        $canManage = $roles->intersect(self::MANAGERS)->isNotEmpty();
+        return view('tagore.fieldwork.studio', compact('canManage'));
     }
 
     public function myCampaigns(Request $request)
