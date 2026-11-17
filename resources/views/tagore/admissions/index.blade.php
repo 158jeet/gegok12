@@ -18,7 +18,7 @@
 <button type="submit">Apply filters</button><a class="tg-ad-btn" href="{{ route('tagore.admissions.index') }}">Reset</a>
 </form>
 <section class="tg-ad-card tg-ad-section"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px"><div><h2 style="margin:0">Enquiry pipeline</h2><span class="tg-ad-muted">Showing {{ $leads->firstItem() ?? 0 }}–{{ $leads->lastItem() ?? 0 }} of {{ $leads->total() }} enquiries</span></div></div>
-<div class="tg-ad-tablewrap" style="display:block;position:relative;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain"><table class="tg-ad-table" style="display:table;width:max-content;min-width:760px;max-width:none"><thead><tr><th>Lead ID</th><th>Student / parent</th><th>Contact</th><th>Class</th><th>Source / campaign</th><th>Owner</th><th>Stage</th><th>Next follow-up</th></tr></thead><tbody>
+<div class="tg-ad-tablewrap" style="display:block;position:relative;flex:none;width:100%;min-width:0;max-width:100%;overflow-x:scroll!important;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch"><table class="tg-ad-table" style="display:table;width:max-content;min-width:760px;max-width:none"><thead><tr><th>Lead ID</th><th>Student / parent</th><th>Contact</th><th>Class</th><th>Source / campaign</th><th>Owner</th><th>Stage</th><th>Next follow-up</th></tr></thead><tbody>
 @forelse($leads as $lead)<tr>
 <td><a href="{{ route('tagore.admissions.show',$lead) }}"><strong>{{ $lead->lead_no }}</strong></a></td>
 <td><strong>{{ $lead->student_name }}</strong><div class="tg-ad-muted">{{ $lead->parent_name ?: 'Parent not added' }}</div></td>
