@@ -40,8 +40,13 @@ class TagoreCashierWorkspaceTest extends TestCase
             ->get('/tagore/cashier?q=acceptance')
             ->assertOk()
             ->assertSee('Cashier counter')
+            ->assertSee('Total outstanding dues')
+            ->assertSee('Overdue dues')
+            ->assertSee('Online payments awaiting confirmation')
+            ->assertSee('Collected today')
             ->assertSee('Search by student name', false)
-            ->assertSee('Student name, mobile or ID', false);
+            ->assertSee('Student name, mobile or ID', false)
+            ->assertSee('Latest receipts');
     }
 
     public function test_read_only_coordinator_cannot_post_a_payment_directly(): void
