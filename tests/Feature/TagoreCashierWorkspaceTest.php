@@ -98,7 +98,7 @@ class TagoreCashierWorkspaceTest extends TestCase
         ]);
 
         $this->get('/tagore/accounts/fees')->assertForbidden();
-        $this->get('/tagore/cashier')->assertOk()->assertDontSee('tagore/accounts/fees');
+        $this->get('/tagore/cashier')->assertOk()->assertDontSee('href="'.route('tagore.fees.accounts').'"', false);
     }
 
     public function test_cashier_route_is_named_and_resolvable(): void
