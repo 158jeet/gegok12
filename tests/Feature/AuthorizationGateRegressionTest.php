@@ -160,7 +160,7 @@ class AuthorizationGateRegressionTest extends TestCase
 
         foreach ($methods as $index => $method) {
             try {
-                app(\\App\\Http\\Controllers\\Auth\\ImpersonateController::class)->{$method}($targets[$index]->id);
+                app(\App\Http\Controllers\Auth\ImpersonateController::class)->{$method}($targets[$index]->id);
                 $this->fail("The {$method} endpoint must reject a target in another school.");
             } catch (HttpException $exception) {
                 $this->assertSame(403, $exception->getStatusCode());
@@ -200,7 +200,7 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->actingAs($actor);
 
         try {
-            app(\\App\\Http\\Controllers\\Auth\\ImpersonateController::class)->impersonate($owner->id);
+            app(\App\Http\Controllers\Auth\ImpersonateController::class)->impersonate($owner->id);
             $this->fail('The Owner account must never be impersonated.');
         } catch (HttpException $exception) {
             $this->assertSame(403, $exception->getStatusCode());
