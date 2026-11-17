@@ -78,7 +78,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
     Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
 
-    Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
+    Route::get('/fieldwork/forms', [FieldworkFormController::class, 'index'])->name('tagore.fieldwork.forms.index');\n    Route::post('/fieldwork/forms', [FieldworkFormController::class, 'storeTemplate'])->name('tagore.fieldwork.forms.store');\n    Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');\n    Route::post('/fieldwork/campaigns', [FieldworkFormController::class, 'createCampaign'])->name('tagore.fieldwork.campaigns.store');\n    Route::post('/fieldwork/campaigns/{campaignId}/submissions', [FieldworkFormController::class, 'submit'])->whereNumber('campaignId')->name('tagore.fieldwork.submissions.store');\n\n    Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
     Route::get('/admissions/create', [AdmissionsController::class, 'create'])->name('tagore.admissions.create');
     Route::post('/admissions', [AdmissionsController::class, 'store'])->name('tagore.admissions.store');
     Route::patch('/admissions/{leadId}/assign', [AdmissionsController::class, 'assign'])->whereNumber('leadId')->name('tagore.admissions.assign');
