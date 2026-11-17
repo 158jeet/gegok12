@@ -15,6 +15,7 @@ class FieldworkFormController extends Controller
     {
         [$userId, $roles, $institutions] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
 
         $staff = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->join('users as u', 'u.id', '=', 'ur.user_id')
             ->whereIn('ur.institution_id', $institutions)->where('ur.status', 'active')
@@ -36,6 +37,7 @@ class FieldworkFormController extends Controller
     {
         [$userId, $roles, $institutions] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:150'],
@@ -68,6 +70,7 @@ class FieldworkFormController extends Controller
     {
         [$userId, $roles, $institutions] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
         $data = $request->validate([
             'fields' => ['required', 'array', 'min:1', 'max:100'],
             'fields.*.key' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]{1,59}$/', 'distinct'],
@@ -100,6 +103,7 @@ class FieldworkFormController extends Controller
     {
         [$userId, $roles, $institutions] = $this->context($request);
         abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'template_id' => ['required', 'integer'],
@@ -248,6 +252,25 @@ class FieldworkFormController extends Controller
                 abort_unless(isset($condition['field'], $condition['equals']) && in_array($condition['field'], $keys, true), 422, 'Conditional visibility must reference a field in this form.');
             }
         }
+    }
+
+    private function managerInstitutions(int $userId, $roles): array
+    {
+        if ($roles->contains('OWNER')) {
+            return DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->where('ur.status', 'active')
+            ->whereNotNull('ur.institution_id')
+            ->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])
+            ->pluck('ur.institution_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function context(Request $request): array
