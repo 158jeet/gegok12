@@ -195,7 +195,7 @@
     rows.forEach(row => {
       // Search only displayed data columns. The final Actions cell contains
       // hidden edit forms whose values must not affect live search.
-      const dataCells = Array.from(row.cells || []).slice(0, -1);
+      const dataCells = Array.from(row.querySelectorAll(':scope > td')).slice(0, -1);
       const rowText = dataCells.map(cell => cell.textContent || '')
         .join(' ')
         .normalize('NFKC')
