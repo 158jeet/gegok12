@@ -147,6 +147,50 @@ class TagoreCoachingCbtTest extends TestCase
         $this->actingAs($parent)->post(route('tagore.cbt.start', $paperId))->assertForbidden();
     }
 
+    public function test_student_cannot_force_submit_another_students_attempt(): void
+    {
+        $paperId = $this->buildPublishedPaper();
+        $service = app(CoachingCbtService::class);
+        $attemptId = $service->startAttempt($paperId, (int) $this->student->id);
+        $otherStudent = User::factory()->create([
+            'name' => 'Other CBT Student',
+            'email' => 'other-cbt-' . bin2hex(random_bytes(4)) . '@example.invalid',
+            'school_id' => $this->student->school_id,
+            'usergroup_id' => 6,
+        ]);
+
+        $this->actingAs($otherStudent)
+            ->post(route('tagore.cbt.submit', $attemptId))
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('tagore_cbt_attempts', [
+            'id' => $attemptId,
+            'student_id' => $this->student->id,
+            'status' => 'in_progress',
+        ]);
+    }
+
+    public function test_expired_attempt_is_finalized_as_expired_and_cannot_be_resumed(): void
+    {
+        $paperId = $this->buildPublishedPaper();
+        $service = app(CoachingCbtService::class);
+        $attemptId = $service->startAttempt($paperId, (int) $this->student->id);
+        DB::table('tagore_cbt_attempts')->where('id', $attemptId)->update([
+            'expires_at' => now()->subSecond(),
+            'updated_at' => now(),
+        ]);
+
+        $result = $service->scoreAttempt($attemptId);
+        $this->assertSame('expired', $result->status);
+
+        try {
+            $service->saveAnswer($attemptId, (int) $this->student->id, (int) DB::table('tagore_cbt_paper_questions')->where('paper_id', $paperId)->value('question_id'), 'A', false, 10);
+            $this->fail('An expired attempt must not accept answers.');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+    }
+
     public function test_coaching_cbt_routes_are_registered(): void
     {
         foreach ([
