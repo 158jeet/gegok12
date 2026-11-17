@@ -275,11 +275,30 @@ class CoachingCbtService
             $incorrect = 0;
             $unanswered = 0;
             $sectionRows = [];
+            $topicStats = [];
 
             foreach (json_decode($attempt->question_order_json, true) ?: [] as $questionId) {
                 $row = $paperQuestions->get($questionId);
                 if ($row) {
                     $sectionRows[$row->section_id][] = ['question_id' => $questionId, 'row' => $row];
+                    $snapshot = json_decode($row->question_snapshot_json, true) ?: [];
+                    $subject = (string) ($snapshot['subject'] ?? 'UNKNOWN');
+                    $chapter = (string) ($snapshot['chapter'] ?? 'Unclassified');
+                    $topic = (string) ($snapshot['topic'] ?? '');
+                    $topicKey = $subject.'|'.$chapter.'|'.$topic;
+                    if (!isset($topicStats[$topicKey])) {
+                        $topicStats[$topicKey] = [
+                            'subject' => $subject, 'chapter' => $chapter, 'topic' => $topic,
+                            'total_questions' => 0, 'attempted_count' => 0, 'scored_count' => 0,
+                            'correct_count' => 0, 'incorrect_count' => 0, 'score' => 0.0,
+                        ];
+                    }
+                    $topicStats[$topicKey]['total_questions']++;
+                    $answerRow = $answers->get($questionId);
+                    $answer = $answerRow && $answerRow->answer_json !== null ? json_decode($answerRow->answer_json, true) : null;
+                    if ($answer !== null && $answer !== '' && $answer !== []) {
+                        $topicStats[$topicKey]['attempted_count']++;
+                    }
                 }
             }
 
@@ -317,14 +336,41 @@ class CoachingCbtService
                     $snapshot = json_decode($row->question_snapshot_json, true) ?: [];
                     $marks = (float) $row->marks;
                     $negative = (float) $row->negative_marks;
+                    $subject = (string) ($snapshot['subject'] ?? 'UNKNOWN');
+                    $chapter = (string) ($snapshot['chapter'] ?? 'Unclassified');
+                    $topic = (string) ($snapshot['topic'] ?? '');
+                    $topicKey = $subject.'|'.$chapter.'|'.$topic;
+                    $topicStats[$topicKey]['scored_count']++;
                     if ($this->isCorrect((string) ($snapshot['question_type'] ?? ''), $scored['answer'], $snapshot['correct_answer'] ?? null)) {
                         $score += $marks;
                         $correct++;
+                        $topicStats[$topicKey]['correct_count']++;
+                        $topicStats[$topicKey]['score'] += $marks;
                     } else {
                         $score -= $negative;
                         $incorrect++;
+                        $topicStats[$topicKey]['incorrect_count']++;
+                        $topicStats[$topicKey]['score'] -= $negative;
                     }
                 }
+            }
+
+            foreach ($topicStats as $stats) {
+                DB::table('tagore_cbt_attempt_topic_stats')->insert([
+                    'attempt_id' => $attemptId,
+                    'subject' => $stats['subject'],
+                    'chapter' => $stats['chapter'],
+                    'topic' => $stats['topic'],
+                    'total_questions' => $stats['total_questions'],
+                    'attempted_count' => $stats['attempted_count'],
+                    'scored_count' => $stats['scored_count'],
+                    'correct_count' => $stats['correct_count'],
+                    'incorrect_count' => $stats['incorrect_count'],
+                    'unattempted_count' => max(0, $stats['total_questions'] - $stats['attempted_count']),
+                    'score' => round($stats['score'], 2),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             $expired = $expired || now()->gt($attempt->expires_at);
