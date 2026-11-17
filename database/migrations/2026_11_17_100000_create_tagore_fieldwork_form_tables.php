@@ -12,6 +12,7 @@ return new class extends Migration {
             $table->foreignId('institution_id')->constrained('tagore_institutions')->cascadeOnDelete();
             $table->string('name', 150);
             $table->text('description')->nullable();
+            $table->json('draft_fields');
             $table->string('status', 20)->default('draft');
             $table->unsignedInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->restrictOnDelete();
