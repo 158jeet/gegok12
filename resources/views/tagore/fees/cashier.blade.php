@@ -19,7 +19,7 @@
 .tg-cashier-kpi strong{display:block;font-size:25px;margin-top:6px;color:#f4f7fb}
 .tg-cashier-section{margin-top:22px}
 @media(max-width:1050px){.tg-cashier-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.tg-cashier-tools input{max-width:none}.tg-cashier-table{min-width:980px}.tg-cashier-kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.tg-shell,.tg-layout,.tg-main{width:100%;max-width:100%;min-width:0}.tg-cashier-tools input{max-width:none}.tg-cashier-table{min-width:980px}.tg-cashier-kpis{display:grid;width:100%;max-width:100%;min-width:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tg-cashier-kpi{min-width:0;max-width:100%;overflow-wrap:anywhere}.tg-cashier-kpi strong{font-size:clamp(18px,5vw,25px);overflow-wrap:anywhere;word-break:break-word}}
 </style>
 </head>
 <body class="tg-app">
