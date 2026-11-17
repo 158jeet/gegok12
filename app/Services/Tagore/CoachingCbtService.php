@@ -188,9 +188,14 @@ class CoachingCbtService
                 ->get(['pq.question_id', 's.section_key', 's.sort_order as section_order', 'pq.sort_order']);
             abort_if($paperQuestions->isEmpty(), 409, 'This mock test has no questions.');
 
-            $questionOrder = $paperQuestions->pluck('question_id')->map(fn ($id) => (int) $id)->all();
-            if ($paper->shuffle_questions) {
-                shuffle($questionOrder);
+            // Preserve section order; randomize only within each section.
+            $questionOrder = [];
+            foreach ($paperQuestions->groupBy('section_order') as $sectionRows) {
+                $sectionQuestionIds = $sectionRows->pluck('question_id')->map(fn ($id) => (int) $id)->all();
+                if ($paper->shuffle_questions) {
+                    shuffle($sectionQuestionIds);
+                }
+                $questionOrder = array_merge($questionOrder, $sectionQuestionIds);
             }
             $attemptNo = $attemptCount + 1;
             $attemptId = DB::table('tagore_cbt_attempts')->insertGetId([
@@ -253,36 +258,67 @@ class CoachingCbtService
                 return $attempt;
             }
 
-            $paperQuestions = DB::table('tagore_cbt_paper_questions')->where('paper_id', $attempt->paper_id)->get()->keyBy('question_id');
+            $paperQuestions = DB::table('tagore_cbt_paper_questions as pq')
+                ->join('tagore_cbt_sections as s', 's.id', '=', 'pq.section_id')
+                ->where('pq.paper_id', $attempt->paper_id)
+                ->get(['pq.*', 's.required_answer_count', 's.section_key'])
+                ->keyBy('question_id');
             $answers = DB::table('tagore_cbt_answers')->where('attempt_id', $attemptId)->get()->keyBy('question_id');
             $score = 0.0;
             $maxScore = 0.0;
             $correct = 0;
             $incorrect = 0;
             $unanswered = 0;
+            $sectionRows = [];
 
             foreach (json_decode($attempt->question_order_json, true) ?: [] as $questionId) {
                 $row = $paperQuestions->get($questionId);
-                if (!$row) {
-                    continue;
+                if ($row) {
+                    $sectionRows[$row->section_id][] = ['question_id' => $questionId, 'row' => $row];
                 }
-                $snapshot = json_decode($row->question_snapshot_json, true) ?: [];
-                $marks = (float) $row->marks;
-                $negative = (float) $row->negative_marks;
-                $maxScore += $marks;
-                $answerRow = $answers->get($questionId);
-                $answer = $answerRow && $answerRow->answer_json !== null ? json_decode($answerRow->answer_json, true) : null;
-                if ($answer === null || $answer === '' || $answer === []) {
-                    $unanswered++;
-                    continue;
+            }
+
+            foreach ($sectionRows as $rows) {
+                $required = $rows[0]['row']->required_answer_count === null
+                    ? count($rows)
+                    : min(count($rows), (int) $rows[0]['row']->required_answer_count);
+
+                // The maximum score for an optional section is based on its best
+                // required-answer combination, not every available question.
+                $possibleMarks = array_map(fn ($item) => (float) $item['row']->marks, $rows);
+                rsort($possibleMarks);
+                $maxScore += array_sum(array_slice($possibleMarks, 0, $required));
+
+                $answeredRows = [];
+                foreach ($rows as $position => $item) {
+                    $answerRow = $answers->get($item['question_id']);
+                    $answer = $answerRow && $answerRow->answer_json !== null ? json_decode($answerRow->answer_json, true) : null;
+                    if ($answer !== null && $answer !== '' && $answer !== []) {
+                        $answeredRows[] = ['item' => $item, 'answer' => $answer, 'answered_at' => $answerRow->answered_at, 'position' => $position];
+                    }
                 }
 
-                if ($this->isCorrect((string) ($snapshot['question_type'] ?? ''), $answer, $snapshot['correct_answer'] ?? null)) {
-                    $score += $marks;
-                    $correct++;
-                } else {
-                    $score -= $negative;
-                    $incorrect++;
+                // When a section says "answer any N", only the first N attempted
+                // questions are scored. Extra responses are retained but ignored.
+                usort($answeredRows, function ($a, $b) {
+                    $timeCompare = strcmp((string) $a['answered_at'], (string) $b['answered_at']);
+                    return $timeCompare !== 0 ? $timeCompare : ($a['position'] <=> $b['position']);
+                });
+                $scoredRows = array_slice($answeredRows, 0, $required);
+                $unanswered += max(0, $required - count($scoredRows));
+
+                foreach ($scoredRows as $scored) {
+                    $row = $scored['item']['row'];
+                    $snapshot = json_decode($row->question_snapshot_json, true) ?: [];
+                    $marks = (float) $row->marks;
+                    $negative = (float) $row->negative_marks;
+                    if ($this->isCorrect((string) ($snapshot['question_type'] ?? ''), $scored['answer'], $snapshot['correct_answer'] ?? null)) {
+                        $score += $marks;
+                        $correct++;
+                    } else {
+                        $score -= $negative;
+                        $incorrect++;
+                    }
                 }
             }
 
@@ -331,8 +367,16 @@ class CoachingCbtService
             ->first(['a.*', 'p.name as paper_name', 'p.instructions', 'p.duration_minutes', 'p.shuffle_options']);
         abort_unless($attempt, 404);
 
-        $questionRows = DB::table('tagore_cbt_paper_questions')
-            ->where('paper_id', $attempt->paper_id)->get()->keyBy('question_id');
+        $questionRows = DB::table('tagore_cbt_paper_questions as pq')
+            ->join('tagore_cbt_sections as s', 's.id', '=', 'pq.section_id')
+            ->where('pq.paper_id', $attempt->paper_id)
+            ->get(['pq.*', 's.title as section_title', 's.section_key', 's.required_answer_count'])
+            ->keyBy('question_id');
+        $sectionCounts = DB::table('tagore_cbt_paper_questions')
+            ->where('paper_id', $attempt->paper_id)
+            ->select('section_id', DB::raw('COUNT(*) as question_count'))
+            ->groupBy('section_id')
+            ->pluck('question_count', 'section_id');
         $saved = DB::table('tagore_cbt_answers')->where('attempt_id', $attemptId)->get()->keyBy('question_id');
         $questions = [];
         foreach (json_decode($attempt->question_order_json, true) ?: [] as $questionId) {
@@ -358,6 +402,10 @@ class CoachingCbtService
             $questions[] = [
                 'id' => (int) $questionId,
                 'section_id' => (int) $row->section_id,
+                'section_title' => $row->section_title,
+                'section_key' => $row->section_key,
+                'required_answer_count' => $row->required_answer_count === null ? null : (int) $row->required_answer_count,
+                'section_question_count' => (int) ($sectionCounts[$row->section_id] ?? 0),
                 'marks' => (float) $row->marks,
                 'negative_marks' => (float) $row->negative_marks,
                 'question' => $snapshot,
