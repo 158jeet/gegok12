@@ -170,6 +170,22 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->assertAuthenticatedAs($actor);
     }
 
+    public function test_legacy_impersonation_routes_are_post_only_and_cross_school_post_is_denied(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($otherSchool)->create(['usergroup_id' => 5]);
+
+        $this->actingAs($actor)
+            ->get('/teacher/'.$target->id.'/impersonate')
+            ->assertStatus(405);
+
+        $this->actingAs($actor)
+            ->post('/teacher/'.$target->id.'/impersonate')
+            ->assertForbidden();
+    }
+
     public function test_legacy_impersonation_never_allows_the_owner_account_as_a_target(): void
     {
         $school = School::factory()->create();
