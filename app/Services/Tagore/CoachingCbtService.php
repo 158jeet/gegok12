@@ -218,6 +218,15 @@ class CoachingCbtService
             abort_unless($attempt->status === 'in_progress' && now()->lte($attempt->expires_at), 409, 'This attempt is no longer accepting answers.');
             $questionIds = json_decode($attempt->question_order_json, true) ?: [];
             abort_unless(in_array($questionId, $questionIds, true), 422, 'Question does not belong to this attempt.');
+            $paperQuestion = DB::table('tagore_cbt_paper_questions')
+                ->where('paper_id', $attempt->paper_id)
+                ->where('question_id', $questionId)
+                ->first(['question_snapshot_json']);
+            abort_unless($paperQuestion, 422, 'Question is not part of this paper.');
+            if ($answer !== null && $answer !== '' && $answer !== []) {
+                $snapshot = json_decode($paperQuestion->question_snapshot_json, true) ?: [];
+                $this->validateAnswer($snapshot, $answer);
+            }
 
             DB::table('tagore_cbt_answers')->updateOrInsert(
                 ['attempt_id' => $attemptId, 'question_id' => $questionId],
@@ -358,6 +367,36 @@ class CoachingCbtService
         }
 
         return ['attempt' => $attempt, 'questions' => $questions];
+    }
+
+    private function validateAnswer(array $snapshot, $answer): void
+    {
+        $type = (string) ($snapshot['question_type'] ?? '');
+        $options = $snapshot['options'] ?? [];
+
+        if ($type === 'numerical') {
+            $value = is_array($answer) ? ($answer['value'] ?? null) : $answer;
+            if (!is_numeric($value)) {
+                throw ValidationException::withMessages(['answer' => 'Enter a valid numerical answer.']);
+            }
+            return;
+        }
+
+        $validKeys = array_map('strval', array_keys(is_array($options) ? $options : []));
+        if ($type === 'multiple_choice') {
+            if (!is_array($answer) || !$answer) {
+                throw ValidationException::withMessages(['answer' => 'Select at least one option.']);
+            }
+            $selected = array_map('strval', $answer);
+            if (count($selected) !== count(array_unique($selected)) || array_diff($selected, $validKeys)) {
+                throw ValidationException::withMessages(['answer' => 'One or more selected options are invalid.']);
+            }
+            return;
+        }
+
+        if (!is_scalar($answer) || !in_array((string) $answer, $validKeys, true)) {
+            throw ValidationException::withMessages(['answer' => 'Select a valid answer option.']);
+        }
     }
 
     private function isCorrect(string $type, $given, $expected): bool
