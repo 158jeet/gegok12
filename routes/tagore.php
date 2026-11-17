@@ -79,6 +79,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
     Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
 
+    Route::get('/fieldwork/studio', [FieldworkFormController::class, 'studio'])->name('tagore.fieldwork.studio');
+    Route::get('/fieldwork/my-campaigns', [FieldworkFormController::class, 'myCampaigns'])->name('tagore.fieldwork.campaigns.mine');
     Route::get('/fieldwork/forms', [FieldworkFormController::class, 'index'])->name('tagore.fieldwork.forms.index');
     Route::post('/fieldwork/forms', [FieldworkFormController::class, 'storeTemplate'])->name('tagore.fieldwork.forms.store');
     Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');
