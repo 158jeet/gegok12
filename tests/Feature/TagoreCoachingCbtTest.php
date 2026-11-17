@@ -33,7 +33,7 @@ class TagoreCoachingCbtTest extends TestCase
         parent::tearDown();
     }
 
-    private function buildPublishedPaper(): int
+    private function buildPublishedPaper(int $requiredAnswers = 2): int
     {
         $service = app(CoachingCbtService::class);
         $questionIds = [];
@@ -67,7 +67,7 @@ class TagoreCoachingCbtTest extends TestCase
             'shuffle_questions' => false,
             'shuffle_options' => false,
             'sections' => [
-                ['section_key' => 'P', 'title' => 'Physics', 'question_limit' => 2, 'required_answer_count' => 2, 'section_type' => 'single_choice'],
+                ['section_key' => 'P', 'title' => 'Physics', 'question_limit' => 2, 'required_answer_count' => $requiredAnswers, 'section_type' => 'single_choice'],
             ],
         ]);
         $sectionId = (int) DB::table('tagore_cbt_sections')->where('paper_id', $paperId)->value('id');
@@ -104,6 +104,23 @@ class TagoreCoachingCbtTest extends TestCase
         $this->assertSame(1, (int) $result->rank);
         $this->assertSame('100.0000', number_format((float) $result->percentile, 4, '.', ''));
         $this->assertDatabaseHas('tagore_cbt_events', ['attempt_id' => $attemptId, 'event' => 'attempt_submitted']);
+    }
+
+    public function test_optional_section_scores_only_the_required_number_of_attempted_questions(): void
+    {
+        $paperId = $this->buildPublishedPaper(1);
+        $service = app(CoachingCbtService::class);
+        $attemptId = $service->startAttempt($paperId, (int) $this->student->id);
+        $questionIds = json_decode(DB::table('tagore_cbt_attempts')->where('id', $attemptId)->value('question_order_json'), true);
+
+        $service->saveAnswer($attemptId, (int) $this->student->id, (int) $questionIds[0], 'B', false, 20);
+        $result = $service->scoreAttempt($attemptId);
+
+        $this->assertSame('4.00', number_format((float) $result->score, 2, '.', ''));
+        $this->assertSame('4.00', number_format((float) $result->max_score, 2, '.', ''));
+        $this->assertSame(1, (int) $result->correct_count);
+        $this->assertSame(0, (int) $result->incorrect_count);
+        $this->assertSame(0, (int) $result->unanswered_count);
     }
 
     public function test_student_cannot_reuse_an_attempt_or_save_answers_after_submission(): void
