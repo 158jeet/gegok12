@@ -30,6 +30,9 @@
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
   @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty() || $roles->contains('STUDENT'))
+    <a class="tg-side-link" href="{{ route('tagore.cbt.index') }}"><span class="tg-side-icon">◷</span>JEE / NEET CBT</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
@@ -175,6 +178,9 @@
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.examinations.index') }}"><div class="tg-module-icon">▤</div><b>Examinations & results</b><span>Schedules, marks entry, moderation and published results</span></a>
+      @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
+      <a class="tg-module" href="{{ route('tagore.cbt.index') }}"><div class="tg-module-icon">◷</div><b>JEE / NEET CBT engine</b><span>Question bank, mock papers, timed tests and rank analytics</span></a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Admissions CRM</b><span>{{ $erp['admission_leads'] }} leads · {{ $erp['pending_leads'] }} need follow-up</span></a>
