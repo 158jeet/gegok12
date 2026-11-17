@@ -157,8 +157,14 @@ class CoachingCbtController extends Controller
     public function submit(Request $request, int $attemptId, CoachingCbtService $service)
     {
         abort_unless((int) $request->user()->usergroup_id === 6, 403);
-        $attempt = $service->scoreAttempt($attemptId);
-        abort_unless((int) $attempt->student_id === (int) $request->user()->id, 404);
+        // Authorize ownership before scoring: otherwise a student could force-submit
+        // another student's attempt by guessing or obtaining its numeric ID.
+        $ownedAttempt = DB::table('tagore_cbt_attempts')
+            ->where('id', $attemptId)
+            ->where('student_id', $request->user()->id)
+            ->first(['id']);
+        abort_unless($ownedAttempt, 404);
+        $service->scoreAttempt($attemptId);
         return redirect()->route('tagore.cbt.result', $attemptId);
     }
 
