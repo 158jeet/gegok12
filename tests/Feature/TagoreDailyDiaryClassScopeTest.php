@@ -72,6 +72,16 @@ class TagoreDailyDiaryClassScopeTest extends TestCase
             'student_id' => $student->id, 'homework' => 'Assigned class homework',
             'school_updated_by' => $teacher->id,
         ]);
+
+        $this->actingAs($teacher)->post(route('tagore.diary.save', $student->id), [
+            'diary_date' => now()->toDateString(), 'homework' => 'Revised assigned class homework',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_daily_diary_audits', [
+            'student_id' => $student->id, 'actor_id' => $teacher->id,
+            'actor_role' => 'school', 'field_name' => 'homework',
+            'old_value' => 'Assigned class homework', 'new_value' => 'Revised assigned class homework',
+        ]);
     }
 
     public function test_coordinator_diary_access_requires_exact_class_scope(): void
@@ -118,6 +128,17 @@ class TagoreDailyDiaryClassScopeTest extends TestCase
         $this->assertDatabaseHas('tagore_daily_diary', [
             'student_id' => $student->id, 'parent_updated_by' => $parent->id,
             'parent_feedback' => 'Linked child feedback',
+        ]);
+
+        $this->actingAs($parent)->post(route('tagore.diary.save', $student->id), [
+            'diary_date' => now()->toDateString(), 'study_hours' => 2,
+            'parent_feedback' => 'Updated linked child feedback',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_daily_diary_audits', [
+            'student_id' => $student->id, 'actor_id' => $parent->id,
+            'actor_role' => 'parent', 'field_name' => 'parent_feedback',
+            'old_value' => 'Linked child feedback', 'new_value' => 'Updated linked child feedback',
         ]);
     }
 }
