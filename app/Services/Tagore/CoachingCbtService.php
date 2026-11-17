@@ -39,10 +39,12 @@ class CoachingCbtService
 
     public function approveQuestion(int $questionId): void
     {
-        $question = DB::table('tagore_cbt_questions')->where('id', $questionId)->whereNull('deleted_at')->lockForUpdate()->first();
-        abort_unless($question, 404);
-        abort_unless($question->status === 'draft', 409, 'Only draft questions can be approved.');
-        DB::table('tagore_cbt_questions')->where('id', $questionId)->update(['status' => 'approved', 'updated_at' => now()]);
+        DB::transaction(function () use ($questionId) {
+            $question = DB::table('tagore_cbt_questions')->where('id', $questionId)->whereNull('deleted_at')->lockForUpdate()->first();
+            abort_unless($question, 404);
+            abort_unless($question->status === 'draft', 409, 'Only draft questions can be approved.');
+            DB::table('tagore_cbt_questions')->where('id', $questionId)->update(['status' => 'approved', 'updated_at' => now()]);
+        });
     }
 
     public function createPaper(int $institutionId, int $actorId, array $data): int
@@ -275,6 +277,7 @@ class CoachingCbtService
                 }
             }
 
+            $expired = $expired || now()->gt($attempt->expires_at);
             $status = $expired ? 'expired' : 'submitted';
             $submittedAt = now();
             DB::table('tagore_cbt_attempts')->where('id', $attemptId)->update([
@@ -316,7 +319,7 @@ class CoachingCbtService
         $attempt = DB::table('tagore_cbt_attempts as a')
             ->join('tagore_cbt_papers as p', 'p.id', '=', 'a.paper_id')
             ->where('a.id', $attemptId)->where('a.student_id', $studentId)
-            ->first(['a.*', 'p.name as paper_name', 'p.instructions', 'p.duration_minutes']);
+            ->first(['a.*', 'p.name as paper_name', 'p.instructions', 'p.duration_minutes', 'p.shuffle_options']);
         abort_unless($attempt, 404);
 
         $questionRows = DB::table('tagore_cbt_paper_questions')
@@ -329,6 +332,18 @@ class CoachingCbtService
                 continue;
             }
             $snapshot = json_decode($row->question_snapshot_json, true) ?: [];
+            if ($attempt->shuffle_options && is_array($snapshot['options'] ?? null)) {
+                $optionKeys = array_keys($snapshot['options']);
+                usort($optionKeys, fn ($a, $b) => strcmp(
+                    hash('sha256', $attemptId.'-'.$questionId.'-'.$a),
+                    hash('sha256', $attemptId.'-'.$questionId.'-'.$b)
+                ));
+                $shuffledOptions = [];
+                foreach ($optionKeys as $optionKey) {
+                    $shuffledOptions[$optionKey] = $snapshot['options'][$optionKey];
+                }
+                $snapshot['options'] = $shuffledOptions;
+            }
             unset($snapshot['correct_answer'], $snapshot['explanation']);
             $answerRow = $saved->get($questionId);
             $questions[] = [
