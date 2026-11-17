@@ -207,6 +207,15 @@ class FamilyOnlinePaymentService
             abort_if($orders->isEmpty(), 409, 'Family checkout contains no child payment orders.');
 
             $paymentData = $this->capturedPaymentData($group, $gatewayPaymentId, $gatewayEntity);
+            if (!$paymentData['captured']) {
+                throw ValidationException::withMessages(['payment' => 'Gateway has not confirmed a captured payment. No family fee ledger entries were changed.']);
+            }
+            $usedPaymentId = DB::table('tagore_payments')
+                ->where('gateway_payment_id', $gatewayPaymentId)
+                ->where(function ($query) use ($groupId) {
+                    $query->whereNull('family_payment_group_id')->orWhere('family_payment_group_id', '<>', $groupId);
+                })->exists();
+            abort_if($usedPaymentId, 409, 'This gateway payment is already linked to another checkout.');
             $capturedIsValid = $paymentData['valid'];
             $allocations = DB::table('tagore_payment_order_allocations as a')
                 ->join('tagore_payment_orders as o', 'o.id', '=', 'a.payment_order_id')
@@ -357,17 +366,19 @@ class FamilyOnlinePaymentService
                 ->withBasicAuth((string) config('services.razorpay.key'), (string) config('services.razorpay.secret'))
                 ->get('https://api.razorpay.com/v1/payments/'.$paymentId);
             if (!$response->successful()) {
-                return ['valid' => false];
+                throw ValidationException::withMessages(['payment' => 'Could not verify the captured payment with Razorpay. Please retry confirmation.']);
             }
             $entity = $response->json() ?: [];
         }
 
-        return ['valid' =>
-            (string) ($entity['id'] ?? '') === $paymentId
-            && (string) ($entity['order_id'] ?? '') === (string) $group->gateway_order_id
-            && (int) ($entity['amount'] ?? 0) === (int) round((float) $group->amount * 100)
-            && strtoupper((string) ($entity['currency'] ?? '')) === 'INR'
-            && (string) ($entity['status'] ?? '') === 'captured'
+        $captured = (string) ($entity['status'] ?? '') === 'captured';
+        return [
+            'captured' => $captured,
+            'valid' => $captured
+                && (string) ($entity['id'] ?? '') === $paymentId
+                && (string) ($entity['order_id'] ?? '') === (string) $group->gateway_order_id
+                && (int) ($entity['amount'] ?? 0) === (int) round((float) $group->amount * 100)
+                && strtoupper((string) ($entity['currency'] ?? '')) === 'INR',
         ];
     }
 
