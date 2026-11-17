@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, 'integration/erp-7day']
   push:
-    branches: [main]
+    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**']
   workflow_dispatch:
 
 permissions:
