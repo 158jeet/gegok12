@@ -97,6 +97,11 @@ class CoachingCbtService
                 ->where('institution_id', $paper->institution_id)->where('status', 'approved')
                 ->whereNull('deleted_at')->first();
             abort_unless($question, 422, 'Only approved questions from the same institution can be added.');
+            abort_unless(
+                $section->section_type === 'mixed' || $section->section_type === $question->question_type,
+                422,
+                'Question type does not match the selected paper section.'
+            );
 
             $exists = DB::table('tagore_cbt_paper_questions')->where('paper_id', $paperId)->where('question_id', $questionId)->exists();
             abort_if($exists, 409, 'This question is already in the paper.');
