@@ -6,7 +6,7 @@ $expected=((Get-Content -LiteralPath $checksumPath -Raw).Trim() -split '\s+')[0]
 if($expected -ne $actual){throw "Archive SHA-256 mismatch."}
 $work=Join-Path ([IO.Path]::GetTempPath()) ("tagore-restore-test-"+[guid]::NewGuid().ToString("N"))
 $container="tagore-restore-test-"+[guid]::NewGuid().ToString("N").Substring(0,8)
-$password=[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$rng=[Security.Cryptography.RandomNumberGenerator]::Create();$randomBytes=New-Object byte[] 32;try{$rng.GetBytes($randomBytes)}finally{$rng.Dispose()};$password=[Convert]::ToBase64String($randomBytes)
 try {
  Expand-Archive -LiteralPath $ArchivePath -DestinationPath $work
  $dump=Join-Path $work "database.sql"; $manifestPath=Join-Path $work "manifest.json"; $uploads=Join-Path $work "uploads"
@@ -28,7 +28,7 @@ try {
   & docker cp $dump ($container+":/tmp/tagore-backup.sql");if($LASTEXITCODE -ne 0){throw "Could not copy SQL dump."}
   & docker exec $container sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -e "CREATE DATABASE tagore_erp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"';if($LASTEXITCODE -ne 0){throw "Could not create isolated database."}
   & docker exec $container sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot tagore_erp < /tmp/tagore-backup.sql';if($LASTEXITCODE -ne 0){throw "SQL restore failed."}
-  $countOutput=& docker exec $container sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -uroot tagore_erp -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '\''tagore_erp'\''"'
+  $countOutput=& docker exec $container sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -uroot tagore_erp -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 0x7461676f72655f657270"'
   $tableCount=($countOutput | Select-Object -Last 1).ToString().Trim()
   if($LASTEXITCODE -ne 0 -or [int]$tableCount -lt 1){throw "Restored database contains no tables."}
   $restoreStatus="PASS ($tableCount tables in disposable container)"
