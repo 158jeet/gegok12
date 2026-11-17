@@ -23,6 +23,14 @@ class ParentDashboardController extends Controller
             ->get(['ps.student_id', 'ps.relationship', 'u.name', 'u.school_id', 'i.id as institution_id', 'i.display_name as institution']);
 
         $studentIds = $children->pluck('student_id');
+        $feeObligations = DB::table('tagore_fee_obligations as o')
+            ->join('users as u', 'u.id', '=', 'o.student_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'o.institution_id')
+            ->whereIn('o.student_id', $studentIds)
+            ->where('o.outstanding_amount', '>', 0)
+            ->whereIn('o.status', ['pending', 'partial', 'overdue'])
+            ->orderBy('o.due_date')->orderBy('o.id')
+            ->get(['o.id as fee_obligation_id', 'o.student_id', 'u.name as student_name', 'o.institution_id', 'i.display_name as institution', 'o.due_date', 'o.outstanding_amount', 'o.status']);
         $feeSummary = DB::table('tagore_fee_obligations')
             ->whereIn('student_id', $studentIds)
             ->selectRaw('student_id, COALESCE(SUM(net_amount),0) payable, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(outstanding_amount),0) outstanding')
@@ -71,7 +79,7 @@ class ParentDashboardController extends Controller
             ];
         });
 
-        return view('tagore.parent-dashboard', compact('cards', 'familySummary'));
+        return view('tagore.parent-dashboard', compact('cards', 'familySummary', 'feeObligations'));
     }
 
     private function roles(int $userId)
