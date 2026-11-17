@@ -118,6 +118,23 @@ return new class extends Migration {
             $table->unique(['attempt_id', 'question_id']);
         });
 
+        Schema::create('tagore_cbt_attempt_topic_stats', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('attempt_id')->constrained('tagore_cbt_attempts')->cascadeOnDelete();
+            $table->string('subject', 40);
+            $table->string('chapter', 120);
+            $table->string('topic', 120)->default('');
+            $table->unsignedSmallInteger('total_questions')->default(0);
+            $table->unsignedSmallInteger('attempted_count')->default(0);
+            $table->unsignedSmallInteger('scored_count')->default(0);
+            $table->unsignedSmallInteger('correct_count')->default(0);
+            $table->unsignedSmallInteger('incorrect_count')->default(0);
+            $table->unsignedSmallInteger('unattempted_count')->default(0);
+            $table->decimal('score', 10, 2)->default(0);
+            $table->timestamps();
+            $table->unique(['attempt_id', 'subject', 'chapter', 'topic'], 'tagore_cbt_attempt_topic_unique');
+        });
+
         Schema::create('tagore_cbt_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('paper_id')->nullable()->constrained('tagore_cbt_papers')->nullOnDelete();
@@ -135,6 +152,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::dropIfExists('tagore_cbt_events');
+        Schema::dropIfExists('tagore_cbt_attempt_topic_stats');
         Schema::dropIfExists('tagore_cbt_answers');
         Schema::dropIfExists('tagore_cbt_attempts');
         Schema::dropIfExists('tagore_cbt_paper_questions');
