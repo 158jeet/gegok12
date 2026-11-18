@@ -126,6 +126,8 @@ class TagoreCbtManagementTest extends TestCase
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+        // The seeded demo student is shared by other feature tests; isolate this trend fixture.
+        DB::table('tagore_cbt_attempts')->where('student_id', $student->id)->delete();
         $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
         $now = now();
 
