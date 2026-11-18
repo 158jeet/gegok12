@@ -12,7 +12,7 @@ on:
       - 'tests/Feature/TagoreLegacyFeeMigrationTest.php'
       - '.github/workflows/feature-fees-finance.yml'
   push:
-    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**', 'automation/**']
+    branches: [main, 'integration/erp-7day']
     paths:
       - 'app/**'
       - 'routes/**'

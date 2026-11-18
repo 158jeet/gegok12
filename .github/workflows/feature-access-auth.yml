@@ -14,7 +14,7 @@ on:
       - 'tests/Feature/TagoreRoleAccessMatrixTest.php'
       - '.github/workflows/feature-access-auth.yml'
   push:
-    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**', 'automation/**']
+    branches: [main, 'integration/erp-7day']
     paths:
       - 'app/Http/Middleware/**'
       - 'app/Policies/**'
