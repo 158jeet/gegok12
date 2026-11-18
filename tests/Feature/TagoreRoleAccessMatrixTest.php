@@ -22,11 +22,11 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'lacks' => ['user.manage', 'scope.manage'],
             ],
             'COORDINATOR' => [
-                'has' => ['dashboard.view', 'attendance.manage', 'result.manage', 'task.manage'],
+                'has' => ['dashboard.view', 'attendance.manage', 'fee.view', 'result.manage', 'task.manage'],
                 'lacks' => ['fee.manage', 'user.manage'],
             ],
             'TEACHER' => [
-                'has' => ['dashboard.view', 'attendance.manage', 'result.manage', 'task.manage'],
+                'has' => ['dashboard.view', 'attendance.manage', 'fee.view', 'result.manage', 'task.manage'],
                 'lacks' => ['fee.manage', 'fee.edit', 'user.manage'],
             ],
             'PARENT' => [
@@ -40,6 +40,10 @@ class TagoreRoleAccessMatrixTest extends TestCase
             'ACCOUNTS' => [
                 'has' => ['dashboard.view', 'fee.manage', 'payment.reconcile', 'report.export'],
                 'lacks' => ['fee.edit', 'user.manage'],
+            ],
+            'CASHIER' => [
+                'has' => ['dashboard.view', 'student.view', 'fee.view', 'payment.view', 'payment.collect'],
+                'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage'],
             ],
             'FEE_EDITOR' => [
                 'has' => ['dashboard.view', 'fee.view', 'fee.edit', 'report.view'],
@@ -83,6 +87,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
             'coordinator@tagore-demo.local',
             'teacher@tagore-demo.local',
             'accounts@tagore-demo.local',
+            'cashier@tagore-demo.local',
             'fees@tagore-demo.local',
             'parent@tagore-demo.local',
             'student@tagore-demo.local',
@@ -239,5 +244,41 @@ class TagoreRoleAccessMatrixTest extends TestCase
             $user = User::query()->where('email', $email)->whereNull('deleted_at')->firstOrFail();
             $this->actingAs($user)->get('/tagore/accounts/fees/manage')->assertStatus($status);
         }
+    }
+
+    public function test_coordinator_cannot_open_central_accounts_workspace(): void
+    {
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $teacher = User::query()->where('email', 'teacher@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $accounts = User::query()->where('email', 'accounts@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+
+        $this->actingAs($coordinator)->get(route('tagore.fees.accounts'))->assertForbidden();
+        $this->actingAs($teacher)->get(route('tagore.fees.accounts'))->assertForbidden();
+        $this->actingAs($accounts)->get(route('tagore.fees.accounts'))->assertOk();
+    }
+
+    public function test_coordinator_and_teacher_have_a_separate_read_only_class_fee_status_entry_point(): void
+    {
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $teacher = User::query()->where('email', 'teacher@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+
+        $this->actingAs($coordinator)->get(route('tagore.fees.class-status'))->assertOk()->assertSee('Class fee status');
+        $this->actingAs($teacher)->get(route('tagore.fees.class-status'))->assertOk()->assertSee('Class fee status');
+        $this->actingAs($coordinator)->get(route('tagore.fees.accounts'))->assertForbidden();
+        $this->actingAs($teacher)->get(route('tagore.fees.accounts'))->assertForbidden();
+    }
+
+    public function test_owner_console_displays_disabled_user_account_status(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+
+        DB::table('users')->where('id', $principal->id)->update(['status' => 'inactive']);
+
+        $this->actingAs($owner)
+            ->get(route('tagore.admin'))
+            ->assertOk()
+            ->assertSee('Disabled')
+            ->assertSee('Enable');
     }
 }

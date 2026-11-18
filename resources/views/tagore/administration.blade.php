@@ -37,6 +37,49 @@
       <form method="post" action="{{ route('tagore.admin.users.password',$a->user_id) }}">@csrf<button>Reset password</button></form><form method="post" action="{{ route('tagore.admin.users.status',$a->user_id) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $a->status === 'active' ? 'disabled' : 'active' }}"><button>{{ $a->status === 'active' ? 'Disable' : 'Enable' }}</button></form>
       </td></tr>@empty<tr><td colspan="6">No accounts with role assignments.</td></tr>@endforelse
     </tbody></table></div></section>
+    <section class="card wide">
+      <h2>Coordinator class fee visibility</h2>
+      <p class="muted">Grant only read-only <b>fee.view</b> access to a Coordinator for a specific class. The selected class must belong to the Coordinator's school. Every grant and revocation records the Owner, target, class, reason and timestamp.</p>
+      <form method="post" action="{{ route('tagore.admin.fee-scopes.grant') }}">
+        @csrf
+        <label>Coordinator account</label>
+        <select name="user_id" required>
+          <option value="">Select Coordinator</option>
+          @foreach($coordinators as $coordinator)
+            <option value="{{ $coordinator->id }}">{{ $coordinator->name }} — {{ $coordinator->email }}</option>
+          @endforeach
+        </select>
+        <label>Class / section</label>
+        <select name="standard_link_id" required>
+          <option value="">Select class</option>
+          @foreach($classScopes as $class)
+            <option value="{{ $class->id }}">{{ $class->institution }} · {{ $class->standard_name }} · {{ $class->section_name }} · Academic year ID {{ $class->academic_year_id }}</option>
+          @endforeach
+        </select>
+        <label>Reason for access (required for audit)</label>
+        <input name="reason" minlength="8" maxlength="250" required placeholder="e.g. Coordinator assigned to fee follow-up for this class">
+        <button type="submit">Grant read-only class fee access</button>
+      </form>
+      <h3 style="margin-top:24px">Current class scopes</h3>
+      <div class="table-responsive"><table><thead><tr><th>Coordinator</th><th>Class</th><th>Scope</th><th>Action</th></tr></thead><tbody>
+        @forelse($scopeAssignments as $scope)
+          <tr><td>{{ $scope->user_name }}<br><span class="muted">{{ $scope->email }}</span></td><td>{{ $scope->standard_name }} · {{ $scope->section_name }}<br><span class="muted">Academic year ID {{ $scope->academic_year_id }}</span></td><td>fee.view — read only</td><td>
+            <form method="post" action="{{ route('tagore.admin.fee-scopes.revoke', $scope->id) }}">
+              @csrf @method('DELETE')
+              <label>Revocation reason</label><input name="reason" minlength="8" maxlength="250" required placeholder="Reason for removing access">
+              <button type="submit">Revoke scope</button>
+            </form>
+          </td></tr>
+        @empty<tr><td colspan="4">No Coordinator class fee scopes have been granted.</td></tr>@endforelse
+      </tbody></table></div>
+      <h3 style="margin-top:24px">Scope audit history</h3>
+      <div class="table-responsive"><table><thead><tr><th>When</th><th>Action</th><th>Coordinator</th><th>Owner actor</th><th>Details</th></tr></thead><tbody>
+        @forelse($scopeAudits as $audit)
+          @php($metadata = json_decode($audit->metadata ?? '{}', true) ?: [])
+          <tr><td>{{ $audit->created_at }}</td><td>{{ str_replace('_', ' ', $audit->action) }}</td><td>{{ $audit->target_name ?? 'Deleted account' }}</td><td>{{ $audit->actor_name }}</td><td>{{ $metadata['permission'] ?? '—' }} · Class ID {{ $metadata['scope_id'] ?? '—' }}<br><span class="muted">{{ $metadata['reason'] ?? '' }}</span></td></tr>
+        @empty<tr><td colspan="5">No scope changes recorded.</td></tr>@endforelse
+      </tbody></table></div>
+    </section>
     <div class="grid">
         <section class="card">
             <h2>Tagore Group</h2>

@@ -210,7 +210,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
     await authenticate(page, 'coordinator');
     await expect(page.locator('a[href$="/tagore/accounts/fees/manage"]:visible')).toHaveCount(0);
     await expect(page.locator('a[href$="/tagore/accounts/fees/editor"]:visible')).toHaveCount(0);
-    await expect(page.locator('a[href$="/tagore/accounts/fees"]:visible').first()).toBeVisible();
+    await expect(page.locator('a[href$="/tagore/fees/class-status"]:visible').first()).toBeVisible();
   });
 
   for (const role of roles) {
