@@ -1,0 +1,128 @@
+name: Free Parallel Feature Regression
+
+# Free GitHub Actions only: six isolated feature suites execute concurrently.
+# This is a regression/coordination layer, not a paid coding-agent workflow.
+on:
+  pull_request:
+    branches: [main, 'integration/erp-7day']
+  push:
+    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**']
+    paths:
+      - 'app/**'
+      - 'routes/**'
+      - 'database/**'
+      - 'resources/**'
+      - 'tests/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/free-parallel-feature-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: free-feature-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  feature-regression:
+    name: ${{ matrix.feature }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - feature: Access and authentication
+            tests: "tests/Feature/AuthenticationTest.php tests/Feature/AuthenticationAdvancedTest.php tests/Feature/AuthorizationGateRegressionTest.php tests/Feature/TagoreManagerDashboardTest.php tests/Feature/TagoreRoleAccessMatrixTest.php"
+          - feature: Admissions and fieldwork
+            tests: "tests/Feature/TagoreAdmissionsTest.php tests/Feature/KoboAdmissionImporterTest.php tests/Feature/KoboSubmissionSyncTest.php"
+          - feature: Fees and finance
+            tests: "tests/Feature/TagoreFeeWorkflowAcceptanceTest.php tests/Feature/TagoreFeeImportTest.php tests/Feature/TagoreFeeArchiveDeliveryTest.php tests/Feature/TagoreLegacyFeeMigrationTest.php"
+          - feature: Academics, exams and diary
+            tests: "tests/Feature/TagoreAcademicStructureTest.php tests/Feature/TagoreExaminationTest.php tests/Feature/TagoreDailyDiaryAcceptanceTest.php tests/Feature/TagoreOlympiadTest.php tests/Feature/TagoreParentOlympiadTest.php"
+          - feature: Campus and workforce operations
+            tests: "tests/Feature/TagoreOperationsAcceptanceTest.php tests/Feature/TagoreTasksTest.php tests/Feature/SchoolStatusLifecycleTest.php tests/Feature/TeacherStatusLifecycleTest.php tests/Feature/TagoreOfflineSyncTest.php"
+          - feature: Core, family and UI contracts
+            tests: "tests/Feature/TagoreCoreModuleSmokeTest.php tests/Feature/TagoreBladeContractTest.php tests/Feature/TagoreStudentParentMigrationTest.php tests/Feature/TagorePerformanceRouteTest.php tests/Feature/TagorePrototypeTest.php"
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/feature-ci.sqlite
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      TAGORE_OLYMPIAD_INTAKE_ENABLED: true
+      TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, sqlite3, pdo_sqlite, intl
+          coverage: none
+
+      - name: Validate and install backend dependencies
+        run: |
+          composer validate --no-check-publish --no-interaction
+          composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare isolated disposable database
+        run: |
+          mkdir -p database
+          touch database/feature-ci.sqlite
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+
+      - name: Run this feature's focused regression suite
+        env:
+          FEATURE_TEST_PATHS: ${{ matrix.tests }}
+        run: |
+          set -euo pipefail
+          echo "## ${{ matrix.feature }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: `$GITHUB_SHA`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Test files: `$FEATURE_TEST_PATHS`" >> "$GITHUB_STEP_SUMMARY"
+          php artisan test $FEATURE_TEST_PATHS
+
+      - name: Upload feature test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-regression-${{ strategy.job-index }}-${{ github.sha }}
+          path: |
+            storage/logs/laravel.log
+            database/feature-ci.sqlite
+          if-no-files-found: warn
+          retention-days: 7
+
+  parallel-acceptance-gate:
+    name: All feature slices passed
+    if: always()
+    needs: [feature-regression]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail closed unless every feature slice passed
+        env:
+          MATRIX_RESULT: ${{ needs.feature-regression.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Free parallel feature acceptance"
+            echo
+            echo "- Candidate SHA: `$CANDIDATE_SHA`"
+            echo "- Six feature suites: **$MATRIX_RESULT**"
+            echo "- Execution: six independent GitHub-hosted jobs, no paid agents"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$MATRIX_RESULT" != "success" ]]; then
+            echo "::error::At least one feature regression suite failed, was skipped, or was cancelled."
+            exit 1
+          fi
