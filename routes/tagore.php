@@ -28,6 +28,7 @@ use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
 use App\Http\Controllers\Tagore\PerformanceController;
 use App\Http\Controllers\Tagore\CbtAttemptController;
+use App\Http\Controllers\Tagore\CbtManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -48,6 +49,15 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
     Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
     Route::get('/cbt', [CbtAttemptController::class, 'index'])->name('tagore.cbt.index');
+    Route::get('/cbt/manage', [CbtManagementController::class, 'index'])->name('tagore.cbt.manage');
+    Route::post('/cbt/banks', [CbtManagementController::class, 'storeBank'])->name('tagore.cbt.banks.store');
+    Route::post('/cbt/banks/{bankId}/questions', [CbtManagementController::class, 'storeQuestion'])->whereNumber('bankId')->name('tagore.cbt.questions.store');
+    Route::post('/cbt/banks/{bankId}/questions/import', [CbtManagementController::class, 'importQuestions'])->whereNumber('bankId')->name('tagore.cbt.questions.import');
+    Route::patch('/cbt/questions/{questionId}', [CbtManagementController::class, 'updateQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.update');
+    Route::delete('/cbt/questions/{questionId}', [CbtManagementController::class, 'deleteQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.delete');
+    Route::post('/cbt/exams', [CbtManagementController::class, 'storeExam'])->name('tagore.cbt.exams.store');
+    Route::post('/cbt/exams/{examId}/questions', [CbtManagementController::class, 'attachQuestions'])->whereNumber('examId')->name('tagore.cbt.exams.questions.attach');
+    Route::patch('/cbt/exams/{examId}/publish', [CbtManagementController::class, 'publishExam'])->whereNumber('examId')->name('tagore.cbt.exams.publish');
     Route::get('/cbt/exams/available', [CbtAttemptController::class, 'available'])->name('tagore.cbt.exams.available');
     Route::post('/cbt/exams/{examId}/start', [CbtAttemptController::class, 'start'])->whereNumber('examId')->name('tagore.cbt.attempts.start');
     Route::get('/cbt/attempts/{attemptId}', [CbtAttemptController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.attempts.player');
