@@ -49,10 +49,38 @@ class AdministrationController extends Controller
             ->leftJoin('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
             ->where('ur.status', 'active')
             ->orderBy('u.name')
-            ->limit(250)
-            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
+            ->get(['ur.id', 'u.id as user_id', 'u.name', 'u.email', 'u.status', 'r.name as role_name', 'r.code as role_code', 'i.display_name as institution']);
 
-        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff'));
+        $coordinators = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->join('users as u', 'u.id', '=', 'ur.user_id')
+            ->where('r.code', 'COORDINATOR')->where('ur.status', 'active')->where('u.status', 'active')
+            ->whereNull('u.deleted_at')->orderBy('u.name')->get(['u.id', 'u.name', 'u.email', 'u.school_id']);
+        $classScopes = DB::table('standards_link as sl')
+            ->join('standards as st', 'st.id', '=', 'sl.standard_id')
+            ->join('sections as se', 'se.id', '=', 'sl.section_id')
+            ->join('tagore_institutions as i', 'i.school_id', '=', 'sl.school_id')
+            ->where('sl.status', 1)->whereNull('sl.deleted_at')->where('i.status', 'active')
+            ->orderBy('i.display_name')->orderBy('st.order')->orderBy('se.name')
+            ->get(['sl.id', 'sl.school_id', 'sl.academic_year_id', 'i.display_name as institution', 'st.name as standard_name', 'se.name as section_name']);
+        $feeViewPermissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $scopeAssignments = DB::table('tagore_user_scopes as us')
+            ->join('users as u', 'u.id', '=', 'us.user_id')
+            ->join('tagore_permissions as p', 'p.id', '=', 'us.permission_id')
+            ->join('standards_link as sl', 'sl.id', '=', 'us.scope_id')
+            ->join('standards as st', 'st.id', '=', 'sl.standard_id')
+            ->join('sections as se', 'se.id', '=', 'sl.section_id')
+            ->where('us.scope_type', 'standard_link')->where('p.code', 'fee.view')
+            ->orderBy('u.name')->orderBy('sl.id')
+            ->get(['us.id', 'us.user_id', 'u.name as user_name', 'u.email', 'us.scope_id', 'st.name as standard_name', 'se.name as section_name', 'sl.academic_year_id']);
+        $scopeAudits = DB::table('tagore_user_admin_audits as a')
+            ->join('users as actor', 'actor.id', '=', 'a.actor_id')
+            ->leftJoin('users as target', 'target.id', '=', 'a.target_user_id')
+            ->whereIn('a.action', ['fee_scope_granted', 'fee_scope_revoked'])
+            ->orderByDesc('a.created_at')->limit(50)
+            ->get(['a.id', 'a.action', 'a.metadata', 'a.created_at', 'actor.name as actor_name', 'target.name as target_name']);
+
+        return view('tagore.administration', compact('group', 'institutions', 'availableSchools', 'years', 'rolesList', 'assignments', 'departments', 'staff', 'coordinators', 'classScopes', 'feeViewPermissionId', 'scopeAssignments', 'scopeAudits'));
     }
 
     public function storeUser(Request $request)
@@ -161,6 +189,70 @@ class AdministrationController extends Controller
             DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
         });
         return back()->with('success','User account status updated.');
+    }
+
+    public function grantFeeScope(Request $request)
+    {
+        $this->owner($request);
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'standard_link_id' => ['required', 'integer'],
+            'reason' => ['required', 'string', 'min:8', 'max:250'],
+        ]);
+        $target = DB::table('users')->where('id', $data['user_id'])->whereNull('deleted_at')->first(['id', 'school_id']);
+        abort_unless($target && DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $target->id)->where('ur.status', 'active')->where('r.code', 'COORDINATOR')->exists(), 422,
+            'Select an active Coordinator account.');
+        $class = DB::table('standards_link')->where('id', $data['standard_link_id'])
+            ->where('school_id', $target->school_id)->where('status', 1)->whereNull('deleted_at')
+            ->first(['id', 'school_id']);
+        abort_unless($class, 422, 'The selected class must belong to the Coordinator school and be active.');
+        $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        abort_unless($permissionId, 422, 'The read-only fee permission is not configured.');
+
+        DB::transaction(function () use ($request, $data, $target, $class, $permissionId) {
+            $exists = DB::table('tagore_user_scopes')->where('user_id', $target->id)
+                ->where('scope_type', 'standard_link')->where('scope_id', $class->id)
+                ->where('permission_id', $permissionId)->exists();
+            if ($exists) return;
+            DB::table('tagore_user_scopes')->insert([
+                'user_id' => $target->id, 'scope_type' => 'standard_link',
+                'scope_id' => $class->id, 'permission_id' => $permissionId,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id, 'target_user_id' => $target->id,
+                'action' => 'fee_scope_granted',
+                'metadata' => json_encode(['scope_type' => 'standard_link', 'scope_id' => $class->id, 'permission' => 'fee.view', 'reason' => trim($data['reason'])]),
+                'created_at' => now(),
+            ]);
+        });
+        return back()->with('success', 'Read-only fee visibility scope saved.');
+    }
+
+    public function revokeFeeScope(Request $request, int $scopeId)
+    {
+        $this->owner($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:250']]);
+        $permissionId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $scope = DB::table('tagore_user_scopes')->where('id', $scopeId)
+            ->where('scope_type', 'standard_link')->where('permission_id', $permissionId)->first();
+        abort_unless($scope, 404);
+        abort_unless(DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $scope->user_id)->where('ur.status', 'active')->where('r.code', 'COORDINATOR')->exists(), 422,
+            'Only Coordinator fee-view scopes can be revoked here.');
+
+        DB::transaction(function () use ($request, $scope, $data) {
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id, 'target_user_id' => $scope->user_id,
+                'action' => 'fee_scope_revoked',
+                'metadata' => json_encode(['scope_type' => 'standard_link', 'scope_id' => $scope->scope_id, 'permission' => 'fee.view', 'reason' => trim($data['reason'])]),
+                'created_at' => now(),
+            ]);
+            DB::table('tagore_user_scopes')->where('id', $scope->id)->delete();
+        });
+        return back()->with('success', 'Fee visibility scope revoked and audited.');
     }
 
     public function storeInstitution(Request $request)

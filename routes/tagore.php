@@ -62,6 +62,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/users', [AdministrationController::class, 'storeUser'])->name('tagore.admin.users.store');
     Route::post('/admin/users/{userId}/password', [AdministrationController::class, 'resetUserPassword'])->whereNumber('userId')->name('tagore.admin.users.password');
     Route::patch('/admin/users/{userId}/status', [AdministrationController::class, 'updateUserStatus'])->whereNumber('userId')->name('tagore.admin.users.status');
+    Route::post('/admin/fee-scopes', [AdministrationController::class, 'grantFeeScope'])->name('tagore.admin.fee-scopes.grant');
+    Route::delete('/admin/fee-scopes/{scopeId}', [AdministrationController::class, 'revokeFeeScope'])->whereNumber('scopeId')->name('tagore.admin.fee-scopes.revoke');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
     Route::patch('/staff/me/leave/{leaveId}/cancel', [\App\Http\Controllers\Tagore\StaffController::class, 'cancelOwnLeave'])->whereNumber('leaveId')->name('tagore.staff.self.leave.cancel');
@@ -101,6 +103,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
     Route::post('/child/{studentId}/fees/pay', [OnlinePaymentController::class, 'initiate'])->whereNumber('studentId')->name('tagore.payments.initiate');
     Route::post('/payments/confirm', [OnlinePaymentController::class, 'confirm'])->name('tagore.payments.confirm');
+    Route::get('/fees/class-status', [FeeController::class, 'classStatus'])->name('tagore.fees.class-status');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
     Route::post('/accounts/fees/payment/{paymentId}/reconcile', [FeeController::class, 'reconcile'])->whereNumber('paymentId')->name('tagore.fees.reconcile');

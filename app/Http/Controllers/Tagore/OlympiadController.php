@@ -39,7 +39,7 @@ class OlympiadController extends Controller
             ->join('standards as s', 's.id', '=', 'sl.standard_id')
             ->where('sa.user_id', $userId)->where('sa.school_id', $schoolId)->where('sl.school_id', $schoolId)
             ->whereNull('sa.deleted_at')->whereNull('sl.deleted_at')->whereNull('s.deleted_at')
-            ->where('sl.status', 1)->orderByDesc('sa.academic_year_id')->select('s.name as grade_name', 's.order as grade_order')->first();
+            ->where('sl.status', 1)->orderByDesc('sa.academic_year_id')->orderByDesc('sa.id')->select('s.name as grade_name', 's.order as grade_order')->first();
         if (!$record) return null;
         $digits = preg_replace('/\D+/', '', (string) $record->grade_name);
         $grade = (int) $digits;

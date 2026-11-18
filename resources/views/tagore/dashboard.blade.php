@@ -41,7 +41,10 @@
   @if($roles->contains('FEE_EDITOR'))
     <a class="tg-side-link" href="{{ route('tagore.fees.editor') }}"><span class="tg-side-icon">₹</span>Fee editor</a>
   @endif
-  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
+  @if($roles->intersect(['COORDINATOR','TEACHER'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.fees.class-status') }}"><span class="tg-side-icon">₹</span>Class fee status</a>
+  @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}"><span class="tg-side-icon">▤</span>Accounts</a>
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())
@@ -75,7 +78,7 @@
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
         <a class="tg-btn" href="{{ route('tagore.tasks.index') }}">Create task</a>
       @endif
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
+      @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.accounts') }}">Open accounts</a>
       @endif
       @if($roles->contains('PARENT'))
@@ -185,7 +188,10 @@
       @if($roles->contains('FEE_EDITOR'))
       <a class="tg-module" href="{{ route('tagore.fees.editor') }}"><div class="tg-module-icon">₹</div><b>Fee editor</b><span>Adjust fee records and manage fee-editing tasks</span></a>
       @endif
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
+      @if($roles->intersect(['COORDINATOR','TEACHER'])->isNotEmpty())
+      <a class="tg-module" href="{{ route('tagore.fees.class-status') }}"><div class="tg-module-icon">₹</div><b>Class fee status</b><span>Read-only fee balances for your assigned classes</span></a>
+      @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.fees.accounts') }}"><div class="tg-module-icon">▤</div><b>Accounts</b><span>Collections, receipts and reconciliation</span></a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())

@@ -193,12 +193,11 @@
     const wantedStatus = String(statusValue ?? status?.value ?? '');
     let visible = 0;
     rows.forEach(row => {
-      // Search rendered record cells only, excluding hidden edit forms and actions.
-      // Use the row's complete text content rather than relying on the
-      // table-cell collection. Some mobile browser/table accessibility
-      // layouts expose cells differently while the row itself remains
-      // searchable and visible to the user.
-      const rowText = String(row.textContent || row.innerText || '')
+      // Search only displayed data columns. The final Actions cell contains
+      // hidden edit forms whose values must not affect live search.
+      const dataCells = Array.from(row.querySelectorAll(':scope > td')).slice(0, -1);
+      const rowText = dataCells.map(cell => cell.textContent || '')
+        .join(' ')
         .normalize('NFKC')
         .replace(/\s+/g, ' ')
         .trim()
