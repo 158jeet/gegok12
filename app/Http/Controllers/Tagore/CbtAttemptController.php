@@ -106,7 +106,12 @@ class CbtAttemptController extends Controller
             return $question;
         });
         $responses = DB::table('tagore_cbt_responses')->where('attempt_id', $attemptId)
-            ->get(['exam_question_id', 'answer_json', 'marked_for_review', 'time_spent_seconds'])->keyBy('exam_question_id');
+            ->get(['exam_question_id', 'answer_json', 'marked_for_review', 'time_spent_seconds'])
+            ->mapWithKeys(fn ($response) => [(string) $response->exam_question_id => [
+                'answer' => json_decode($response->answer_json ?? 'null', true),
+                'marked_for_review' => (bool) $response->marked_for_review,
+                'time_spent_seconds' => (int) $response->time_spent_seconds,
+            ]]);
         return response()->json(['attempt' => $attempt, 'exam' => $exam, 'questions' => $questions, 'responses' => $responses]);
     }
 
