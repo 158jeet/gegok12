@@ -33,6 +33,8 @@ class CbtScoringServiceTest extends TestCase
         $this->assertSame(75.0, $result['accuracy']);
         $this->assertSame(-1.0, $result['details']['14']['awarded_marks']);
         $this->assertSame(0.0, $result['details']['15']['awarded_marks']);
+        $this->assertNull($result['details']['15']['is_correct']);
+        $this->assertFalse($result['details']['15']['answered']);
     }
 
     public function test_multiple_choice_is_all_or_nothing_and_numerical_respects_tolerance(): void

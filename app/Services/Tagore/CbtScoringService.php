@@ -40,7 +40,7 @@ class CbtScoringService
             if (!$answered) {
                 $unanswered++;
                 $awarded = 0.0;
-                $isCorrect = false;
+                $isCorrect = null;
             } else {
                 $isCorrect = $this->matches($type, $key, $response);
                 if ($isCorrect) {
