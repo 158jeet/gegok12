@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers\\Tagore;
+namespace App\Http\Controllers\Tagore;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Services\\Tagore\\CbtScoringService;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Validation\\ValidationException;
+use App\Http\Controllers\Controller;
+use App\Services\Tagore\CbtScoringService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CbtAttemptController extends Controller
 {
