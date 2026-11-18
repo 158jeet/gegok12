@@ -88,7 +88,7 @@ class CbtAttemptController extends Controller
             ]);
             return DB::table('tagore_cbt_attempts')->where('id', $id)->first();
         });
-        return response()->json(['attempt_id' => $attempt->id, 'status' => $attempt->status, 'expires_at' => $attempt->expires_at,
+        return response()->json(['attempt_id' => $attempt->id, 'status' => $attempt->status, 'expires_at' => \\Illuminate\\Support\\Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String(),
             'resumed' => $attempt->started_at !== $attempt->created_at]);
     }
 
@@ -100,6 +100,7 @@ class CbtAttemptController extends Controller
         abort_unless($attempt->status === 'in_progress', 409);
         abort_if(now()->gte($attempt->expires_at), 409, 'The attempt time has expired. Submit the attempt to calculate its result.');
         $exam = DB::table('tagore_cbt_exams')->where('id', $attempt->exam_id)->first(['id', 'title', 'exam_track', 'duration_minutes']);
+        $attempt->expires_at = \\Illuminate\\Support\\Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String();
         $questions = $this->examQuestions((int) $attempt->exam_id)->map(function ($question) {
             $question->options = json_decode($question->options_json ?? '[]', true) ?: [];
             unset($question->options_json);
