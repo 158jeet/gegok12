@@ -192,6 +192,63 @@ class CbtManagementController extends Controller
         return response()->json(['attached' => count($data['questions'])]);
     }
 
+    public function scheduleExam(Request $request, int $examId)
+    {
+        [, , $institutions] = $this->scope($request);
+        $exam = $this->examInScope($examId, $institutions);
+        abort_unless($exam->status === 'draft', 409, 'Published exams cannot be rescheduled.');
+        $data = $request->validate([
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after:starts_at'],
+        ]);
+        abort_if(($data['starts_at'] ?? null) && !($data['ends_at'] ?? null), 422, 'Set both the start and end time for a scheduled exam.');
+        abort_if(!($data['starts_at'] ?? null) && ($data['ends_at'] ?? null), 422, 'Set both the start and end time for a scheduled exam.');
+        DB::table('tagore_cbt_exams')->where('id', $examId)->update([
+            'starts_at' => $data['starts_at'] ?? null,
+            'ends_at' => $data['ends_at'] ?? null,
+            'updated_at' => now(),
+        ]);
+        return response()->json(['scheduled' => true, 'starts_at' => $data['starts_at'] ?? null, 'ends_at' => $data['ends_at'] ?? null]);
+    }
+
+    public function analytics(Request $request, int $examId)
+    {
+        [, , $institutions] = $this->scope($request);
+        $this->examInScope($examId, $institutions);
+        $attempts = DB::table('tagore_cbt_attempts as a')
+            ->leftJoin('users as u', 'u.id', '=', 'a.student_id')
+            ->where('a.exam_id', $examId)->where('a.status', 'submitted')
+            ->orderByDesc('a.score')->orderBy('a.submitted_at')
+            ->get(['a.id', 'a.student_id', 'u.name as student_name', 'a.score', 'a.max_score', 'a.accuracy',
+                'a.correct_count', 'a.wrong_count', 'a.unanswered_count', 'a.submitted_at']);
+        $leaderboard = $attempts->values()->map(function ($attempt, $index) use ($attempts) {
+            $attempt->rank = $index + 1;
+            $attempt->percentile = $attempts->count() > 1
+                ? round((($attempts->count() - $index - 1) / ($attempts->count() - 1)) * 100, 2) : 100.0;
+            return $attempt;
+        });
+        $subjectBreakdown = DB::table('tagore_cbt_responses as r')
+            ->join('tagore_cbt_attempts as a', 'a.id', '=', 'r.attempt_id')
+            ->join('tagore_cbt_exam_questions as eq', 'eq.id', '=', 'r.exam_question_id')
+            ->join('tagore_cbt_questions as q', 'q.id', '=', 'eq.question_id')
+            ->where('a.exam_id', $examId)->where('a.status', 'submitted')
+            ->groupBy('q.subject_code')
+            ->orderBy('q.subject_code')
+            ->get([
+                'q.subject_code',
+                DB::raw('COUNT(*) as response_count'),
+                DB::raw('SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as correct_count'),
+                DB::raw('ROUND(AVG(COALESCE(r.awarded_marks, 0)), 2) as average_marks'),
+            ]);
+        return response()->json([
+            'attempt_count' => $attempts->count(),
+            'average_score' => round((float) ($attempts->avg('score') ?? 0), 2),
+            'average_accuracy' => round((float) ($attempts->avg('accuracy') ?? 0), 2),
+            'leaderboard' => $leaderboard,
+            'subject_breakdown' => $subjectBreakdown,
+        ]);
+    }
+
     public function publishExam(Request $request, int $examId)
     {
         [$userId, , $institutions] = $this->scope($request);
