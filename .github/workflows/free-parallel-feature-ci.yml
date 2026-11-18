@@ -3,19 +3,7 @@ name: Free Parallel Feature Regression
 # Free GitHub Actions only: six isolated feature suites execute concurrently.
 # This is a regression/coordination layer, not a paid coding-agent workflow.
 on:
-  pull_request:
-    branches: [main, 'integration/erp-7day']
-  push:
-    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**']
-    paths:
-      - 'app/**'
-      - 'routes/**'
-      - 'database/**'
-      - 'resources/**'
-      - 'tests/**'
-      - 'composer.json'
-      - 'composer.lock'
-      - '.github/workflows/free-parallel-feature-ci.yml'
+  # Full six-slice sweep is manual; six independent workflows run automatically.
   workflow_dispatch:
 
 permissions:
