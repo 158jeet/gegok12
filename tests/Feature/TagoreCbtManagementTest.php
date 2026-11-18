@@ -23,6 +23,7 @@ class TagoreCbtManagementTest extends TestCase
             'tagore.cbt.exams.schedule',
             'tagore.cbt.exams.analytics',
             'tagore.cbt.exams.analytics.export',
+            'tagore.cbt.students.progress',
         ] as $name) {
             $this->assertNotNull(app('router')->getRoutes()->getByName($name), "Missing CBT management route {$name}");
         }
@@ -120,4 +121,60 @@ class TagoreCbtManagementTest extends TestCase
             'stem' => 'Which is a cell organelle?',
         ]);
     }
+
+    public function test_student_progress_is_scoped_and_returns_trends_and_topic_recommendations(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
+        $now = now();
+
+        $bankId = DB::table('tagore_cbt_question_banks')->insertGetId([
+            'institution_id' => $institutionId, 'name' => 'Progress test bank', 'exam_track' => 'JEE_MAIN',
+            'created_by' => $owner->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $questionId = DB::table('tagore_cbt_questions')->insertGetId([
+            'question_bank_id' => $bankId, 'subject_code' => 'physics', 'chapter' => 'Kinematics',
+            'difficulty' => 'medium', 'question_type' => 'single_choice', 'stem' => 'Progress test question',
+            'options_json' => json_encode(['A' => 'A', 'B' => 'B']), 'answer_key_json' => json_encode('A'),
+            'default_marks' => 4, 'default_negative_marks' => 1, 'status' => 'approved',
+            'created_by' => $owner->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $examId = DB::table('tagore_cbt_exams')->insertGetId([
+            'institution_id' => $institutionId, 'title' => 'Progress test mock', 'exam_track' => 'JEE_MAIN',
+            'duration_minutes' => 60, 'status' => 'published', 'created_by' => $owner->id,
+            'published_by' => $owner->id, 'published_at' => $now, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $examQuestionId = DB::table('tagore_cbt_exam_questions')->insertGetId([
+            'exam_id' => $examId, 'question_id' => $questionId, 'display_order' => 1,
+            'marks' => 4, 'negative_marks' => 1, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $attemptIds = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $attemptIds[] = DB::table('tagore_cbt_attempts')->insertGetId([
+                'exam_id' => $examId, 'student_id' => $student->id, 'attempt_no' => $i,
+                'status' => 'submitted', 'started_at' => $now->copy()->subDays(4 - $i),
+                'expires_at' => $now, 'submitted_at' => $now->copy()->subDays(4 - $i),
+                'score' => 0, 'max_score' => 4, 'accuracy' => 0,
+                'correct_count' => 0, 'wrong_count' => 1, 'unanswered_count' => 0,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+        foreach ($attemptIds as $attemptId) {
+            DB::table('tagore_cbt_responses')->insert([
+                'attempt_id' => $attemptId, 'exam_question_id' => $examQuestionId,
+                'answer_json' => json_encode('B'), 'marked_for_review' => false, 'time_spent_seconds' => 30,
+                'is_correct' => false, 'awarded_marks' => 0, 'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
+        $this->actingAs($owner)->getJson(route('tagore.cbt.students.progress', $student->id))
+            ->assertOk()->assertJsonPath('attempt_count', 3)
+            ->assertJsonPath('progress_trend.0.exam_title', 'Progress test mock')
+            ->assertJsonPath('weak_topics.0.chapter', 'Kinematics')
+            ->assertJsonPath('weak_topics.0.recommendation', 'Priority revision: revisit concepts, then solve guided questions');
+
+        $this->actingAs($student)->getJson(route('tagore.cbt.students.progress', $student->id))->assertForbidden();
+    }
+
 }

@@ -284,6 +284,72 @@ class CbtManagementController extends Controller
         ]);
     }
 
+
+    public function studentProgress(Request $request, int $studentId)
+    {
+        [, , $institutions] = $this->scope($request);
+
+        $attempts = DB::table('tagore_cbt_attempts as a')
+            ->join('tagore_cbt_exams as e', 'e.id', '=', 'a.exam_id')
+            ->where('a.student_id', $studentId)
+            ->whereIn('e.institution_id', $institutions)
+            ->where('a.status', 'submitted')
+            ->orderBy('a.submitted_at')
+            ->get(['a.id', 'a.exam_id', 'e.title as exam_title', 'e.exam_track',
+                'a.score', 'a.max_score', 'a.accuracy', 'a.correct_count', 'a.wrong_count',
+                'a.unanswered_count', 'a.submitted_at']);
+
+        abort_if($attempts->isEmpty(), 404, 'No submitted CBT attempts found for this student in your institution scope.');
+
+        $attemptIds = $attempts->pluck('id')->all();
+        $topics = DB::table('tagore_cbt_responses as r')
+            ->join('tagore_cbt_attempts as a', 'a.id', '=', 'r.attempt_id')
+            ->join('tagore_cbt_exam_questions as eq', 'eq.id', '=', 'r.exam_question_id')
+            ->join('tagore_cbt_questions as q', 'q.id', '=', 'eq.question_id')
+            ->whereIn('r.attempt_id', $attemptIds)
+            ->groupBy('q.subject_code', 'q.chapter')
+            ->orderBy('q.subject_code')->orderBy('q.chapter')
+            ->get([
+                'q.subject_code', 'q.chapter',
+                DB::raw('COUNT(*) as response_count'),
+                DB::raw('SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as correct_count'),
+                DB::raw('ROUND(AVG(CASE WHEN r.is_correct IS NULL THEN NULL WHEN r.is_correct = 1 THEN 100.0 ELSE 0.0 END), 2) as accuracy_percent'),
+                DB::raw('ROUND(AVG(COALESCE(r.awarded_marks, 0)), 2) as average_awarded_marks'),
+            ])
+            ->map(function ($topic) {
+                $topic->sample_sufficient = (int) $topic->response_count >= 3;
+                $accuracy = (float) ($topic->accuracy_percent ?? 0);
+                $topic->recommendation = !$topic->sample_sufficient
+                    ? 'Collect more responses before judging this topic'
+                    : ($accuracy < 60
+                        ? 'Priority revision: revisit concepts, then solve guided questions'
+                        : ($accuracy < 80
+                            ? 'Targeted practice: solve another topic-wise question set'
+                            : 'Maintain: continue mixed and timed practice'));
+                return $topic;
+            })
+            ->sortBy(fn ($topic) => [$topic->sample_sufficient ? 0 : 1, (float) ($topic->accuracy_percent ?? 0)])
+            ->values();
+
+        return response()->json([
+            'student_id' => $studentId,
+            'attempt_count' => $attempts->count(),
+            'average_score' => round((float) $attempts->avg('score'), 2),
+            'average_accuracy' => round((float) $attempts->avg('accuracy'), 2),
+            'progress_trend' => $attempts->map(fn ($attempt) => [
+                'exam_id' => $attempt->exam_id,
+                'exam_title' => $attempt->exam_title,
+                'exam_track' => $attempt->exam_track,
+                'score' => (float) $attempt->score,
+                'max_score' => (float) $attempt->max_score,
+                'accuracy' => (float) $attempt->accuracy,
+                'submitted_at' => $attempt->submitted_at,
+            ])->values(),
+            'weak_topics' => $topics->filter(fn ($topic) => $topic->sample_sufficient && (float) ($topic->accuracy_percent ?? 0) < 60)->values(),
+            'topic_recommendations' => $topics,
+        ]);
+    }
+
     public function publishExam(Request $request, int $examId)
     {
         [$userId, , $institutions] = $this->scope($request);
