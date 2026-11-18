@@ -27,6 +27,7 @@ use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
 use App\Http\Controllers\Tagore\PerformanceController;
+use App\Http\Controllers\Tagore\CbtAttemptController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -46,6 +47,13 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/parent/olympiad/{studentId}/{olympiadId}/result', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'result'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.result');
     Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
     Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
+    Route::get('/cbt/exams/available', [CbtAttemptController::class, 'available'])->name('tagore.cbt.exams.available');
+    Route::post('/cbt/exams/{examId}/start', [CbtAttemptController::class, 'start'])->whereNumber('examId')->name('tagore.cbt.attempts.start');
+    Route::get('/cbt/attempts/{attemptId}', [CbtAttemptController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.attempts.player');
+    Route::put('/cbt/attempts/{attemptId}/response', [CbtAttemptController::class, 'saveResponse'])->whereNumber('attemptId')->name('tagore.cbt.attempts.response');
+    Route::post('/cbt/attempts/{attemptId}/submit', [CbtAttemptController::class, 'submit'])->whereNumber('attemptId')->name('tagore.cbt.attempts.submit');
+    Route::get('/cbt/attempts/{attemptId}/result', [CbtAttemptController::class, 'result'])->whereNumber('attemptId')->name('tagore.cbt.attempts.result');
+
     Route::get('/olympiad', [\App\Http\Controllers\Tagore\OlympiadController::class, 'index'])->name('tagore.olympiad.index');
     Route::post('/olympiad', [\App\Http\Controllers\Tagore\OlympiadController::class, 'store'])->name('tagore.olympiad.store');
     Route::get('/olympiad/question-template', [\App\Http\Controllers\Tagore\OlympiadController::class, 'downloadQuestionTemplate'])->name('tagore.olympiad.question-template');
