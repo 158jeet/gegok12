@@ -60,6 +60,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::patch('/cbt/exams/{examId}/publish', [CbtManagementController::class, 'publishExam'])->whereNumber('examId')->name('tagore.cbt.exams.publish');
     Route::patch('/cbt/exams/{examId}/schedule', [CbtManagementController::class, 'scheduleExam'])->whereNumber('examId')->name('tagore.cbt.exams.schedule');
     Route::get('/cbt/exams/{examId}/analytics', [CbtManagementController::class, 'analytics'])->whereNumber('examId')->name('tagore.cbt.exams.analytics');
+    Route::get('/cbt/exams/{examId}/analytics/export', [CbtManagementController::class, 'exportAnalytics'])->whereNumber('examId')->name('tagore.cbt.exams.analytics.export');
     Route::get('/cbt/exams/available', [CbtAttemptController::class, 'available'])->name('tagore.cbt.exams.available');
     Route::post('/cbt/exams/{examId}/start', [CbtAttemptController::class, 'start'])->whereNumber('examId')->name('tagore.cbt.attempts.start');
     Route::get('/cbt/attempts/{attemptId}', [CbtAttemptController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.attempts.player');

@@ -22,6 +22,7 @@ class TagoreCbtManagementTest extends TestCase
             'tagore.cbt.exams.publish',
             'tagore.cbt.exams.schedule',
             'tagore.cbt.exams.analytics',
+            'tagore.cbt.exams.analytics.export',
         ] as $name) {
             $this->assertNotNull(app('router')->getRoutes()->getByName($name), "Missing CBT management route {$name}");
         }
