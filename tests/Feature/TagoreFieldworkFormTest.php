@@ -71,10 +71,16 @@ class TagoreFieldworkFormTest extends TestCase
             'finalize' => true,
         ])->assertStatus(422);
 
+        $draft = $this->actingAs($teacher)->postJson(route('tagore.fieldwork.submissions.store', $campaignId), [
+            'payload' => ['student_name' => 'QA Applicant'],
+        ])->assertOk()->assertJsonPath('status', 'draft');
+        $draftId = (int) $draft->json('submission_id');
+        $this->actingAs($teacher)->getJson(route('tagore.fieldwork.campaigns.mine'))
+            ->assertOk()->assertJsonFragment(['draft_submission_id' => $draftId]);
         $submission = $this->actingAs($teacher)->postJson(route('tagore.fieldwork.submissions.store', $campaignId), [
             'payload' => ['student_name' => 'QA Applicant', 'needs_hostel' => '1', 'hostel_notes' => 'Needs hostel details'],
             'finalize' => true,
-        ])->assertCreated()->assertJsonPath('status', 'submitted');
+        ])->assertOk()->assertJsonPath('status', 'submitted')->assertJsonPath('submission_id', $draftId);
 
         $this->assertDatabaseHas('tagore_form_submissions', [
             'id' => $submission->json('submission_id'),

@@ -198,25 +198,42 @@ class FieldworkFormController extends Controller
             abort_unless(DB::table('tagore_admission_leads')->where('id', $data['admission_lead_id'])->where('institution_id', $campaign->institution_id)->exists(), 422);
         }
 
-        $id = DB::transaction(function () use ($data, $campaign, $campaignId, $userId) {
+        $result = DB::transaction(function () use ($data, $campaignId, $userId) {
+            // Lock the campaign row so simultaneous saves by the same assignee cannot create parallel drafts.
+            $lockedCampaign = DB::table('tagore_form_campaigns')->where('id', $campaignId)->lockForUpdate()->first();
+            abort_unless($lockedCampaign && $lockedCampaign->status === 'active'
+                && (!$lockedCampaign->starts_at || now()->gte($lockedCampaign->starts_at))
+                && (!$lockedCampaign->ends_at || now()->lte($lockedCampaign->ends_at)), 422, 'This campaign is not accepting submissions.');
+            $draft = DB::table('tagore_form_submissions')->where('campaign_id', $campaignId)
+                ->where('submitted_by', $userId)->where('status', 'draft')->orderByDesc('id')->lockForUpdate()->first();
             $status = ($data['finalize'] ?? false) ? 'submitted' : 'draft';
-            $id = DB::table('tagore_form_submissions')->insertGetId([
-                'campaign_id' => $campaignId, 'institution_id' => $campaign->institution_id,
-                'form_version_id' => $campaign->form_version_id, 'submitted_by' => $userId,
-                'admission_lead_id' => $data['admission_lead_id'] ?? null,
-                'status' => $status, 'payload' => json_encode($data['payload'], JSON_THROW_ON_ERROR),
-                'submitted_at' => $status === 'submitted' ? now() : null,
-                'created_at' => now(), 'updated_at' => now(),
-            ]);
+            $now = now();
+            $values = [
+                'admission_lead_id' => $data['admission_lead_id'] ?? ($draft->admission_lead_id ?? null),
+                'status' => $status,
+                'payload' => json_encode($data['payload'], JSON_THROW_ON_ERROR),
+                'submitted_at' => $status === 'submitted' ? $now : null,
+                'updated_at' => $now,
+            ];
+            if ($draft) {
+                DB::table('tagore_form_submissions')->where('id', $draft->id)->update($values);
+                $id = (int) $draft->id;
+            } else {
+                $id = DB::table('tagore_form_submissions')->insertGetId(array_merge($values, [
+                    'campaign_id' => $campaignId, 'institution_id' => $lockedCampaign->institution_id,
+                    'form_version_id' => $lockedCampaign->form_version_id, 'submitted_by' => $userId,
+                    'created_at' => $now,
+                ]));
+            }
             DB::table('tagore_form_submission_events')->insert([
                 'submission_id' => $id, 'actor_id' => $userId,
                 'event_type' => $status === 'submitted' ? 'submitted' : 'draft_saved',
-                'metadata' => json_encode(['form_version_id' => $campaign->form_version_id], JSON_THROW_ON_ERROR),
-                'created_at' => now(),
+                'metadata' => json_encode(['form_version_id' => $lockedCampaign->form_version_id], JSON_THROW_ON_ERROR),
+                'created_at' => $now,
             ]);
-            return $id;
+            return ['submission_id' => $id, 'status' => $status];
         });
-        return response()->json(['submission_id' => $id, 'status' => ($data['finalize'] ?? false) ? 'submitted' : 'draft'], 201);
+        return response()->json($result, ($result['status'] === 'submitted' ? 200 : 200));
     }
 
     public function reviewQueue(Request $request)
@@ -285,13 +302,19 @@ class FieldworkFormController extends Controller
     public function myCampaigns(Request $request)
     {
         $userId = (int) $request->user()->id;
+        $latestDrafts = DB::table('tagore_form_submissions')
+            ->selectRaw('MAX(id) as id, campaign_id')
+            ->where('submitted_by', $userId)->where('status', 'draft')->groupBy('campaign_id');
         $campaigns = DB::table('tagore_form_campaigns as c')
             ->join('tagore_form_campaign_assignments as a', 'a.campaign_id', '=', 'c.id')
             ->join('tagore_form_versions as v', 'v.id', '=', 'c.form_version_id')
+            ->leftJoinSub($latestDrafts, 'latest_draft', function ($join) { $join->on('latest_draft.campaign_id', '=', 'c.id'); })
+            ->leftJoin('tagore_form_submissions as draft', 'draft.id', '=', 'latest_draft.id')
             ->where('a.user_id', $userId)->where('c.status', 'active')
             ->where(function ($q) { $q->whereNull('c.starts_at')->orWhere('c.starts_at', '<=', now()); })
             ->where(function ($q) { $q->whereNull('c.ends_at')->orWhere('c.ends_at', '>=', now()); })
-            ->orderBy('c.name')->get(['c.id', 'c.name', 'c.institution_id', 'c.form_version_id', 'v.fields']);
+            ->orderBy('c.name')->get(['c.id', 'c.name', 'c.institution_id', 'c.form_version_id', 'v.fields',
+                'draft.id as draft_submission_id', 'draft.payload as draft_payload']);
         return response()->json(['campaigns' => $campaigns]);
     }
 
