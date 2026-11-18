@@ -135,15 +135,26 @@ class CbtAttemptController extends Controller
             abort_unless(DB::table('tagore_cbt_exam_questions')->where('id', $data['exam_question_id'])->where('exam_id', $attempt->exam_id)->exists(), 404);
             $answer = $data['answer'] ?? null;
             if (is_array($answer) && count($answer) > 20) throw ValidationException::withMessages(['answer' => 'Too many selected values.']);
-            DB::table('tagore_cbt_responses')->updateOrInsert(
-                ['attempt_id' => $attemptId, 'exam_question_id' => $data['exam_question_id']],
-                ['answer_json' => $answer === null ? null : json_encode($answer, JSON_THROW_ON_ERROR),
-                    'marked_for_review' => (bool) ($data['marked_for_review'] ?? false),
-                    'time_spent_seconds' => (int) ($data['time_spent_seconds'] ?? 0), 'updated_at' => now(), 'created_at' => now()]
-            );
+            $responseQuery = DB::table('tagore_cbt_responses')
+                ->where('attempt_id', $attemptId)->where('exam_question_id', $data['exam_question_id']);
+            $responseValues = [
+                'answer_json' => $answer === null ? null : json_encode($answer, JSON_THROW_ON_ERROR),
+                'marked_for_review' => (bool) ($data['marked_for_review'] ?? false),
+                'time_spent_seconds' => (int) ($data['time_spent_seconds'] ?? 0),
+                'updated_at' => now(),
+            ];
+            if ($responseQuery->exists()) {
+                $responseQuery->update($responseValues);
+            } else {
+                DB::table('tagore_cbt_responses')->insert($responseValues + [
+                    'attempt_id' => $attemptId,
+                    'exam_question_id' => $data['exam_question_id'],
+                    'created_at' => now(),
+                ]);
+            }
             return $attempt;
         });
-        return response()->json(['saved' => true, 'expires_at' => $attempt->expires_at]);
+        return response()->json(['saved' => true, 'expires_at' => Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String()]);
     }
 
     public function submit(Request $request, int $attemptId, CbtScoringService $scorer)
