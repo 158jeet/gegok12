@@ -99,7 +99,7 @@ class CbtAttemptController extends Controller
         $this->assertCandidate($roles);
         $attempt = $this->ownedAttempt($attemptId, $userId);
         abort_unless($attempt->status === 'in_progress', 409);
-        abort_if(now()->gte($attempt->expires_at), 409, 'The attempt time has expired. Submit the attempt to calculate its result.');
+        // Allow the candidate player to load an expired in-progress attempt so its countdown can trigger server-side submission.
         $exam = DB::table('tagore_cbt_exams')->where('id', $attempt->exam_id)->first(['id', 'title', 'exam_track', 'duration_minutes']);
         $attempt->expires_at = Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String();
         $questions = $this->examQuestions((int) $attempt->exam_id)->map(function ($question) {

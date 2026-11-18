@@ -80,6 +80,24 @@ class TagoreCbtAttemptTest extends TestCase
             ->assertOk()->assertJsonPath('result.score', -1);
     }
 
+    public function test_expired_attempt_can_reopen_and_be_submitted_without_losing_saved_answers(): void
+    {
+        $fixture = $this->publishedExam();
+        $student = $fixture['student'];
+        $start = $this->actingAs($student)
+            ->postJson(route('tagore.cbt.attempts.start', $fixture['examId']))->assertOk();
+        $attemptId = (int) $start->json('attempt_id');
+
+        $this->travel(61)->minutes();
+
+        $this->getJson(route('tagore.cbt.attempts.player', $attemptId))
+            ->assertOk()->assertJsonPath('attempt.id', $attemptId);
+        $this->postJson(route('tagore.cbt.attempts.submit', $attemptId))
+            ->assertOk()->assertJsonPath('submitted', true)
+            ->assertJsonPath('result.unanswered_count', 1)
+            ->assertJsonPath('result.score', 0);
+    }
+
     public function test_attempt_routes_reject_owner_and_cannot_be_read_by_another_student(): void
     {
         $fixture = $this->publishedExam();
