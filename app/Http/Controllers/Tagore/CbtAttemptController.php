@@ -81,7 +81,7 @@ class CbtAttemptController extends Controller
             if ($existing) return $existing;
             $attemptNo = (int) DB::table('tagore_cbt_attempts')->where('exam_id', $examId)->where('student_id', $userId)->max('attempt_no') + 1;
             $expiresAt = $now->copy()->addMinutes((int) $exam->duration_minutes);
-            if ($exam->ends_at && $expiresAt->gt($exam->ends_at)) $expiresAt = \Illuminate\Support\Carbon::parse($exam->ends_at);
+            if ($exam->ends_at && $expiresAt->gt($exam->ends_at)) $expiresAt = Carbon::parse($exam->ends_at);
             $id = DB::table('tagore_cbt_attempts')->insertGetId([
                 'exam_id' => $examId, 'student_id' => $userId, 'attempt_no' => $attemptNo,
                 'status' => 'in_progress', 'started_at' => $now, 'expires_at' => $expiresAt,
@@ -89,7 +89,7 @@ class CbtAttemptController extends Controller
             ]);
             return DB::table('tagore_cbt_attempts')->where('id', $id)->first();
         });
-        return response()->json(['attempt_id' => $attempt->id, 'status' => $attempt->status, 'expires_at' => \\Illuminate\\Support\\Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String(),
+        return response()->json(['attempt_id' => $attempt->id, 'status' => $attempt->status, 'expires_at' => Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String(),
             'resumed' => $attempt->started_at !== $attempt->created_at]);
     }
 
@@ -101,7 +101,7 @@ class CbtAttemptController extends Controller
         abort_unless($attempt->status === 'in_progress', 409);
         abort_if(now()->gte($attempt->expires_at), 409, 'The attempt time has expired. Submit the attempt to calculate its result.');
         $exam = DB::table('tagore_cbt_exams')->where('id', $attempt->exam_id)->first(['id', 'title', 'exam_track', 'duration_minutes']);
-        $attempt->expires_at = \\Illuminate\\Support\\Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String();
+        $attempt->expires_at = Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String();
         $questions = $this->examQuestions((int) $attempt->exam_id)->map(function ($question) {
             $question->options = json_decode($question->options_json ?? '[]', true) ?: [];
             unset($question->options_json);
