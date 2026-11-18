@@ -46,6 +46,13 @@ class CbtAttemptController extends Controller
                 'q.subject_code', 'q.chapter', 'q.difficulty', 'q.question_type', 'q.stem', 'q.options_json']);
     }
 
+    public function index(Request $request)
+    {
+        [, $roles] = $this->context($request);
+        $this->assertCandidate($roles);
+        return view('tagore.cbt.index');
+    }
+
     public function available(Request $request)
     {
         [$userId, $roles, $institutions] = $this->context($request);
