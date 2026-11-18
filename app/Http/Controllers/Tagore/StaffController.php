@@ -109,6 +109,7 @@ class StaffController extends Controller
     {
         [$userId, $roles] = $this->context($request);
         $managerInstitutionIds = $this->managerInstitutionIds($userId, $roles);
+        abort_unless($roles->contains('OWNER') || $managerInstitutionIds !== [], 403);
 
         $schoolIds = DB::table('tagore_institutions')
             ->whereIn('id', $managerInstitutionIds)->where('status', 'active')->pluck('school_id')->all();
@@ -149,6 +150,7 @@ class StaffController extends Controller
     {
         [$userId, $roles] = $this->context($request);
         $managerInstitutionIds = $this->managerInstitutionIds($userId, $roles);
+        abort_unless($roles->contains('OWNER') || $managerInstitutionIds !== [], 403);
         $schoolIds = DB::table('tagore_institutions')->whereIn('id', $managerInstitutionIds)->where('status', 'active')->pluck('school_id')->all();
 
         $data = $request->validate([
