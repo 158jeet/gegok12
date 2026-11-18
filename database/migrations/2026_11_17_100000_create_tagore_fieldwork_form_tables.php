@@ -68,6 +68,10 @@ return new class extends Migration {
             $table->string('status', 20)->default('draft');
             $table->json('payload');
             $table->dateTime('submitted_at')->nullable();
+            $table->unsignedInteger('reviewed_by')->nullable();
+            $table->foreign('reviewed_by')->references('id')->on('users')->nullOnDelete();
+            $table->dateTime('reviewed_at')->nullable();
+            $table->text('review_note')->nullable();
             $table->timestamps();
             $table->index(['institution_id', 'campaign_id', 'status']);
             $table->index(['submitted_by', 'created_at']);

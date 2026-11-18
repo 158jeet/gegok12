@@ -186,6 +186,60 @@ class FieldworkFormController extends Controller
         return response()->json(['submission_id' => $id, 'status' => ($data['finalize'] ?? false) ? 'submitted' : 'draft'], 201);
     }
 
+    public function reviewQueue(Request $request)
+    {
+        [$userId, $roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
+        $submissions = DB::table('tagore_form_submissions as s')
+            ->join('tagore_form_campaigns as c', 'c.id', '=', 's.campaign_id')
+            ->join('users as u', 'u.id', '=', 's.submitted_by')
+            ->leftJoin('users as reviewer', 'reviewer.id', '=', 's.reviewed_by')
+            ->whereIn('s.institution_id', $institutions)
+            ->whereIn('s.status', ['submitted', 'approved', 'rejected'])
+            ->orderByDesc('s.submitted_at')->limit(250)
+            ->get(['s.id','s.institution_id','s.campaign_id','s.form_version_id','s.status','s.payload',
+                's.admission_lead_id','s.submitted_at','s.reviewed_at','s.review_note',
+                'c.name as campaign_name','u.name as submitted_by_name','reviewer.name as reviewer_name']);
+        return response()->json(['submissions' => $submissions]);
+    }
+
+    public function reviewSubmission(Request $request, int $submissionId)
+    {
+        [$userId, $roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
+        $data = $request->validate([
+            'decision' => ['required', 'in:approved,rejected'],
+            'review_note' => ['nullable', 'string', 'max:2000'],
+            'admission_lead_id' => ['nullable', 'integer'],
+        ]);
+        $result = DB::transaction(function () use ($submissionId, $institutions, $userId, $data) {
+            $submission = DB::table('tagore_form_submissions')->where('id', $submissionId)->lockForUpdate()->first();
+            abort_unless($submission && in_array((int) $submission->institution_id, $institutions, true), 404);
+            abort_unless($submission->status === 'submitted', 422, 'Only submitted fieldwork can be reviewed.');
+            $leadId = $data['admission_lead_id'] ?? null;
+            if ($leadId !== null) {
+                abort_unless(DB::table('tagore_admission_leads')->where('id', $leadId)
+                    ->where('institution_id', $submission->institution_id)->exists(), 422,
+                    'The admission lead must belong to the same institution.');
+            }
+            $now = now();
+            DB::table('tagore_form_submissions')->where('id', $submissionId)->update([
+                'status' => $data['decision'], 'reviewed_by' => $userId, 'reviewed_at' => $now,
+                'review_note' => $data['review_note'] ?? null,
+                'admission_lead_id' => $leadId ?? $submission->admission_lead_id, 'updated_at' => $now,
+            ]);
+            DB::table('tagore_form_submission_events')->insert([
+                'submission_id' => $submissionId, 'actor_id' => $userId, 'event_type' => $data['decision'],
+                'metadata' => json_encode(['review_note' => $data['review_note'] ?? null,
+                    'admission_lead_id' => $leadId], JSON_THROW_ON_ERROR), 'created_at' => $now,
+            ]);
+            return ['id' => $submissionId, 'status' => $data['decision']];
+        });
+        return response()->json($result);
+    }
+
     public function studio(Request $request)
     {
         [, $roles] = $this->context($request);

@@ -16,6 +16,7 @@ body{margin:0;background:#f3f6fb;color:#172033;font:15px system-ui}.shell{max-wi
 <section class="panel"><h2>Campaign assignment</h2><div class="grid"><div class="field"><label>Campaign name</label><input id="campaignName"></div><div class="field"><label>Published version</label><select id="version"><option value="">Choose version</option></select></div><div class="field"><label>Starts</label><input id="starts" type="datetime-local"></div><div class="field"><label>Ends</label><input id="ends" type="datetime-local"></div></div>
 <div class="field"><label>Staff assignments</label><div id="staff" class="stack"></div></div><button id="createCampaign">Create campaign</button><div id="campaigns"></div></section>
 @endif
+<section class="panel" id="reviewPanel"><h2>Submission review</h2><p class="muted">Review submitted enquiries within your institution scope. Decisions remain in the audit trail.</p><div id="reviewQueue" class="muted">Loading submissions…</div></section>
 <section class="panel"><h2>My assigned fieldwork</h2><div id="mine" class="muted">Loading…</div><div id="entry" class="hidden"></div></section>
 </main>
 <script>
@@ -30,8 +31,35 @@ $('template').replaceChildren(option('Choose template',''),...(m.templates||[]).
 $('version').replaceChildren(option('Choose version',''),...(m.versions||[]).map(x=>option('Template #'+x.template_id+' · v'+x.version,x.id)));
 renderStaff();$('institution').onchange=renderStaff;
 $('campaigns').replaceChildren(...(m.campaigns||[]).map(x=>{const d=document.createElement('div');d.className='item';d.textContent=x.name+' · '+x.status+' · version '+x.form_version;return d;}));
+await loadReviewQueue();
 }
 $('mine').replaceChildren(...state.mine.map(x=>{const d=document.createElement('div');d.className='item';const b=document.createElement('button');b.textContent='Open '+x.name;b.onclick=()=>openEntry(x);d.append(document.createTextNode(x.name+' · form version '+x.form_version_id+' '),b);return d;}));}
+async function loadReviewQueue(){
+ if(!canManage)return;
+ const data=await api('/submissions/review'),host=$('reviewQueue'),rows=data.submissions||[];
+ if(!rows.length){host.textContent='No submitted enquiries are awaiting or have completed review.';return;}
+ host.replaceChildren(...rows.map(item=>{
+  const card=document.createElement('article');card.className='item';
+  const heading=document.createElement('strong');heading.textContent='#'+item.id+' · '+item.campaign_name+' · '+item.status;
+  const who=document.createElement('p');who.className='muted';who.textContent='Submitted by '+item.submitted_by_name+' · '+(item.submitted_at||'');
+  const payload=document.createElement('pre');payload.style.whiteSpace='pre-wrap';payload.textContent=JSON.stringify(JSON.parse(item.payload||'{}'),null,2);
+  card.append(heading,who,payload);
+  if(item.status==='submitted'){
+   const note=document.createElement('textarea');note.placeholder='Review note (optional)';note.maxLength=2000;note.setAttribute('aria-label','Review note');
+   const lead=document.createElement('input');lead.type='number';lead.min='1';lead.placeholder='Admission lead ID (optional)';lead.setAttribute('aria-label','Admission lead ID');
+   const actions=document.createElement('div');actions.className='stack';
+   for(const decision of ['approved','rejected']){
+    const b=document.createElement('button');b.textContent=decision==='approved'?'Approve':'Reject';
+    b.onclick=async()=>{try{const body={decision,review_note:note.value};if(lead.value)body.admission_lead_id=Number(lead.value);await api('/submissions/'+item.id+'/review','PATCH',body);msg('Submission #'+item.id+' '+decision+'.');await loadReviewQueue();}catch(e){msg(e.message,true);}};
+    actions.append(b);
+   }
+   card.append(note,lead,actions);
+  }else{
+   const review=document.createElement('p');review.className='muted';review.textContent='Reviewed '+(item.reviewed_at||'')+' by '+(item.reviewer_name||'unknown')+(item.review_note?' · '+item.review_note:'');card.append(review);
+  }
+  return card;
+ }));
+}
 function renderStaff(){if(!canManage)return;$('staff').replaceChildren(...(state.staff||[]).filter(x=>String(x.institution_id)===$('institution').value).map(x=>{const l=document.createElement('label');l.className='stack';const c=document.createElement('input');c.type='checkbox';c.value=x.id;c.dataset.staff='1';l.append(c,document.createTextNode(x.name));return l;}));}
 $('save').onclick=async()=>{try{const d=await api('/forms','POST',{institution_id:+$('institution').value,name:$('name').value,description:$('description').value,fields:JSON.parse($('fields').value)});msg('Draft saved: #'+d.id);await load();$('template').value=d.id;}catch(e){msg(e.message,true);}};
 $('publish').onclick=async()=>{try{const id=+$('template').value;if(!id)throw Error('Select a template');const d=await api('/forms/'+id+'/publish','POST',{fields:JSON.parse($('fields').value)});msg('Published immutable version #'+d.form_version_id);await load();}catch(e){msg(e.message,true);}};

@@ -86,6 +86,8 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');
     Route::post('/fieldwork/campaigns', [FieldworkFormController::class, 'createCampaign'])->name('tagore.fieldwork.campaigns.store');
     Route::post('/fieldwork/campaigns/{campaignId}/submissions', [FieldworkFormController::class, 'submit'])->whereNumber('campaignId')->name('tagore.fieldwork.submissions.store');
+    Route::get('/fieldwork/submissions/review', [FieldworkFormController::class, 'reviewQueue'])->name('tagore.fieldwork.submissions.review');
+    Route::patch('/fieldwork/submissions/{submissionId}/review', [FieldworkFormController::class, 'reviewSubmission'])->whereNumber('submissionId')->name('tagore.fieldwork.submissions.decide');
 
     Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
     Route::get('/admissions/create', [AdmissionsController::class, 'create'])->name('tagore.admissions.create');

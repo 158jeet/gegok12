@@ -79,6 +79,19 @@ class TagoreFieldworkFormTest extends TestCase
             'actor_id' => $teacher->id,
             'event_type' => 'submitted',
         ]);
+        $submissionId = (int) $submission->json('submission_id');
+        $this->actingAs($owner)->getJson(route('tagore.fieldwork.submissions.review'))
+            ->assertOk()->assertJsonFragment(['id' => $submissionId]);
+        $this->actingAs($owner)->patchJson(route('tagore.fieldwork.submissions.decide', $submissionId), [
+            'decision' => 'approved', 'review_note' => 'Applicant details verified.',
+        ])->assertOk()->assertJsonPath('status', 'approved');
+        $this->assertDatabaseHas('tagore_form_submissions', [
+            'id' => $submissionId, 'status' => 'approved', 'reviewed_by' => $owner->id,
+            'review_note' => 'Applicant details verified.',
+        ]);
+        $this->assertDatabaseHas('tagore_form_submission_events', [
+            'submission_id' => $submissionId, 'actor_id' => $owner->id, 'event_type' => 'approved',
+        ]);
     }
 
     public function test_teacher_can_open_assigned_fieldwork_but_cannot_manage_templates_or_campaigns(): void
@@ -153,4 +166,14 @@ class TagoreFieldworkFormTest extends TestCase
             ],
         ])->assertStatus(422);
     }
+
+    public function test_teacher_cannot_access_submission_review_or_decide_submissions(): void
+    {
+        $teacher = User::query()->where('email', 'teacher@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $this->actingAs($teacher)->getJson(route('tagore.fieldwork.submissions.review'))->assertForbidden();
+        $this->actingAs($teacher)->patchJson(route('tagore.fieldwork.submissions.decide', 1), [
+            'decision' => 'approved',
+        ])->assertForbidden();
+    }
+
 }
