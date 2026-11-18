@@ -312,12 +312,13 @@ class CbtManagementController extends Controller
             ->get([
                 'q.subject_code', 'q.chapter',
                 DB::raw('COUNT(*) as response_count'),
+                DB::raw('COUNT(r.is_correct) as scored_response_count'),
                 DB::raw('SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as correct_count'),
                 DB::raw('ROUND(AVG(CASE WHEN r.is_correct IS NULL THEN NULL WHEN r.is_correct = 1 THEN 100.0 ELSE 0.0 END), 2) as accuracy_percent'),
                 DB::raw('ROUND(AVG(COALESCE(r.awarded_marks, 0)), 2) as average_awarded_marks'),
             ])
             ->map(function ($topic) {
-                $topic->sample_sufficient = (int) $topic->response_count >= 3;
+                $topic->sample_sufficient = (int) $topic->scored_response_count >= 3;
                 $accuracy = (float) ($topic->accuracy_percent ?? 0);
                 $topic->recommendation = !$topic->sample_sufficient
                     ? 'Collect more responses before judging this topic'

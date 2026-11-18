@@ -160,6 +160,25 @@ class TagoreCbtManagementTest extends TestCase
                 'created_at' => $now, 'updated_at' => $now,
             ]);
         }
+        $unscoredQuestionId = DB::table('tagore_cbt_questions')->insertGetId([
+            'question_bank_id' => $bankId, 'subject_code' => 'physics', 'chapter' => 'Electrostatics',
+            'difficulty' => 'medium', 'question_type' => 'single_choice', 'stem' => 'Unanswered progress question',
+            'options_json' => json_encode(['A' => 'A', 'B' => 'B']), 'answer_key_json' => json_encode('A'),
+            'default_marks' => 4, 'default_negative_marks' => 1, 'status' => 'approved',
+            'created_by' => $owner->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $unscoredExamQuestionId = DB::table('tagore_cbt_exam_questions')->insertGetId([
+            'exam_id' => $examId, 'question_id' => $unscoredQuestionId, 'display_order' => 2,
+            'marks' => 4, 'negative_marks' => 1, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        foreach ($attemptIds as $attemptId) {
+            DB::table('tagore_cbt_responses')->insert([
+                'attempt_id' => $attemptId, 'exam_question_id' => $unscoredExamQuestionId,
+                'answer_json' => null, 'marked_for_review' => false, 'time_spent_seconds' => 0,
+                'is_correct' => null, 'awarded_marks' => null, 'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
         foreach ($attemptIds as $attemptId) {
             DB::table('tagore_cbt_responses')->insert([
                 'attempt_id' => $attemptId, 'exam_question_id' => $examQuestionId,
@@ -172,7 +191,12 @@ class TagoreCbtManagementTest extends TestCase
             ->assertOk()->assertJsonPath('attempt_count', 3)
             ->assertJsonPath('progress_trend.0.exam_title', 'Progress test mock')
             ->assertJsonPath('weak_topics.0.chapter', 'Kinematics')
-            ->assertJsonPath('weak_topics.0.recommendation', 'Priority revision: revisit concepts, then solve guided questions');
+            ->assertJsonPath('weak_topics.0.recommendation', 'Priority revision: revisit concepts, then solve guided questions')
+            ->assertJsonPath('topic_recommendations.1.chapter', 'Electrostatics')
+            ->assertJsonPath('topic_recommendations.1.response_count', 3)
+            ->assertJsonPath('topic_recommendations.1.scored_response_count', 0)
+            ->assertJsonPath('topic_recommendations.1.sample_sufficient', false)
+            ->assertJsonPath('topic_recommendations.1.accuracy_percent', null);
 
         $this->actingAs($student)->getJson(route('tagore.cbt.students.progress', $student->id))->assertForbidden();
     }
