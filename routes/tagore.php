@@ -47,6 +47,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/parent/olympiad/{studentId}/{olympiadId}/result', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'result'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.result');
     Route::get('/diary', [DailyDiaryController::class, 'index'])->name('tagore.diary.index');
     Route::post('/diary/{studentId}', [DailyDiaryController::class, 'save'])->whereNumber('studentId')->name('tagore.diary.save');
+    Route::get('/cbt', [CbtAttemptController::class, 'index'])->name('tagore.cbt.index');
     Route::get('/cbt/exams/available', [CbtAttemptController::class, 'available'])->name('tagore.cbt.exams.available');
     Route::post('/cbt/exams/{examId}/start', [CbtAttemptController::class, 'start'])->whereNumber('examId')->name('tagore.cbt.attempts.start');
     Route::get('/cbt/attempts/{attemptId}', [CbtAttemptController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.attempts.player');
