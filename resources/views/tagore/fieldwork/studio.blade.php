@@ -16,7 +16,9 @@ body{margin:0;background:#f3f6fb;color:#172033;font:15px system-ui}.shell{max-wi
 <section class="panel"><h2>Campaign assignment</h2><div class="grid"><div class="field"><label>Campaign name</label><input id="campaignName"></div><div class="field"><label>Published version</label><select id="version"><option value="">Choose version</option></select></div><div class="field"><label>Starts</label><input id="starts" type="datetime-local"></div><div class="field"><label>Ends</label><input id="ends" type="datetime-local"></div></div>
 <div class="field"><label>Staff assignments</label><div id="staff" class="stack"></div></div><button id="createCampaign">Create campaign</button><div id="campaigns"></div></section>
 @endif
+@if($canManage)
 <section class="panel" id="reviewPanel"><h2>Submission review</h2><p class="muted">Review submitted enquiries within your institution scope. Decisions remain in the audit trail.</p><div id="reviewQueue" class="muted">Loading submissions…</div></section>
+@endif
 <section class="panel"><h2>My assigned fieldwork</h2><div id="mine" class="muted">Loading…</div><div id="entry" class="hidden"></div></section>
 </main>
 <script>
