@@ -83,6 +83,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/fieldwork/my-campaigns', [FieldworkFormController::class, 'myCampaigns'])->name('tagore.fieldwork.campaigns.mine');
     Route::get('/fieldwork/forms', [FieldworkFormController::class, 'index'])->name('tagore.fieldwork.forms.index');
     Route::post('/fieldwork/forms', [FieldworkFormController::class, 'storeTemplate'])->name('tagore.fieldwork.forms.store');
+    Route::put('/fieldwork/forms/{templateId}', [FieldworkFormController::class, 'updateTemplate'])->whereNumber('templateId')->name('tagore.fieldwork.forms.update');
     Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');
     Route::post('/fieldwork/campaigns', [FieldworkFormController::class, 'createCampaign'])->name('tagore.fieldwork.campaigns.store');
     Route::post('/fieldwork/campaigns/{campaignId}/submissions', [FieldworkFormController::class, 'submit'])->whereNumber('campaignId')->name('tagore.fieldwork.submissions.store');

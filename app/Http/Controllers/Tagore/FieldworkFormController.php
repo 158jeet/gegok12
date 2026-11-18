@@ -66,6 +66,39 @@ class FieldworkFormController extends Controller
         return response()->json(['id' => $id, 'status' => 'draft'], 201);
     }
 
+    public function updateTemplate(Request $request, int $templateId)
+    {
+        [$userId, $roles] = $this->context($request);
+        abort_unless($roles->intersect(self::MANAGERS)->isNotEmpty(), 403);
+        $institutions = $this->managerInstitutions($userId, $roles);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'fields' => ['required', 'array', 'min:1', 'max:100'],
+            'fields.*.key' => ['required', 'string', 'regex:/^[a-z][a-z0-9_]{1,59}$/', 'distinct'],
+            'fields.*.label' => ['required', 'string', 'max:150'],
+            'fields.*.type' => ['required', 'in:text,textarea,number,email,date,select,checkbox'],
+            'fields.*.required' => ['sometimes', 'boolean'],
+            'fields.*.options' => ['sometimes', 'array', 'max:100'],
+            'fields.*.visible_if' => ['sometimes', 'array'],
+        ]);
+        $this->validateFieldDefinitions($data['fields']);
+
+        DB::transaction(function () use ($templateId, $institutions, $data) {
+            $template = DB::table('tagore_form_templates')->where('id', $templateId)->lockForUpdate()->first();
+            abort_unless($template && in_array((int) $template->institution_id, $institutions, true), 404);
+            abort_unless($template->status === 'draft', 422, 'Published templates are immutable; create a new draft to change the form.');
+            DB::table('tagore_form_templates')->where('id', $templateId)->update([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'draft_fields' => json_encode($data['fields'], JSON_THROW_ON_ERROR),
+                'updated_at' => now(),
+            ]);
+        });
+
+        return response()->json(['id' => $templateId, 'status' => 'draft', 'updated' => true]);
+    }
+
     public function publish(Request $request, int $templateId)
     {
         [$userId, $roles, $institutions] = $this->context($request);

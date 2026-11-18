@@ -31,6 +31,15 @@ class TagoreFieldworkFormTest extends TestCase
         ])->assertCreated()->assertJsonPath('status', 'draft');
 
         $templateId = (int) $created->json('id');
+        $draftUpdate = $this->actingAs($owner)->putJson(route('tagore.fieldwork.forms.update', $templateId), [
+            'name' => 'Admission Field Enquiry QA Revised',
+            'description' => 'Revised draft before publishing',
+            'fields' => $fields,
+        ])->assertOk()->assertJsonPath('updated', true);
+        $this->assertDatabaseHas('tagore_form_templates', [
+            'id' => $templateId, 'name' => 'Admission Field Enquiry QA Revised',
+            'description' => 'Revised draft before publishing',
+        ]);
         $published = $this->actingAs($owner)->postJson(route('tagore.fieldwork.forms.publish', $templateId), [
             'fields' => $fields,
         ])->assertCreated()->assertJsonPath('immutable', true);
