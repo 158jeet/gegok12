@@ -71,7 +71,9 @@ class TagoreCbtAttemptTest extends TestCase
         $this->assertSame($createdAt, DB::table('tagore_cbt_responses')->where('attempt_id', $attemptId)->value('created_at'));
 
         $this->postJson(route('tagore.cbt.attempts.submit', $attemptId))
-            ->assertOk()->assertJsonPath('submitted', true)->assertJsonPath('result.score', -1);
+            ->assertOk()->assertJsonPath('submitted', true)->assertJsonPath('result.score', -1)
+            ->assertJsonPath('result.rank', 1)->assertJsonPath('result.candidates', 1)
+            ->assertJsonPath('result.percentile', 100);
         $this->getJson(route('tagore.cbt.attempts.result', $attemptId))
             ->assertOk()->assertJsonPath('result.score', -1);
         $this->postJson(route('tagore.cbt.attempts.submit', $attemptId))

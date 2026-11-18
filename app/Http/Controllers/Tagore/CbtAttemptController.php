@@ -207,7 +207,8 @@ class CbtAttemptController extends Controller
                 'accuracy' => $scored['accuracy'], 'correct_count' => $scored['correct_count'],
                 'wrong_count' => $scored['wrong_count'], 'unanswered_count' => $scored['unanswered_count'], 'updated_at' => now(),
             ]);
-            return $scored;
+            $submittedAttempt = DB::table('tagore_cbt_attempts')->where('id', $attemptId)->first();
+            return $this->resultPayload($submittedAttempt);
         });
         return response()->json(['submitted' => true, 'result' => $result]);
     }
