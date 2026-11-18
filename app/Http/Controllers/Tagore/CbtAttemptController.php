@@ -133,8 +133,35 @@ class CbtAttemptController extends Controller
             abort_unless($attempt->status === 'in_progress', 409);
             abort_if(now()->gte($attempt->expires_at), 409, 'The attempt time has expired.');
             abort_unless(DB::table('tagore_cbt_exam_questions')->where('id', $data['exam_question_id'])->where('exam_id', $attempt->exam_id)->exists(), 404);
+            $question = DB::table('tagore_cbt_exam_questions as eq')
+                ->join('tagore_cbt_questions as q', 'q.id', '=', 'eq.question_id')
+                ->where('eq.id', $data['exam_question_id'])->where('eq.exam_id', $attempt->exam_id)
+                ->first(['q.question_type', 'q.options_json']);
+            abort_unless($question, 404);
             $answer = $data['answer'] ?? null;
-            if (is_array($answer) && count($answer) > 20) throw ValidationException::withMessages(['answer' => 'Too many selected values.']);
+            $options = json_decode($question->options_json ?? '[]', true) ?: [];
+            if ($answer !== null && $answer !== '') {
+                if ($question->question_type === 'single_choice') {
+                    if (!is_string($answer) || !array_key_exists($answer, $options)) {
+                        throw ValidationException::withMessages(['answer' => 'Select one of the available options.']);
+                    }
+                } elseif ($question->question_type === 'multiple_choice') {
+                    if (!is_array($answer) || count($answer) > 20 || count($answer) !== count(array_unique($answer, SORT_REGULAR))) {
+                        throw ValidationException::withMessages(['answer' => 'Select a valid set of options.']);
+                    }
+                    foreach ($answer as $choice) {
+                        if (!is_string($choice) || !array_key_exists($choice, $options)) {
+                            throw ValidationException::withMessages(['answer' => 'One or more selected options are invalid.']);
+                        }
+                    }
+                } elseif ($question->question_type === 'numerical') {
+                    if (!is_scalar($answer) || !is_numeric($answer) || strlen((string) $answer) > 32) {
+                        throw ValidationException::withMessages(['answer' => 'Enter a valid numerical answer.']);
+                    }
+                } else {
+                    throw ValidationException::withMessages(['answer' => 'This question type is not supported.']);
+                }
+            }
             $responseQuery = DB::table('tagore_cbt_responses')
                 ->where('attempt_id', $attemptId)->where('exam_question_id', $data['exam_question_id']);
             $responseValues = [
