@@ -15,7 +15,7 @@
 <hr><h2>Assemble and publish</h2><label>Draft exam ID<input id="examId" type="number"></label><label>Question mapping JSON<textarea id="mapping" rows="5" placeholder='[{"question_id":1,"section_code":"physics","marks":4,"negative_marks":1}]'></textarea></label><button id="attach">Attach questions</button> <button id="publish">Publish exam</button></section>
 </main><script>
 (()=>{const csrf=document.querySelector('meta[name="csrf-token"]').content,$=id=>document.getElementById(id),notice=(m)=>{$('notice').textContent=m;};
-const api=async(url,method='POST',body={})=>{const r=await fetch(url,{method,credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify(body)});const d=await r.json().catch(()=>({message:'Unexpected response'}));if(!r.ok)throw new Error(d.message||JSON.stringify(d.errors||{}));return d;};
+const api=async(url,method='POST',body={})=>{const r=await fetch(url,{method,credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':csrf},...(method==='GET'?{}:{body:JSON.stringify(body)})});const d=await r.json().catch(()=>({message:'Unexpected response'}));if(!r.ok)throw new Error(d.message||JSON.stringify(d.errors||{}));return d;};
 const form=f=>Object.fromEntries(new FormData(f).entries());
 $('bank').onsubmit=async e=>{e.preventDefault();try{const d=await api('/tagore/cbt/banks','POST',form(e.target));notice('Question bank created: '+d.bank_id+'. Refresh to see it.');}catch(x){notice(x.message);}};
 $('exam').onsubmit=async e=>{e.preventDefault();try{const d=await api('/tagore/cbt/exams','POST',form(e.target));notice('Draft exam created: '+d.exam_id+'.');}catch(x){notice(x.message);}};
