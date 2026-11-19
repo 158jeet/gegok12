@@ -98,6 +98,35 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
         ]);
     }
 
+    public function test_gateway_failure_releases_the_checkout_reservation(): void
+    {
+        Http::fake([
+            'https://api.razorpay.com/v1/orders' => Http::response(['error' => 'gateway unavailable'], 503),
+        ]);
+
+        try {
+            app(OnlinePaymentService::class)->createOrder((int) $this->student->id, (int) $this->parent->id, 80.00);
+            $this->fail('A failed gateway order must not be returned as a usable checkout.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment', $exception->errors());
+        }
+
+        $failedOrder = DB::table('tagore_payment_orders')
+            ->where('student_id', $this->student->id)
+            ->where('amount', 80.00)
+            ->orderByDesc('id')
+            ->first();
+        $this->assertNotNull($failedOrder);
+        $this->assertSame('failed', $failedOrder->status);
+
+        // A failed gateway attempt must no longer reserve any fee balance.
+        Http::fake([
+            'https://api.razorpay.com/v1/orders' => Http::response(['id' => 'order_after_failure'], 200),
+        ]);
+        $retry = app(OnlinePaymentService::class)->createOrder((int) $this->student->id, (int) $this->parent->id, 80.00);
+        $this->assertSame('order_after_failure', $retry['gateway_order_id']);
+    }
+
     public function test_captured_payment_is_quarantined_if_fee_balance_changed_after_checkout(): void
     {
         $service = app(OnlinePaymentService::class);
