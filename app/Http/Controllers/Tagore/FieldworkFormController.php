@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class FieldworkFormController extends Controller
 {
@@ -48,6 +49,7 @@ class FieldworkFormController extends Controller
             'fields.*.type' => ['required', 'in:text,textarea,number,email,date,select,checkbox'],
             'fields.*.required' => ['sometimes', 'boolean'],
             'fields.*.options' => ['sometimes', 'array', 'max:100'],
+            'fields.*.options.*' => ['string', 'max:150'],
             'fields.*.visible_if' => ['sometimes', 'array'],
         ]);
         abort_unless(in_array((int) $data['institution_id'], $institutions, true), 403);
@@ -80,6 +82,7 @@ class FieldworkFormController extends Controller
             'fields.*.type' => ['required', 'in:text,textarea,number,email,date,select,checkbox'],
             'fields.*.required' => ['sometimes', 'boolean'],
             'fields.*.options' => ['sometimes', 'array', 'max:100'],
+            'fields.*.options.*' => ['string', 'max:150'],
             'fields.*.visible_if' => ['sometimes', 'array'],
         ]);
         $this->validateFieldDefinitions($data['fields']);
@@ -111,6 +114,7 @@ class FieldworkFormController extends Controller
             'fields.*.type' => ['required', 'in:text,textarea,number,email,date,select,checkbox'],
             'fields.*.required' => ['sometimes', 'boolean'],
             'fields.*.options' => ['sometimes', 'array', 'max:100'],
+            'fields.*.options.*' => ['string', 'max:150'],
             'fields.*.visible_if' => ['sometimes', 'array'],
         ]);
         $this->validateFieldDefinitions($data['fields']);
@@ -333,7 +337,7 @@ class FieldworkFormController extends Controller
                 };
             }
             if (($field['type'] ?? null) === 'select') {
-                $rules[$key][] = 'in:' . implode(',', array_map('strval', $field['options'] ?? []));
+                $rules[$key][] = Rule::in(array_map('strval', $field['options'] ?? []));
             }
         }
         Validator::make($payload, $rules)->validate();
