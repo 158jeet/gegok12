@@ -208,8 +208,8 @@ class TagoreAdmissionsTest extends TestCase
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
         $institution = DB::table('tagore_institutions')->first();
         $this->assertNotNull($institution);
-        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
-        $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->firstOrFail();
+        $student = User::factory()->student()->create(['school_id' => $institution->school_id]);
+        $parent = User::factory()->parent()->create(['school_id' => $institution->school_id]);
         $mobile = '97' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
         DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => false]);
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
@@ -227,9 +227,8 @@ class TagoreAdmissionsTest extends TestCase
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
         $institution = DB::table('tagore_institutions')->first();
         $this->assertNotNull($institution);
-        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
-        $parents = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->limit(2)->get();
-        if ($parents->count() < 2) $this->markTestSkipped('Two parent fixtures are required to verify duplicate-mobile rejection.');
+        $student = User::factory()->student()->create(['school_id' => $institution->school_id]);
+        $parents = User::factory()->count(2)->parent()->create(['school_id' => $institution->school_id]);
         $mobile = '96' . str_pad((string) $parents[0]->id, 8, '0', STR_PAD_LEFT);
         DB::table('users')->whereIn('id', $parents->pluck('id'))->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
@@ -247,9 +246,9 @@ class TagoreAdmissionsTest extends TestCase
         $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
         $institution = DB::table('tagore_institutions')->first();
         $this->assertNotNull($institution);
-        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
-        $parent = User::query()->where('usergroup_id', 7)->where('school_id', '<>', $institution->school_id)->whereNull('deleted_at')->first();
-        if (!$parent) $this->markTestSkipped('A parent fixture in a second school is required for cross-institution acceptance.');
+        $student = User::factory()->student()->create(['school_id' => $institution->school_id]);
+        $otherSchool = \\App\\Models\\School::factory()->create();
+        $parent = User::factory()->parent()->create(['school_id' => $otherSchool->id]);
         $mobile = '95' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
         DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
