@@ -1,0 +1,39 @@
+name: TagoreK12 Windows Client
+
+on:
+  push:
+    branches: [main, 'feature/**']
+    paths:
+      - 'desktop/**'
+      - 'app/Services/Tagore/OfflineSyncService.php'
+      - 'app/Http/Controllers/Api/TagoreSyncController.php'
+      - 'routes/api.php'
+      - 'database/migrations/*offline_sync*'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'app/Services/Tagore/OfflineSyncService.php'
+      - 'app/Http/Controllers/Api/TagoreSyncController.php'
+      - 'routes/api.php'
+      - 'database/migrations/*offline_sync*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm install
+      - name: Build Windows installers
+        working-directory: desktop
+        run: npm run build
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagorek12-windows-installers
+          path: desktop/src-tauri/target/release/bundle/**/*

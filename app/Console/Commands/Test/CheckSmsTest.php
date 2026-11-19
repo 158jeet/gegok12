@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Console\Commands\Test;
+
+use Illuminate\Console\Command;
+use App\Traits\MSG91;
+use Exception;
+
+class CheckSmsTest extends Command
+{
+    use MSG91;
+  
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'gego:checksmstest';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Check sms Test ';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+  
+    
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        try
+        {
+            $mobileno = $this->ask('Enter mobile number)');  
+            $mobileno = $mobileno;            
+
+                    if(env('SMS_STATUS') == 'on')
+                    {
+ 
+                       $msg=$this->sendSMS('hii',$mobileno);
+                       dd($msg);
+                    }
+     
+        }
+        catch(Exception $e)
+        {
+            dd($e->getMessage());
+        }
+    }
+}
