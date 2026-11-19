@@ -340,7 +340,7 @@ trait AcademicProcess
             DB::commit();
             return $standardLink;
         }
-        catch(\\Throwable $e)
+        catch(\Throwable $e)
         {
             DB::rollBack();
             throw $e;
