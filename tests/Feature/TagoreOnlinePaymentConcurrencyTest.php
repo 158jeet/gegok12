@@ -100,9 +100,12 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
 
     public function test_gateway_failure_releases_the_checkout_reservation(): void
     {
-        Http::fake([
-            'https://api.razorpay.com/v1/orders' => Http::response(['error' => 'gateway unavailable'], 503),
-        ]);
+        // Replace the setup fake so the earlier successful sequence cannot shadow
+        // this failure/retry scenario. Both responses are deterministic in one queue.
+        Http::swap(new \\Illuminate\\Http\\Client\\Factory);
+        Http::fakeSequence('https://api.razorpay.com/v1/orders')
+            ->push(['error' => 'gateway unavailable'], 503)
+            ->push(['id' => 'order_after_failure'], 200);
 
         try {
             app(OnlinePaymentService::class)->createOrder((int) $this->student->id, (int) $this->parent->id, 80.00);
