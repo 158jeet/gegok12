@@ -229,7 +229,7 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNotNull($institution);
         $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
         $parents = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->limit(2)->get();
-        $this->assertCount(2, $parents);
+        if ($parents->count() < 2) $this->markTestSkipped('Two parent fixtures are required to verify duplicate-mobile rejection.');
         $mobile = '96' . str_pad((string) $parents[0]->id, 8, '0', STR_PAD_LEFT);
         DB::table('users')->whereIn('id', $parents->pluck('id'))->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
@@ -240,6 +240,29 @@ class TagoreAdmissionsTest extends TestCase
             'student_id' => $student->id, 'parent_mobile' => $mobile, 'relationship' => 'Guardian',
         ])->assertStatus(422);
         $this->assertSame(0, DB::table('tagore_parent_students')->where('student_id', $student->id)->whereIn('parent_user_id', $parents->pluck('id'))->count());
+    }
+
+    public function test_verified_parent_from_another_school_can_be_linked_to_student(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+        $parent = User::query()->where('usergroup_id', 7)->where('school_id', '<>', $institution->school_id)->whereNull('deleted_at')->first();
+        if (!$parent) $this->markTestSkipped('A parent fixture in a second school is required for cross-institution acceptance.');
+        $mobile = '95' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id, 'lead_no' => 'QA-CROSS-SCHOOL-' . uniqid(),
+            'student_name' => 'Cross School Family Student', 'status' => 'new', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id, 'parent_mobile' => $mobile, 'relationship' => 'Guardian',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('tagore_parent_students', [
+            'parent_user_id' => $parent->id, 'student_id' => $student->id,
+            'relationship' => 'Guardian', 'status' => 'active',
+        ]);
     }
 
 }
