@@ -191,4 +191,44 @@ class TagoreFieldworkFormTest extends TestCase
         ])->assertForbidden();
     }
 
+
+    public function test_select_option_values_with_commas_are_validated_as_exact_options(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $teacher = User::query()->where('email', 'teacher@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')
+            ->where('school_id', $owner->school_id)->where('status', 'active')->value('id');
+
+        $fields = [[
+            'key' => 'preferred_campus',
+            'label' => 'Preferred campus',
+            'type' => 'select',
+            'required' => true,
+            'options' => ['Jaipur, Rajasthan', 'Sikar'],
+        ]];
+        $created = $this->actingAs($owner)->postJson(route('tagore.fieldwork.forms.store'), [
+            'institution_id' => $institutionId,
+            'name' => 'Campus preference QA',
+            'fields' => $fields,
+        ])->assertCreated();
+        $templateId = (int) $created->json('id');
+        $published = $this->actingAs($owner)->postJson(route('tagore.fieldwork.forms.publish', $templateId), [
+            'fields' => $fields,
+        ])->assertCreated();
+        $versionId = (int) $published->json('form_version_id');
+        $campaign = $this->actingAs($owner)->postJson(route('tagore.fieldwork.campaigns.store'), [
+            'institution_id' => $institutionId,
+            'template_id' => $templateId,
+            'form_version_id' => $versionId,
+            'name' => 'Campus preference drive',
+            'assigned_user_ids' => [$teacher->id],
+        ])->assertCreated();
+        $campaignId = (int) $campaign->json('campaign_id');
+
+        $this->actingAs($teacher)->postJson(route('tagore.fieldwork.submissions.store', $campaignId), [
+            'payload' => ['preferred_campus' => 'Jaipur, Rajasthan'],
+            'finalize' => true,
+        ])->assertOk()->assertJsonPath('status', 'submitted');
+    }
+
 }
