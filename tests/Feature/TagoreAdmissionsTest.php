@@ -102,7 +102,21 @@ class TagoreAdmissionsTest extends TestCase
             'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
         ])->assertRedirect();
 
+        $this->assertNull($lead->fresh()->converted_at, 'Admitted status alone must not pretend a student was created.');
+
+        $institution=DB::table('tagore_institutions')->where('id',$institutionId)->first();
+        $class=DB::table('standards_link')->where('school_id',$institution->school_id)->where('status',1)->whereNull('deleted_at')->first();
+        $this->assertNotNull($class, 'Acceptance fixture must provide an active class-section.');
+        $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
+        $studentId=(int)DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->value('student_id');
+        $this->assertGreaterThan(0,$studentId);
+        $this->assertDatabaseHas('users',['id'=>$studentId,'school_id'=>$institution->school_id,'usergroup_id'=>6]);
+        $this->assertDatabaseHas('userprofiles',['user_id'=>$studentId,'firstname'=>'Conversion Student']);
+        $this->assertDatabaseHas('student_academics',['user_id'=>$studentId,'standardLink_id'=>$class->id]);
         $this->assertNotNull($lead->fresh()->converted_at);
+        $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
+        $this->assertSame(1,DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->count());
+        $this->assertSame(1,DB::table('student_academics')->where('user_id',$studentId)->count());
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
             'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',

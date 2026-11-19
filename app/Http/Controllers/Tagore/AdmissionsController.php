@@ -8,6 +8,8 @@ use App\Models\TagoreAdmissionLead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AdmissionsController extends Controller
 {
@@ -38,6 +40,9 @@ class AdmissionsController extends Controller
 
         $leads=$query->paginate(25)->withQueryString();
         $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
+        $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->first();
+        $classOptions=DB::table('standards_link as sl')->join('standards as st','st.id','=','sl.standard_id')->join('sections as sec','sec.id','=','sl.section_id')->join('academic_years as ay','ay.id','=','sl.academic_year_id')->where('sl.school_id',$institution->school_id)->where('sl.status',1)->whereNull('sl.deleted_at')->orderByDesc('ay.start_date')->orderBy('st.name')->orderBy('sec.name')->select('sl.id','sl.academic_year_id','ay.name as academic_year_name','st.name as standard_name','sec.name as section_name')->get();
+        $conversion=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
         $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
@@ -114,7 +119,7 @@ class AdmissionsController extends Controller
         $lead=TagoreAdmissionLead::with('activities')->findOrFail($leadId);
         abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
         $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
-        return view('tagore.admissions.show',compact('lead','staff'));
+        return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion'));
     }
 
     public function linkFamily(Request $request, int $leadId)
@@ -168,6 +173,73 @@ class AdmissionsController extends Controller
         return back()->with('success', 'Verified parent-child link saved. All siblings linked to this same parent account will appear together in the family fee summary.');
     }
 
+
+    /**
+     * Convert an admitted lead into a real student and academic enrolment.
+     * The conversion row is the durable idempotency key; parent accounts are
+     * deliberately not inferred from an unverified lead mobile number.
+     */
+    public function convert(Request $request, int $leadId)
+    {
+        $userId=(int)$request->user()->id; $roles=$this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
+        $data=$request->validate(['standard_link_id'=>['required','integer']]);
+
+        $result=DB::transaction(function() use($leadId,$userId,$roles,$data) {
+            $lead=TagoreAdmissionLead::whereKey($leadId)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
+            $existing=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
+            if($existing) return $existing;
+            abort_unless($lead->status==='admitted',422,'Mark the lead as admitted before creating the student account.');
+
+            $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->where('status','active')->first();
+            abort_unless($institution,422,'The admission institution is not active.');
+            $link=DB::table('standards_link as sl')
+                ->join('academic_years as ay','ay.id','=','sl.academic_year_id')
+                ->where('sl.id',(int)$data['standard_link_id'])
+                ->where('sl.school_id',$institution->school_id)
+                ->where('sl.status',1)->whereNull('sl.deleted_at')
+                ->where('ay.school_id',$institution->school_id)->whereNull('ay.deleted_at')
+                ->select('sl.id','sl.academic_year_id')->first();
+            abort_unless($link,422,'Select an active class and section belonging to this institution.');
+            if($lead->academic_year_id) abort_unless((int)$lead->academic_year_id===(int)$link->academic_year_id,422,'The selected class does not match the lead academic year.');
+
+            $now=now();
+            $registration='TAG-'.strtoupper(Str::random(12));
+            $studentId=DB::table('users')->insertGetId([
+                'usergroup_id'=>6,'school_id'=>$institution->school_id,'password'=>Hash::make(Str::random(64)),
+                'email'=>null,'mobile_no'=>null,'registration_number'=>$registration,
+                'email_verification_code'=>Str::random(40),'email_verified'=>false,
+                'mobile_verified'=>false,'status'=>'active','created_at'=>$now,'updated_at'=>$now,
+            ]);
+            DB::table('userprofiles')->insert([
+                'school_id'=>$institution->school_id,'user_id'=>$studentId,'usergroup_id'=>6,
+                'firstname'=>$lead->student_name,'registration_number'=>$registration,
+                'avatar'=>'uploads/images.jpg','status'=>'active','created_at'=>$now,'updated_at'=>$now,
+            ]);
+            DB::table('student_academics')->insert([
+                'school_id'=>$institution->school_id,'academic_year_id'=>$link->academic_year_id,
+                'user_id'=>$studentId,'standardLink_id'=>$link->id,
+                'roll_number'=>$registration,'id_card_number'=>$registration,
+                'created_at'=>$now,'updated_at'=>$now,
+            ]);
+            $conversionId=DB::table('tagore_admission_conversions')->insertGetId([
+                'lead_id'=>$lead->id,'institution_id'=>$institution->id,'student_id'=>$studentId,
+                'academic_year_id'=>$link->academic_year_id,'standard_link_id'=>$link->id,
+                'converted_by'=>$userId,'created_at'=>$now,'updated_at'=>$now,
+            ]);
+            $lead->update(['academic_year_id'=>$link->academic_year_id,'converted_at'=>$now,'status'=>'admitted']);
+            TagoreAdmissionActivity::create([
+                'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'note','outcome'=>'student_created',
+                'notes'=>'Lead converted to student account #'.$studentId.' and enrolled in academic year #'.$link->academic_year_id.'. Parent account was not auto-linked; verified family linking is a separate step.',
+                'completed_at'=>$now,
+            ]);
+            return DB::table('tagore_admission_conversions')->where('id',$conversionId)->first();
+        });
+
+        return back()->with('success','Admission converted. Student account ID: '.$result->student_id.'. Link a parent only after the parent mobile is verified.');
+    }
+
     public function activity(Request $request,int $leadId)
     {
         $userId=(int)$request->user()->id; $roles=$this->roles($userId);
@@ -188,7 +260,6 @@ class AdmissionsController extends Controller
             $updates=[];
             if(!empty($data['status'])) {
                 $updates['status']=$data['status'];
-                if($data['status']==='admitted') $updates['converted_at']=now();
                 if($data['status']==='lost') $updates['lost_reason']=$data['lost_reason']??null;
                 if($data['status']!=='lost') $updates['lost_reason']=null;
             }
