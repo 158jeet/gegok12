@@ -206,4 +206,32 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
         ]);
         $this->assertSame(1, DB::table('tagore_payments')->where('payment_order_id', $order['order_id'])->count());
     }
+    public function test_parent_can_select_partial_amounts_for_specific_fee_obligations(): void
+    {
+        $secondObligation = app(FeeService::class)->createObligation(
+            (int) $this->student->id, $this->institutionId,
+            ['gross_amount' => 75.00, 'items' => [['fee_head' => 'Second selectable fee', 'code' => 'QA-ONLINE-SECOND', 'gross_amount' => 75.00]]],
+            (int) $this->owner->id,
+        );
+        $service = app(OnlinePaymentService::class);
+        $order = $service->createOrder((int) $this->student->id, (int) $this->parent->id, 55.00, [
+            ['fee_obligation_id' => $secondObligation, 'amount' => 25.00],
+            ['fee_obligation_id' => $this->obligationId, 'amount' => 30.00],
+        ]);
+
+        $allocations = DB::table('tagore_payment_order_allocations')->where('payment_order_id', $order['order_id'])->orderBy('fee_obligation_id')->get();
+        $this->assertSame(2, $allocations->count());
+        $this->assertSame('25.00', number_format((float) $allocations->firstWhere('fee_obligation_id', $secondObligation)->amount, 2, '.', ''));
+        $this->assertSame('30.00', number_format((float) $allocations->firstWhere('fee_obligation_id', $this->obligationId)->amount, 2, '.', ''));
+
+        try {
+            $service->createOrder((int) $this->student->id, (int) $this->parent->id, 80.00, [
+                ['fee_obligation_id' => $this->obligationId, 'amount' => 80.00],
+            ]);
+            $this->fail('A selected amount cannot exceed the available outstanding balance.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('allocations', $exception->errors());
+        }
+    }
+
 }
