@@ -90,7 +90,7 @@ class OnlinePaymentService
                         'student_id' => (string) $studentId,
                     ],
                 ]);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             DB::table('tagore_payment_orders')->where('id', $order['order_id'])
                 ->where('status', 'created')
                 ->update(['status' => 'failed', 'updated_at' => now()]);
