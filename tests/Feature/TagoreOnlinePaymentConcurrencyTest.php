@@ -225,8 +225,8 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
         $this->assertSame('30.00', number_format((float) $allocations->firstWhere('fee_obligation_id', $this->obligationId)->amount, 2, '.', ''));
 
         try {
-            $service->createOrder((int) $this->student->id, (int) $this->parent->id, 60.00, [
-                ['fee_obligation_id' => $this->obligationId, 'amount' => 60.00],
+            $service->createOrder((int) $this->student->id, (int) $this->parent->id, 80.00, [
+                ['fee_obligation_id' => $this->obligationId, 'amount' => 80.00],
             ]);
             $this->fail('A selected amount cannot exceed the available outstanding balance.');
         } catch (ValidationException $exception) {
