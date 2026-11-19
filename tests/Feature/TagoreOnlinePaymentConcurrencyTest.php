@@ -102,7 +102,7 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
     {
         // Replace the setup fake so the earlier successful sequence cannot shadow
         // this failure/retry scenario. Both responses are deterministic in one queue.
-        Http::swap(new \\Illuminate\\Http\\Client\\Factory);
+        Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fakeSequence('https://api.razorpay.com/v1/orders')
             ->push(['error' => 'gateway unavailable'], 503)
             ->push(['id' => 'order_after_failure'], 200);
