@@ -128,11 +128,12 @@ class AdmissionController extends Controller
      */
     public function update(AdmissionFormRequest $request, $id)
     {
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
         try
         {
-            $admission = Admission::where('school_id', Auth::user()->school_id)
-                ->where('id', $id)
-                ->firstOrFail();
 
             $admission->application_status = $request->application_status;
 
@@ -225,12 +226,12 @@ class AdmissionController extends Controller
 
     public function destroy($id)
     {
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
         try
         {
-            $admission = Admission::where('school_id', Auth::user()->school_id)
-                ->where('id', $id)
-                ->firstOrFail();
-
             $admission->delete();
 
             $message=trans('messages.delete_success_msg',['module' => 'Admission']);
