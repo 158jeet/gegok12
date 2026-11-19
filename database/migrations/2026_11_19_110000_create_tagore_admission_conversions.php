@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->unsignedInteger('converted_by')->nullable();
             $table->foreign('converted_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
-            $table->index(['institution_id', 'academic_year_id']);
+            $table->index(['institution_id', 'academic_year_id'], 'tag_adm_inst_year_idx');
         });
     }
 

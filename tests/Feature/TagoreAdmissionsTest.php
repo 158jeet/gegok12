@@ -105,8 +105,25 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNull($lead->fresh()->converted_at, 'Admitted status alone must not pretend a student was created.');
 
         $institution=DB::table('tagore_institutions')->where('id',$institutionId)->first();
-        $class=DB::table('standards_link')->where('school_id',$institution->school_id)->where('status',1)->whereNull('deleted_at')->first();
-        $this->assertNotNull($class, 'Acceptance fixture must provide an active class-section.');
+        $schoolId=(int)$institution->school_id;
+        $academicYearId=DB::table('academic_years')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA Conversion Year '.uniqid(),
+            'start_date'=>now()->startOfYear(),'end_date'=>now()->endOfYear(),
+            'status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $standardId=DB::table('standards')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA Conversion Class','slug'=>'qa-conversion-'.uniqid(),
+            'order'=>99,'status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $sectionId=DB::table('sections')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA','status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $classId=DB::table('standards_link')->insertGetId([
+            'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,'class_teacher_id'=>$owner->id,
+            'standard_id'=>$standardId,'section_id'=>$sectionId,'status'=>1,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $class=(object)['id'=>$classId];
         $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
         $studentId=(int)DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->value('student_id');
         $this->assertGreaterThan(0,$studentId);
