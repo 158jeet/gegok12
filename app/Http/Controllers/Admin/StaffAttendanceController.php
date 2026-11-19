@@ -24,7 +24,6 @@ use App\Models\Attendance;
 use League\Csv\Writer;
 use App\Traits\Common;
 use Carbon\Carbon;
-use Exception;
 use Log;
 
 /**
