@@ -42,8 +42,46 @@
         <div class="metric">Paid<b>₹{{ number_format($summary['paid'],2) }}</b></div>
         <div class="metric">Outstanding<b class="due">₹{{ number_format($summary['outstanding'],2) }}</b></div>
     </div>
-    @if($summary['outstanding'] > 0)
-    <div class="card"><h2>Pay online</h2><form class="pay" method="POST" action="{{ route('tagore.payments.initiate',['studentId'=>$student->id]) }}">@csrf<label>Amount<br><input type="number" name="amount" min="1" max="{{ $summary['outstanding'] }}" step="0.01" value="{{ number_format($summary['outstanding'],2,'.','') }}" required></label><button type="submit">Proceed to Payment</button></form><div class="muted" style="margin-top:10px">Payment is allocated automatically against the student's oldest outstanding fee.</div></div>
+    @if($roles->contains('PARENT') && $summary['outstanding'] > 0)
+    <div class="card">
+      <h2>Pay selected fee amounts</h2>
+      <p class="muted">Enter the amount you want to pay against each outstanding fee. You can pay one fee partly or combine selected fees. The total is calculated before checkout.</p>
+      <form method="POST" action="{{ route('tagore.payments.initiate',['studentId'=>$student->id]) }}" id="selected-fee-payment">@csrf
+        <div style="overflow-x:auto"><table class="table"><thead><tr><th>Due date</th><th>Fee / obligation</th><th>Outstanding</th><th>Pay now</th></tr></thead><tbody>
+        @foreach($fees as $index => $fee)
+          @if((float)$fee->outstanding_amount > 0)
+          <tr><td>{{ $fee->due_date ? \Carbon\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td><td>Fee #{{ $fee->id }}</td><td>₹{{ number_format($fee->outstanding_amount,2) }}</td><td><input class="fee-allocation" type="number" name="allocations[{{ $index }}][amount]" min="0" max="{{ number_format($fee->outstanding_amount,2,'.','') }}" step="0.01" value="0" inputmode="decimal" aria-label="Amount to pay for fee {{ $fee->id }}"><input type="hidden" name="allocations[{{ $index }}][fee_obligation_id]" value="{{ $fee->id }}"></td></tr>
+          @endif
+        @endforeach
+        </tbody></table></div>
+        <label style="display:block;margin:14px 0">Total payment amount<br><input id="selected-fee-total" type="number" name="amount" min="1" max="{{ $summary['outstanding'] }}" step="0.01" readonly required></label>
+        <button type="submit">Proceed to Payment</button>
+      </form>
+      <div class="muted" style="margin-top:10px">Only the amounts entered above will be reserved and charged. Active checkouts cannot reserve the same outstanding balance twice.</div>
+    </div>
+    <script>
+    (() => {
+      const form = document.getElementById('selected-fee-payment');
+      if (!form) return;
+      const inputs = Array.from(form.querySelectorAll('.fee-allocation'));
+      const total = document.getElementById('selected-fee-total');
+      const update = () => {
+        const sum = inputs.reduce((value, input) => value + Math.round((Number(input.value) || 0) * 100), 0);
+        total.value = (sum / 100).toFixed(2);
+      };
+      inputs.forEach(input => input.addEventListener('input', update));
+      form.addEventListener('submit', event => {
+        update();
+        if (Number(total.value) < 1) {
+          event.preventDefault();
+          total.setCustomValidity('Enter an amount against at least one fee.');
+          total.reportValidity();
+        } else {
+          total.setCustomValidity('');
+        }
+      });
+    })();
+    </script>
     @endif
     <div class="card"><h2>Fee obligations</h2><table class="table"><tr><th>Due date</th><th>Gross</th><th>Discount</th><th>Concession</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Status</th></tr>@forelse($fees as $fee)<tr><td>{{ $fee->due_date ? \Carbon\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td><td>₹{{ number_format($fee->gross_amount,2) }}</td><td>₹{{ number_format($fee->discount_amount,2) }}</td><td>₹{{ number_format($fee->concession_amount,2) }}</td><td>₹{{ number_format($fee->net_amount,2) }}</td><td>₹{{ number_format($fee->paid_amount,2) }}</td><td class="due">₹{{ number_format($fee->outstanding_amount,2) }}</td><td>{{ ucfirst($fee->status) }}</td></tr>@empty<tr><td colspan="8">No fee obligations recorded.</td></tr>@endforelse</table></div>
     <div class="card"><h2>Fee heads</h2><table class="table"><tr><th>Head</th><th>Gross</th><th>Discount</th><th>Concession</th><th>Payable</th><th>Paid</th><th>Balance</th></tr>@forelse($items as $item)<tr><td>{{ $item->fee_head }}</td><td>₹{{ number_format($item->gross_amount,2) }}</td><td>₹{{ number_format($item->discount_amount,2) }}</td><td>₹{{ number_format($item->concession_amount,2) }}</td><td>₹{{ number_format($item->net_amount,2) }}</td><td>₹{{ number_format($item->paid_amount,2) }}</td><td>₹{{ number_format($item->outstanding_amount,2) }}</td></tr>@empty<tr><td colspan="7">No fee-head details recorded.</td></tr>@endforelse</table></div>
