@@ -59,8 +59,19 @@ class SecurityController extends Controller
         [$roles,$ids]=$this->context($request);
         abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty(),403);
         $d=$request->validate(['institution_id'=>'required|integer','student_id'=>'required|integer','pass_type'=>'required|string|max:50','reason'=>'required|string|max:2000','valid_from'=>'required|date','valid_until'=>'required|date|after:valid_from']);
-        abort_unless(in_array((int)$d['institution_id'],$ids,true),403);
-        $student=DB::table('users')->where('id',$d['student_id'])->whereNull('deleted_at')->where('usergroup_id',6)->first(); abort_unless($student,422,'Student not found.');
+        $institution=DB::table('tagore_institutions')
+            ->where('id',(int)$d['institution_id'])
+            ->whereIn('id',$ids)
+            ->where('status','active')
+            ->first(['id','school_id']);
+        abort_unless($institution,403);
+        $student=DB::table('users')
+            ->where('id',$d['student_id'])
+            ->where('school_id',$institution->school_id)
+            ->whereNull('deleted_at')
+            ->where('usergroup_id',6)
+            ->first();
+        abort_unless($student,422,'Student not found in the selected institution.');
         $token=Str::random(64);
         $id=DB::table('tagore_security_gatepasses')->insertGetId($d+['token_hash'=>hash('sha256',$token),'status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
         $this->event($request,(int)$d['institution_id'],'GATEPASS_REQUESTED','tagore_security_gatepasses',$id);
