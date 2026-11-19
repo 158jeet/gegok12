@@ -2,6 +2,7 @@
   <div class="bg-white shadow px-4 py-3">
     <div>
 	    <div v-if="this.success!=null" class="alert alert-success" id="success-alert">{{this.success}}</div>
+      <div v-if="errorMessage" class="alert alert-danger" id="attendance-error" role="alert">{{errorMessage}}</div>
       
 
       <div class="my-5">
@@ -138,6 +139,7 @@
         }],
         errors:[],
         success:null,
+        errorMessage:null,
       }
     },
         
@@ -221,7 +223,8 @@
       submitForm()
       {
         this.errors=[];
-        this.success=null; 
+        this.success=null;
+        this.errorMessage=null; 
 
         let formData=new FormData();
    
@@ -276,7 +279,11 @@
           this.success = response.data.success;
           //this.resetForm();
         }).catch(error => {
-          this.errors = error.response.data.errors;
+          const response = error.response;
+          this.errors = response && response.data && response.data.errors ? response.data.errors : {};
+          this.errorMessage = response && response.data && response.data.message
+            ? response.data.message
+            : 'Unable to save staff attendance. Please try again.';
         });
       },
 

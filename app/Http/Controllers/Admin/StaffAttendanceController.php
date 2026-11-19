@@ -139,10 +139,17 @@ class StaffAttendanceController extends Controller
 
             return $res;
         }
-        catch(Exception $e)
+        catch(\\Throwable $e)
         {
-            //Log::info($e->getMessage());
-            dd($e->getMessage());
+            Log::error('Staff attendance could not be saved.', [
+                'school_id' => Auth::user()->school_id,
+                'user_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to save staff attendance. Please check the details and try again.',
+            ], 500);
         }
     }
 
