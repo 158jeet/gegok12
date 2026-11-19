@@ -50,7 +50,7 @@
         <div style="overflow-x:auto"><table class="table"><thead><tr><th>Due date</th><th>Fee / obligation</th><th>Outstanding</th><th>Pay now</th></tr></thead><tbody>
         @foreach($fees as $index => $fee)
           @if((float)$fee->outstanding_amount > 0)
-          <tr><td>{{ $fee->due_date ? \Carbon\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td><td>Fee #{{ $fee->id }}</td><td>₹{{ number_format($fee->outstanding_amount,2) }}</td><td><input class="fee-allocation" type="number" name="allocations[{{ $index }}][amount]" min="0" max="{{ number_format($fee->outstanding_amount,2,'.','') }}" step="0.01" value="0" inputmode="decimal" aria-label="Amount to pay for fee {{ $fee->id }}"><input type="hidden" name="allocations[{{ $index }}][fee_obligation_id]" value="{{ $fee->id }}"></td></tr>
+          <tr><td>{{ $fee->due_date ? \Carbon\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td><td>Fee #{{ $fee->id }}</td><td>₹{{ number_format($fee->outstanding_amount,2) }}</td><td><label><input class="fee-select" type="checkbox" aria-label="Select fee {{ $fee->id }}"> Select</label><input class="fee-allocation" type="number" name="allocations[{{ $index }}][amount]" min="0.01" max="{{ number_format($fee->outstanding_amount,2,'.','') }}" step="0.01" value="" disabled inputmode="decimal" aria-label="Amount to pay for fee {{ $fee->id }}"><input class="fee-obligation-id" type="hidden" name="allocations[{{ $index }}][fee_obligation_id]" value="{{ $fee->id }}" disabled></td></tr>
           @endif
         @endforeach
         </tbody></table></div>
@@ -63,13 +63,26 @@
     (() => {
       const form = document.getElementById('selected-fee-payment');
       if (!form) return;
+      const rows = Array.from(form.querySelectorAll('tbody tr'));
       const inputs = Array.from(form.querySelectorAll('.fee-allocation'));
       const total = document.getElementById('selected-fee-total');
       const update = () => {
-        const sum = inputs.reduce((value, input) => value + Math.round((Number(input.value) || 0) * 100), 0);
+        const sum = inputs.filter(input => !input.disabled).reduce((value, input) => value + Math.round((Number(input.value) || 0) * 100), 0);
         total.value = (sum / 100).toFixed(2);
       };
-      inputs.forEach(input => input.addEventListener('input', update));
+      rows.forEach(row => {
+        const select = row.querySelector('.fee-select');
+        const amount = row.querySelector('.fee-allocation');
+        const obligation = row.querySelector('.fee-obligation-id');
+        select.addEventListener('change', () => {
+          amount.disabled = !select.checked;
+          amount.required = select.checked;
+          obligation.disabled = !select.checked;
+          if (!select.checked) amount.value = '';
+          update();
+        });
+        amount.addEventListener('input', update);
+      });
       form.addEventListener('submit', event => {
         update();
         if (Number(total.value) < 1) {
