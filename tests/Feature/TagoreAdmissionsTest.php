@@ -247,7 +247,7 @@ class TagoreAdmissionsTest extends TestCase
         $institution = DB::table('tagore_institutions')->first();
         $this->assertNotNull($institution);
         $student = User::factory()->student()->create(['school_id' => $institution->school_id]);
-        $otherSchool = \\App\\Models\\School::factory()->create();
+        $otherSchool = \App\Models\School::factory()->create();
         $parent = User::factory()->parent()->create(['school_id' => $otherSchool->id]);
         $mobile = '95' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
         DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
