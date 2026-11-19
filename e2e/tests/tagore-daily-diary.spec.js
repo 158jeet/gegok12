@@ -24,14 +24,19 @@ test.describe('Daily diary acceptance workflow', () => {
 
     const parentNote = 'E2E parent note ' + Date.now();
     const date = await page.locator('input[name="diary_date"]').first().inputValue();
+    const parentStudentCard = page.locator('section[aria-labelledby^="diary-student-"]').first();
+    const studentHeadingId = await parentStudentCard.getAttribute('aria-labelledby');
+    const studentId = studentHeadingId?.replace('diary-student-', '');
+    expect(studentId, 'parent diary must identify the linked student').toBeTruthy();
     await page.locator('input[name="study_hours"]').first().fill('2.5');
     await page.getByLabel('Parent feedback / questions').first().fill(parentNote);
     await page.getByRole('button', { name: 'Save diary entry' }).first().click();
     await expect(page.getByRole('status')).toContainText('Daily diary saved.');
 
     await authenticate(page, 'owner');
-    await page.goto('/tagore/diary?date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
+    await page.goto('/tagore/diary?student_id=' + encodeURIComponent(studentId) + '&date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Daily learning diary' })).toBeVisible();
+    await expect(page.locator('section[aria-labelledby="diary-student-' + studentId + '"]')).toBeVisible();
     await expect(page.locator('body')).toContainText(parentNote);
     await expect(page.getByLabel('Homework / classwork').first()).toBeVisible();
     const homework = 'E2E homework ' + Date.now();
@@ -41,7 +46,8 @@ test.describe('Daily diary acceptance workflow', () => {
     await expect(page.getByRole('status')).toContainText('Daily diary saved.');
 
     await authenticate(page, 'parent');
-    await page.goto('/tagore/diary?date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
+    await page.goto('/tagore/diary?student_id=' + encodeURIComponent(studentId) + '&date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('section[aria-labelledby="diary-student-' + studentId + '"]')).toBeVisible();
     await expect(page.locator('body')).toContainText(parentNote);
     await expect(page.locator('body')).toContainText(homework);
     await expect(page.locator('body')).toContainText('E2E school feedback');
