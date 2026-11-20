@@ -31,6 +31,7 @@ class StudentLifecycleController extends Controller
         $institution = DB::table('tagore_institutions')
             ->where('id', $data['institution_id'])
             ->where('status', 'active')
+            ->whereNull('deleted_at')
             ->first();
         abort_unless($institution, 404);
 

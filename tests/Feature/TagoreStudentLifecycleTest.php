@@ -17,6 +17,7 @@ class TagoreStudentLifecycleTest extends TestCase
             'source_academic_year_id', 'target_academic_year_id',
             'target_standard_link_id', 'whereIn', 'lockForUpdate',
             "where('ur.institution_id', $institution->id)", "whereNull('ur.institution_id')",
+            "whereNull('deleted_at')",
             "whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])",
             'student_academics', 'ValidationException',
         ] as $needle) {
