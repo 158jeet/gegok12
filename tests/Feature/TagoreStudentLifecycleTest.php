@@ -257,4 +257,50 @@ class TagoreStudentLifecycleTest extends TestCase
             'academic_year_id' => $targetYear->id,
         ]);
     }
+
+    public function test_promotion_rejects_inactive_academic_year(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        DB::table('academic_years')->where('id', $targetYear->id)->update(['status' => 0]);
+
+        $this->actingAs($owner)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+            'student_id' => $student->id,
+            'event_type' => 'promotion',
+        ]);
+    }
+
+    public function test_promotion_rejects_inactive_destination_class_link(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        DB::table('standards_link')->where('id', $targetLinkId)->update(['status' => 0]);
+
+        $this->actingAs($owner)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+            'student_id' => $student->id,
+            'event_type' => 'promotion',
+        ]);
+    }
 }
