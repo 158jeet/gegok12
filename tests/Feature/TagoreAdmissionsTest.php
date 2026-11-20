@@ -246,4 +246,26 @@ class TagoreAdmissionsTest extends TestCase
             ->count(), 'A rejected family-link attempt must not change parent/student links.');
     }
 
+    public function test_family_link_rejects_matching_but_unverified_parent_mobile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+        $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->firstOrFail();
+        $mobile = '97' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => false]);
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id, 'lead_no' => 'QA-UNVERIFIED-' . uniqid(),
+            'student_name' => 'Unverified Parent Student', 'status' => 'new',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id, 'parent_mobile' => $mobile, 'relationship' => 'Guardian',
+        ])->assertStatus(422);
+        $this->assertDatabaseMissing('tagore_parent_students', [
+            'parent_user_id' => $parent->id, 'student_id' => $student->id,
+        ]);
+    }
+
 }
