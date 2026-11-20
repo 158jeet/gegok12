@@ -167,7 +167,7 @@ class TagoreAdmissionsTest extends TestCase
             ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
 
         $mobile = '98' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
-        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile]);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
 
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
             'institution_id' => $institution->id,
