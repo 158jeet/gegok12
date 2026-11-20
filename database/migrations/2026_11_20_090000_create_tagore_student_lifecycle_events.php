@@ -25,7 +25,7 @@ return new class extends Migration {
                 ['student_id', 'source_academic_year_id', 'target_academic_year_id', 'event_type'],
                 'tagore_student_lifecycle_once'
             );
-            $table->index(['institution_id', 'target_academic_year_id']);
+            $table->index(['institution_id', 'target_academic_year_id'], 'tagore_lifecycle_inst_year_idx');
         });
     }
 
