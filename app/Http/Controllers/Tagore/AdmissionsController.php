@@ -196,7 +196,6 @@ class AdmissionsController extends Controller
             $updates=[];
             if(!empty($data['status'])) {
                 $updates['status']=$data['status'];
-                if($data['status']==='admitted') $updates['converted_at']=now();
                 if($data['status']==='lost') $updates['lost_reason']=$data['lost_reason']??null;
                 if($data['status']!=='lost') $updates['lost_reason']=null;
             }

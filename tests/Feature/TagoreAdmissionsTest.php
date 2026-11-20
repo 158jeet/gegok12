@@ -102,7 +102,7 @@ class TagoreAdmissionsTest extends TestCase
             'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
         ])->assertRedirect();
 
-        $this->assertNotNull($lead->fresh()->converted_at);
+        $this->assertNull($lead->fresh()->converted_at, 'Admitted pipeline status is not a completed student conversion.');
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
             'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',
