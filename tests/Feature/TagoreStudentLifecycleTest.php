@@ -139,4 +139,79 @@ class TagoreStudentLifecycleTest extends TestCase
             'event_type' => 'promotion',
         ]);
     }
+
+    public function test_institution_principal_can_promote_students(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($principal)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_student_lifecycle_events', [
+            'institution_id' => $institution->id,
+            'student_id' => $student->id,
+            'performed_by' => $principal->id,
+            'event_type' => 'promotion',
+        ]);
+    }
+
+    public function test_global_principal_assignment_does_not_grant_owner_authority(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
+        $principalRoleId = (int) DB::table('tagore_roles')->where('code', 'PRINCIPAL')->value('id');
+
+        DB::table('tagore_user_roles')
+            ->where('user_id', $principal->id)
+            ->where('role_id', $principalRoleId)
+            ->update(['institution_id' => null]);
+
+        $this->actingAs($principal)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+            'student_id' => $student->id,
+            'event_type' => 'promotion',
+        ]);
+    }
+
+    public function test_promotion_rejects_destination_class_link_from_another_year(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+
+        $wrongYearLinkId = DB::table('standards_link')->insertGetId([
+            'school_id' => $institution->school_id,
+            'academic_year_id' => $sourceYear->id,
+            'class_teacher_id' => User::query()->where('email', 'teacher@tagore-demo.local')->value('id'),
+            'standard_id' => DB::table('standards')->where('school_id', $institution->school_id)->value('id'),
+            'section_id' => DB::table('sections')->where('school_id', $institution->school_id)->value('id'),
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $wrongYearLinkId,
+            'student_ids' => [$student->id],
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
+        ]);
+    }
 }
