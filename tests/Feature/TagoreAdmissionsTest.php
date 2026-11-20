@@ -260,12 +260,19 @@ class TagoreAdmissionsTest extends TestCase
             'student_name' => 'Unverified Parent Student', 'status' => 'new',
             'created_at' => now(), 'updated_at' => now(),
         ]);
+        $existingLinks = DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('student_id', $student->id)
+            ->count();
+
         $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
             'student_id' => $student->id, 'parent_mobile' => $mobile, 'relationship' => 'Guardian',
         ])->assertStatus(422);
-        $this->assertDatabaseMissing('tagore_parent_students', [
-            'parent_user_id' => $parent->id, 'student_id' => $student->id,
-        ]);
+
+        $this->assertSame($existingLinks, DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('student_id', $student->id)
+            ->count(), 'An unverified mobile must not create or modify a parent-child link.');
     }
 
 }
