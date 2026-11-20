@@ -18,13 +18,6 @@ class StudentLifecycleController extends Controller
     public function promote(Request $request)
     {
         $userId = (int) $request->user()->id;
-        $roles = DB::table('tagore_user_roles as ur')
-            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
-            ->where('ur.user_id', $userId)
-            ->where('ur.status', 'active')
-            ->pluck('r.code');
-
-        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
 
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
@@ -41,13 +34,40 @@ class StudentLifecycleController extends Controller
             ->first();
         abort_unless($institution, 404);
 
-        if (!$roles->contains('OWNER')) {
-            abort_unless(DB::table('tagore_user_roles')
-                ->where('user_id', $userId)
-                ->where('institution_id', $institution->id)
-                ->where('status', 'active')
-                ->exists(), 403);
-        }
+        // Owner is a global role. Principal and Coordinator authority must be
+        // granted at this exact institution; a role held at another campus
+        // must never authorize a promotion here.
+        $isOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->whereNull('ur.institution_id')
+            ->where('ur.status', 'active')
+            ->where('r.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->where(function ($query) {
+                $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today());
+            })
+            ->exists();
+
+        $institutionRoles = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->where('ur.institution_id', $institution->id)
+            ->where('ur.status', 'active')
+            ->where('r.status', 'active')
+            ->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])
+            ->where(function ($query) {
+                $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today());
+            })
+            ->pluck('r.code');
+
+        abort_unless($isOwner || $institutionRoles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
 
         $schoolId = (int) $institution->school_id;
         $sourceYear = DB::table('academic_years')->where('id', $data['source_academic_year_id'])

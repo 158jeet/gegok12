@@ -16,6 +16,8 @@ class TagoreStudentLifecycleTest extends TestCase
             'OWNER', 'PRINCIPAL', 'COORDINATOR', 'institution_id',
             'source_academic_year_id', 'target_academic_year_id',
             'target_standard_link_id', 'whereIn', 'lockForUpdate',
+            "where('ur.institution_id', $institution->id)", "whereNull('ur.institution_id')",
+            "whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])",
             'student_academics', 'ValidationException',
         ] as $needle) {
             $this->assertStringContainsString($needle, $controller);
