@@ -97,14 +97,15 @@ class TagoreOperationalAuditFoundationTest extends TestCase
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
-        $templateId = $this->activeTemplate($institutionId, $owner->id);
+        $principal = $this->assignedUser($institutionId, 'PRINCIPAL');
+        $templateId = $this->activeTemplate($institutionId, $principal->id);
         $instanceId = app(OperationalAuditService::class)->generateInstance(
-            $templateId, $institutionId, $owner->id, 'PRINCIPAL', 'INSTITUTION', $institutionId,
+            $templateId, $institutionId, $principal->id, 'PRINCIPAL', 'INSTITUTION', $institutionId,
             now()->startOfDay(), now()->endOfDay(), ['title' => 'System evidence test']
         );
 
         try {
-            app(OperationalAuditService::class)->submit($instanceId, $owner->id, [
+            app(OperationalAuditService::class)->submit($instanceId, $principal->id, [
                 ['control_key' => 'fee_reconciliation', 'value' => ['balanced' => true], 'evidence_class' => 'A'],
             ]);
             $this->fail('A user must not self-assert system-derived evidence.');
