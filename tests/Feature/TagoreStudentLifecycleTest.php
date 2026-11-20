@@ -178,11 +178,15 @@ class TagoreStudentLifecycleTest extends TestCase
             'target_academic_year_id' => $targetYear->id,
             'target_standard_link_id' => $targetLinkId,
             'student_ids' => [$student->id],
-        ])->assertForbidden();
+        ])->assertRedirect();
 
         $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
             'student_id' => $student->id,
             'event_type' => 'promotion',
+        ]);
+        $this->assertDatabaseMissing('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
         ]);
     }
 
