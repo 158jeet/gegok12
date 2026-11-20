@@ -130,6 +130,9 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertDatabaseHas('users',['id'=>$studentId,'school_id'=>$institution->school_id,'usergroup_id'=>6]);
         $this->assertDatabaseHas('userprofiles',['user_id'=>$studentId,'firstname'=>'Conversion Student']);
         $this->assertDatabaseHas('student_academics',['user_id'=>$studentId,'standardLink_id'=>$class->id]);
+        $studentRoleId=DB::table('tagore_roles')->where('code','STUDENT')->value('id');
+        $this->assertNotNull($studentRoleId);
+        $this->assertDatabaseHas('tagore_user_roles',['user_id'=>$studentId,'role_id'=>$studentRoleId,'institution_id'=>$institutionId,'status'=>'active']);
         $this->assertNotNull($lead->fresh()->converted_at);
         $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
         $this->assertSame(1,DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->count());

@@ -223,6 +223,12 @@ class AdmissionsController extends Controller
                 'roll_number'=>$registration,'id_card_number'=>$registration,
                 'created_at'=>$now,'updated_at'=>$now,
             ]);
+            $studentRoleId=DB::table('tagore_roles')->where('code','STUDENT')->where('status','active')->value('id');
+            abort_unless($studentRoleId,422,'The Tagore Student role is not configured. Run the Tagore role setup before converting admissions.');
+            DB::table('tagore_user_roles')->updateOrInsert(
+                ['user_id'=>$studentId,'role_id'=>$studentRoleId,'institution_id'=>$institution->id],
+                ['status'=>'active','created_at'=>$now,'updated_at'=>$now]
+            );
             $conversionId=DB::table('tagore_admission_conversions')->insertGetId([
                 'lead_id'=>$lead->id,'institution_id'=>$institution->id,'student_id'=>$studentId,
                 'academic_year_id'=>$link->academic_year_id,'standard_link_id'=>$link->id,
