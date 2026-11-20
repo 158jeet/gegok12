@@ -135,7 +135,7 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNotEmpty(DB::table('users')->where('id',$studentId)->value('registration_number'));
         $storedPassword = DB::table('users')->where('id',$studentId)->value('password');
         $this->assertNotSame($issued['initial_password'], $storedPassword);
-        $this->assertTrue(\\Illuminate\\Support\\Facades\\Hash::check($issued['initial_password'], $storedPassword));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($issued['initial_password'], $storedPassword));
         $this->assertDatabaseHas('userprofiles',['user_id'=>$studentId,'firstname'=>'Conversion Student']);
         $this->assertDatabaseHas('student_academics',['user_id'=>$studentId,'standardLink_id'=>$class->id]);
         $studentRoleId=DB::table('tagore_roles')->where('code','STUDENT')->value('id');
