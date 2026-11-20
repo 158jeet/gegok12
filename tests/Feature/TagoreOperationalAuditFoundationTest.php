@@ -13,17 +13,18 @@ class TagoreOperationalAuditFoundationTest extends TestCase
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
-        $templateId = $this->activeTemplate($institutionId, $owner->id);
+        $principal = $this->assignedUser($institutionId, 'PRINCIPAL');
+        $templateId = $this->activeTemplate($institutionId, $principal->id);
 
         $service = app(OperationalAuditService::class);
         $scheduledFor = now()->startOfDay();
         $dueAt = now()->endOfDay();
 
-        $first = $service->generateInstance($templateId, $institutionId, $owner->id, 'PRINCIPAL', 'INSTITUTION', $institutionId, $scheduledFor, $dueAt, [
+        $first = $service->generateInstance($templateId, $institutionId, $principal->id, 'PRINCIPAL', 'INSTITUTION', $institutionId, $scheduledFor, $dueAt, [
             'title' => 'Principal daily control',
             'controls' => [['key' => 'opening_checks', 'evidence_class' => 'A']],
         ]);
-        $second = $service->generateInstance($templateId, $institutionId, $owner->id, 'PRINCIPAL', 'INSTITUTION', $institutionId, $scheduledFor, $dueAt, [
+        $second = $service->generateInstance($templateId, $institutionId, $principal->id, 'PRINCIPAL', 'INSTITUTION', $institutionId, $scheduledFor, $dueAt, [
             'title' => 'Principal daily control',
             'controls' => [['key' => 'opening_checks', 'evidence_class' => 'A']],
         ]);
@@ -115,6 +116,19 @@ class TagoreOperationalAuditFoundationTest extends TestCase
             'instance_id' => $instanceId,
             'control_key' => 'fee_reconciliation',
         ]);
+    }
+
+
+    private function assignedUser(int $institutionId, string $roleCode): User
+    {
+        $userId = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.institution_id', $institutionId)
+            ->where('ur.status', 'active')
+            ->where('r.code', $roleCode)
+            ->value('ur.user_id');
+
+        return User::query()->findOrFail($userId);
     }
 
     private function activeTemplate(int $institutionId, int $createdBy, string $roleCode = 'PRINCIPAL'): int

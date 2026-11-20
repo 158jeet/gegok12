@@ -25,9 +25,35 @@ class OperationalAuditService
             throw new InvalidArgumentException('An active audit template for this institution is required.');
         }
 
+        if (!DB::table('tagore_institutions')->where('id', $institutionId)->where('status', 'active')->whereNull('deleted_at')->exists()) {
+            throw new InvalidArgumentException('The target institution must be active.');
+        }
+
         $roleCode = strtoupper(trim($roleCode));
         if ($roleCode === '' || $roleCode !== strtoupper((string) $template->role_code)) {
             throw new InvalidArgumentException('The assigned role must match the audit template role.');
+        }
+
+        $assignment = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $assigneeUserId)
+            ->where('r.code', $roleCode)
+            ->where('ur.status', 'active')
+            ->where(function ($query) use ($scheduledFor) {
+                $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $scheduledFor->toDateString());
+            })
+            ->where(function ($query) use ($scheduledFor) {
+                $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $scheduledFor->toDateString());
+            });
+
+        if ($roleCode === 'OWNER') {
+            $assignment->whereNull('ur.institution_id');
+        } else {
+            $assignment->where('ur.institution_id', $institutionId);
+        }
+
+        if (!$assignment->exists()) {
+            throw new InvalidArgumentException('The assignee must hold an active role assignment for the requested institution and date.');
         }
 
         $scheduledDate = $scheduledFor->toDateString();
