@@ -27,8 +27,30 @@ class TagoreStudentLifecycleTest extends TestCase
             'The seeded Owner must have a global, active role assignment.'
         );
 
-        $years = DB::table('academic_years')->where('school_id', $schoolId)->orderBy('id')->limit(2)->get();
-        $this->assertCount(2, $years, 'The acceptance seed must provide two academic years.');
+        $sourceYearId = DB::table('academic_years')->insertGetId([
+            'school_id' => $schoolId,
+            'name' => 'Lifecycle Source ' . Str::uuid(),
+            'description' => 'Isolated promotion lifecycle test year',
+            'start_date' => now()->subYear()->startOfYear(),
+            'end_date' => now()->subYear()->endOfYear(),
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $targetYearId = DB::table('academic_years')->insertGetId([
+            'school_id' => $schoolId,
+            'name' => 'Lifecycle Target ' . Str::uuid(),
+            'description' => 'Isolated promotion lifecycle test year',
+            'start_date' => now()->startOfYear(),
+            'end_date' => now()->endOfYear(),
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $years = collect([
+            DB::table('academic_years')->where('id', $sourceYearId)->first(),
+            DB::table('academic_years')->where('id', $targetYearId)->first(),
+        ]);
 
         $standardId = (int) DB::table('standards')->where('school_id', $schoolId)->orderBy('id')->value('id');
         $sectionId = (int) DB::table('sections')->where('school_id', $schoolId)->orderBy('id')->value('id');
