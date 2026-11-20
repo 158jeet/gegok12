@@ -167,10 +167,28 @@ class TagoreStudentLifecycleTest extends TestCase
         $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
         $principalRoleId = (int) DB::table('tagore_roles')->where('code', 'PRINCIPAL')->value('id');
 
-        DB::table('tagore_user_roles')
-            ->where('user_id', $principal->id)
-            ->where('role_id', $principalRoleId)
-            ->update(['institution_id' => null]);
+        // Build a deterministic identity: this account has exactly one role,
+        // a global Principal assignment. It must not inherit Owner authority
+        // or a second institution-scoped assignment from shared demo fixtures.
+        DB::table('tagore_user_roles')->where('user_id', $principal->id)->delete();
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $principal->id,
+            'role_id' => $principalRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            DB::table('tagore_user_roles as ur')
+                ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->where('ur.user_id', $principal->id)
+                ->where('r.code', 'OWNER')
+                ->where('ur.status', 'active')
+                ->exists(),
+            'The global Principal fixture must not carry Owner authority.'
+        );
 
         // Other tests may reuse rolled-back auto-increment IDs; compare this
         // request's before/after counts instead of asserting global absence.
@@ -190,7 +208,7 @@ class TagoreStudentLifecycleTest extends TestCase
             'target_academic_year_id' => $targetYear->id,
             'target_standard_link_id' => $targetLinkId,
             'student_ids' => [$student->id],
-        ])->assertRedirect();
+        ])->assertForbidden();
 
         $this->assertSame($eventsBefore, DB::table('tagore_student_lifecycle_events')
             ->where('student_id', $student->id)
