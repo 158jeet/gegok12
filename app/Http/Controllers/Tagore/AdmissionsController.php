@@ -207,7 +207,8 @@ class AdmissionsController extends Controller
             $now=now();
             $registration='TAG-'.strtoupper(Str::random(12));
             $studentId=DB::table('users')->insertGetId([
-                'usergroup_id'=>6,'school_id'=>$institution->school_id,'password'=>Hash::make(Str::random(64)),
+                'usergroup_id'=>6,'school_id'=>$institution->school_id,'name'=>$lead->student_name,
+                'password'=>Hash::make(Str::random(64)),
                 'email'=>null,'mobile_no'=>null,'registration_number'=>$registration,
                 'email_verification_code'=>Str::random(40),'email_verified'=>false,
                 'mobile_verified'=>false,'status'=>'active','created_at'=>$now,'updated_at'=>$now,
