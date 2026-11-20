@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TagoreStudentLifecycleTest extends TestCase
@@ -45,7 +46,7 @@ class TagoreStudentLifecycleTest extends TestCase
         $student = User::factory()->create([
             'school_id' => $schoolId,
             'usergroup_id' => 6,
-            'name' => 'Lifecycle Acceptance Student',
+            'name' => 'Lifecycle Acceptance Student ' . Str::uuid(),
         ]);
 
         DB::table('student_academics')->insert([
