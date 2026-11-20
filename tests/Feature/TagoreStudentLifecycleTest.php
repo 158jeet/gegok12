@@ -17,10 +17,12 @@ class TagoreStudentLifecycleTest extends TestCase
         $this->assertNotNull($institution);
 
         $ownerRoleId = (int) DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
-        DB::table('tagore_user_roles')->updateOrInsert(
-            ['user_id' => $owner->id, 'role_id' => $ownerRoleId, 'institution_id' => null],
-            ['status' => 'active', 'start_date' => null, 'end_date' => null, 'created_at' => now(), 'updated_at' => now()]
-        );
+        $this->assertDatabaseHas('tagore_user_roles', [
+            'user_id' => $owner->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+        ], 'The seeded Owner must have a global, active role assignment.');
 
         $years = DB::table('academic_years')->where('school_id', $schoolId)->orderBy('id')->limit(2)->get();
         $this->assertCount(2, $years, 'The acceptance seed must provide two academic years.');

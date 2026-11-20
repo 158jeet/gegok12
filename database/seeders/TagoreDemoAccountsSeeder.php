@@ -73,8 +73,17 @@ class TagoreDemoAccountsSeeder extends Seeder
             $ids[$role] = $id;
             $roleId = $roleIds[$role] ?? null;
             if ($roleId) {
+                // OWNER is the single group-wide administrator, never an institution-scoped account.
+                $roleInstitutionId = $role === 'OWNER' ? null : $institutionId;
+                if ($role === 'OWNER') {
+                    DB::table('tagore_user_roles')
+                        ->where('user_id', $id)
+                        ->where('role_id', $roleId)
+                        ->whereNotNull('institution_id')
+                        ->update(['status' => 'inactive', 'updated_at' => $now]);
+                }
                 DB::table('tagore_user_roles')->updateOrInsert(
-                    ['user_id' => $id, 'role_id' => $roleId, 'institution_id' => $institutionId],
+                    ['user_id' => $id, 'role_id' => $roleId, 'institution_id' => $roleInstitutionId],
                     ['status' => 'active', 'updated_at' => $now, 'created_at' => $now]
                 );
             }
