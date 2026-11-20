@@ -124,18 +124,26 @@ class TagoreAdmissionsTest extends TestCase
             'created_at'=>now(),'updated_at'=>now(),
         ]);
         $class=(object)['id'=>$classId];
-        $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
+        $conversionResponse = $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id]);
+        $conversionResponse->assertRedirect()->assertSessionHas('issued_student_credentials');
+        $issued = session('issued_student_credentials');
+        $this->assertNotEmpty($issued['registration_number']);
+        $this->assertNotEmpty($issued['initial_password']);
         $studentId=(int)DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->value('student_id');
         $this->assertGreaterThan(0,$studentId);
         $this->assertDatabaseHas('users',['id'=>$studentId,'school_id'=>$institution->school_id,'usergroup_id'=>6,'name'=>'Conversion Student']);
         $this->assertNotEmpty(DB::table('users')->where('id',$studentId)->value('registration_number'));
+        $storedPassword = DB::table('users')->where('id',$studentId)->value('password');
+        $this->assertNotSame($issued['initial_password'], $storedPassword);
+        $this->assertTrue(\\Illuminate\\Support\\Facades\\Hash::check($issued['initial_password'], $storedPassword));
         $this->assertDatabaseHas('userprofiles',['user_id'=>$studentId,'firstname'=>'Conversion Student']);
         $this->assertDatabaseHas('student_academics',['user_id'=>$studentId,'standardLink_id'=>$class->id]);
         $studentRoleId=DB::table('tagore_roles')->where('code','STUDENT')->value('id');
         $this->assertNotNull($studentRoleId);
         $this->assertDatabaseHas('tagore_user_roles',['user_id'=>$studentId,'role_id'=>$studentRoleId,'institution_id'=>$institutionId,'status'=>'active']);
         $this->assertNotNull($lead->fresh()->converted_at);
-        $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id])->assertRedirect();
+        $retryResponse = $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id]);
+        $retryResponse->assertRedirect()->assertSessionMissing('issued_student_credentials');
         $this->assertSame(1,DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->count());
         $this->assertSame(1,DB::table('student_academics')->where('user_id',$studentId)->count());
 
