@@ -1,0 +1,70 @@
+name: Tagore Owner-Level Smoke Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: HTTPS base URL of the deployed Tagore ERP
+        required: true
+        type: string
+      environment_label:
+        description: Environment label for the report
+        required: true
+        default: staging
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tagore-owner-smoke
+  cancel-in-progress: false
+
+jobs:
+  owner-smoke:
+    name: Owner login, dashboard and visible routes (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url }}
+      TAGORE_LIVE_ENVIRONMENT: ${{ inputs.environment_label }}
+      TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON: ${{ secrets.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON }}
+      CI: 'true'
+    steps:
+      - name: Validate target and owner credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const url = new URL(process.env.E2E_BASE_URL);
+          if (url.protocol !== 'https:') throw new Error('Acceptance requires an HTTPS URL.');
+          if (url.username || url.password || url.search || url.hash) throw new Error('Do not put credentials, query strings, or fragments in the URL.');
+          if (['localhost', '127.0.0.1', '::1'].includes(url.hostname)) throw new Error('GitHub-hosted runner cannot test localhost.');
+          if (!process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON) throw new Error('Missing GitHub secret TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON.');
+          const accounts = JSON.parse(process.env.TAGORE_LIVE_ACCEPTANCE_ACCOUNTS_JSON);
+          if (!accounts.owner || !accounts.owner.email || !accounts.owner.password) throw new Error('Secret must include owner.email and owner.password.');
+          console.log('HTTPS target and owner credential entry validated; secret values are not printed.');
+          NODE
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        working-directory: e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Run owner-only read-only browser acceptance
+        working-directory: e2e
+        run: npx playwright test tests/owner-smoke-acceptance.spec.js --project=desktop --project=mobile
+      - name: Upload owner acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagore-owner-smoke-${{ github.run_id }}
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          if-no-files-found: warn
+          retention-days: 30

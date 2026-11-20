@@ -1,0 +1,6 @@
+[submodule "mobile/parent"]
+	path = mobile/parent
+	url = https://github.com/saurindashadia/gegok12-parent-app.git
+[submodule "mobile/teacher"]
+	path = mobile/teacher
+	url = https://github.com/saurindashadia/gegok12-teacher-app.git

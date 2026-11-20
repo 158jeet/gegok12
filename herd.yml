@@ -1,0 +1,5 @@
+name: gegok12-opensource
+php: '8.4'
+secured: true
+aliases:
+    - gegok12-opensource

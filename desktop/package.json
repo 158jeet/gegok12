@@ -1,0 +1,1 @@
+{"name":"tagore-k12-desktop","version":"0.1.0","private":true,"scripts":{"tauri":"tauri","build":"tauri build","dev":"tauri dev"},"devDependencies":{"@tauri-apps/cli":"^2.8.0"}}
