@@ -53,3 +53,34 @@ The roadmap already defines the phase sequence and the Phase 0 exit checklist. T
 - This document records programme state only; it adds no application code and does not approve implementation.
 - Do not start a new feature branch while the PR reconciliation is incomplete, except a narrowly scoped critical security/data-integrity correction approved by the Owner.
 - Do not merge or deploy. Do not use live student, parent, staff or financial data during acceptance; use synthetic fixtures.
+
+
+## Phase-one PR reconciliation findings — 20 November 2026
+
+### Candidate health: PR #118
+
+All six workflows triggered by head `2c9c6b0234255ee10deec92ab084e2ac4df3ec36` completed as failures. The primary blocker is PHP syntax validation at `app/Services/Tagore/OperationalAuditService.php:5`: `unexpected namespaced name "Carbon\\CarbonInterface"`. Backend tests and subsequent full-acceptance steps are skipped after this failure. Frontend build, browser E2E, production Docker smoke, and MySQL migration smoke passed; these do not override the syntax blocker or establish full acceptance. PR #118 remains open/draft/unmerged. Do not expand implementation on this branch until the blocker is separately authorised and fixed.
+
+### Overlap and dependency groups
+
+| PR(s) | Evidence | Provisional disposition |
+|---|---|---|
+| #116 | Adds StudentLifecycleController, lifecycle migration, routes, seeder adjustment and promotion authorization/idempotency tests. | Keep as a distinct candidate; verify converted-student identity and academic-year boundaries. |
+| #115 + #112 | Both modify Tagore AdmissionsController and TagoreAdmissionsTest. #115 creates student records/credentials; #112 hardens verified cross-institution family linking and preserves the invariant that admitted status alone is not conversion. | One coordinated admissions/family-link integration group; reconcile shared controller/test hunks first. |
+| #113 + #114 | Both modify Admin/AdmissionController. #113 is a one-commit scope change; #114 is a three-commit hardening variant with additional error/404 behavior. | Overlap confirmed; compare full final diff and tests, choose canonical implementation only after equivalence review. |
+| #94 + #115 | #94 changes Tagore CRM lead workflow/model/views/routes; #115 adds conversion in the same domain. #94 is based on older baseline. | Complementary, not duplicates; reconcile model/schema/controller and migration sequencing. |
+| #104 → #109 | Both change OnlinePaymentService, controller, view and tests. #109 base SHA is 9c28ffa09ee4f5409b0394197d9ffb8024816ffa, a commit in #104's history. | Explicit dependency: payment reservation/settlement hardening first (#104), then replay/rebase partial allocations (#109) onto the final #104 result. |
+| #95 / #97 / #98 / #100 / #96 | #95/#98/#100 share DailyDiaryController and class-scope test; #97/#100 include diary audit work; #96's Olympiad grade fix is repeated in #98 and #100. #100 has the broadest visible diary/audit/view/Olympiad file set. | One overlapping diary/Olympiad cluster. #100 is only an apparent consolidation candidate; verify full diffs/tests before selecting it. Avoid duplicating grade fix. |
+| #99 | Adds a focused multi-child family-fee acceptance test; no production files changed. | Keep as acceptance-test candidate; verify it matches the required one-parent/multiple-child dues behavior. |
+| #93 | Adds Cashier controller/view/role/migration and fee-scope tests, but also touches shared dashboard/seeder/role matrix and includes unrelated Olympiad/operations-search hunks. | Keep as high-value candidate; isolate unrelated changes and verify Cashier permissions against single-Owner/global and institution-scoped staff model. |
+| #102 | Documentation-only coordination board based on older integration SHA 494b737bbd0e72ddce32d1e5d702f8b488237e74. | Reference only until reconciled with current feature register and baseline. |
+
+### Next review sequence
+
+1. Complete the remaining open-PR inventory with base/head SHA, changed paths, checks, dependencies, overlaps and disposition.
+2. Inspect complete diffs and tests for the groups above; file overlap alone does not prove correctness or supersession.
+3. Select one canonical implementation per overlap group only after content-level equivalence is established. Do not close branches during review.
+4. Align retained work to the current integration baseline in dependency order and test each integration in isolation.
+5. Only after the feature register is reconciled and the Owner approves scope should implementation remediation or integration proceed.
+
+No merge, deployment, production-data mutation, or live student/employee data is authorised by this ledger. A route, UI, migration, or narrow green test alone does not prove a feature complete. Keep draft PRs open until their work is accounted for.
