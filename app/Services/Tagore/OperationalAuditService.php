@@ -118,13 +118,13 @@ class OperationalAuditService
             }
 
             DB::table('tagore_operational_audit_instances')->where('id', $instanceId)->update([
-                'status' => $instance->due_at < $now ? 'submitted_late' : 'submitted',
+                'status' => Carbon::parse($instance->due_at)->isBefore($now) ? 'submitted_late' : 'submitted',
                 'submitted_at' => $now,
                 'updated_at' => $now,
             ]);
             $this->appendInstanceEvent($instanceId, $actorUserId, 'submitted', [
                 'response_count' => count($responses),
-                'submitted_late' => $instance->due_at < $now,
+                'submitted_late' => Carbon::parse($instance->due_at)->isBefore($now),
             ]);
         });
     }

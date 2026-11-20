@@ -38,7 +38,7 @@ class TagoreOperationalAuditFoundationTest extends TestCase
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $teacher = User::query()->where('usergroup_id', 5)->where('school_id', $owner->school_id)->whereNull('deleted_at')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
-        $templateId = $this->activeTemplate($institutionId, $teacher->id);
+        $templateId = $this->activeTemplate($institutionId, $teacher->id, 'TEACHER');
         $instanceId = app(OperationalAuditService::class)->generateInstance(
             $templateId, $institutionId, $teacher->id, 'TEACHER', 'CLASS', 1,
             now()->startOfDay(), now()->endOfDay(), ['title' => 'Teacher daily control', 'controls' => [['key' => 'attendance']]]
@@ -47,7 +47,7 @@ class TagoreOperationalAuditFoundationTest extends TestCase
         $service = app(OperationalAuditService::class);
         $service->submit($instanceId, $teacher->id, [
             ['control_key' => 'attendance', 'value' => ['submitted' => true], 'evidence_class' => 'C'],
-            ['control_key' => 'timetable_coverage', 'value' => ['periods' => 6], 'evidence_class' => 'A', 'source_table' => 'timetables', 'source_id' => 1],
+            ['control_key' => 'timetable_coverage', 'value' => ['periods' => 6], 'evidence_class' => 'B'],
         ]);
 
         $this->assertDatabaseHas('tagore_operational_audit_instances', [
@@ -91,14 +91,40 @@ class TagoreOperationalAuditFoundationTest extends TestCase
         );
     }
 
-    private function activeTemplate(int $institutionId, int $createdBy): int
+
+    public function test_user_cannot_claim_system_derived_evidence_class(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+        $templateId = $this->activeTemplate($institutionId, $owner->id);
+        $instanceId = app(OperationalAuditService::class)->generateInstance(
+            $templateId, $institutionId, $owner->id, 'PRINCIPAL', 'INSTITUTION', $institutionId,
+            now()->startOfDay(), now()->endOfDay(), ['title' => 'System evidence test']
+        );
+
+        try {
+            app(OperationalAuditService::class)->submit($instanceId, $owner->id, [
+                ['control_key' => 'fee_reconciliation', 'value' => ['balanced' => true], 'evidence_class' => 'A'],
+            ]);
+            $this->fail('A user must not self-assert system-derived evidence.');
+        } catch (\\InvalidArgumentException $exception) {
+            $this->assertStringContainsString('reserved for system-derived', $exception->getMessage());
+        }
+
+        $this->assertDatabaseMissing('tagore_operational_audit_responses', [
+            'instance_id' => $instanceId,
+            'control_key' => 'fee_reconciliation',
+        ]);
+    }
+
+    private function activeTemplate(int $institutionId, int $createdBy, string $roleCode = 'PRINCIPAL'): int
     {
         return (int) DB::table('tagore_operational_audit_templates')->insertGetId([
             'institution_id' => $institutionId,
             'template_code' => 'QA-DAILY-' . bin2hex(random_bytes(5)),
             'version' => 1,
             'title' => 'Synthetic daily audit',
-            'role_code' => 'PRINCIPAL',
+            'role_code' => $roleCode,
             'scope_type' => 'INSTITUTION',
             'cadence' => 'daily',
             'controls_json' => json_encode([['key' => 'opening_checks', 'evidence_class' => 'A']]),
