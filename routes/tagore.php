@@ -13,7 +13,7 @@ use App\Http\Controllers\Tagore\LegacyStudentMappingController;
 use App\Http\Controllers\Tagore\LegacyFeeReconciliationController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
-use App\Http\Controllers\Tagore\StudentParentMigrationController;
+use App\Http\Controllers\Tagore\StudentParentMigrationController;\nuse App\Http\Controllers\Tagore\StudentLifecycleController;
 use App\Http\Controllers\Tagore\TaskController;
 use App\Http\Controllers\Tagore\PayrollController;
 use App\Http\Controllers\Tagore\InventoryController;
