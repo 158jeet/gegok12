@@ -147,6 +147,20 @@ Acceptance proves exact-once audit generation; missing/late/failed states cannot
 
 No covert surveillance; no assumption that photo/GPS/biometric presence proves quality; no green KPI when data is absent; no AI-only ranking or discipline; no broad exposure of wellbeing/safeguarding details; no live biometric/GPS/CCTV/vendor integration before protocol, security, privacy and owner approval.
 
-## 10. Traceability
+## 10. Initial repository reconnaissance (20 November 2026)
+
+The first code inspection confirms that there is useful foundation, but the requested workflows do not yet exist as a complete system:
+
+1. **Generic audit log exists, not daily assurance.** `tagore_audit_events` and `App\\Services\\Tagore\\AuditService` record actor, institution, action, entity, old/new values, IP and user agent. This is a generic change log; inspection found no role-based audit template/instance lifecycle, evidence provenance, verification class, sampling scheduler, escalation SLA or daily close engine in this service.
+2. **Some management signals already exist.** `Tagore\\DashboardController` calculates active/overdue tasks, employee task completion/workload and manager follow-ups for Owner/Principal/Coordinator. These are useful inputs, but task completion is not an independent measure of teaching, hostel, transport, finance or service quality and must not be presented as a verified reliability score.
+3. **Hostel is currently a generic operations record, not a dedicated hostel product.** `OperationsController` exposes a generic `hostel` module with fields such as hostel name, room, bed, student, check-in/check-out and status. It stores generic rows in `tagore_hostel_records`; it does not implement resident lifecycle, occupancy rules, roll-call, outpass, warden shifts, mess, laundry, food stock/recipes, hygiene, confidential wellbeing, incidents or superintendent daily close.
+4. **A small structured hostel foundation exists.** Migration `2026_09_27_180000_create_tagore_learning_hostel_store.php` creates `tagore_hostel_rooms` and `tagore_hostel_allocations`. The allocation schema records room, student, bed number, check-in/check-out and status, but this first-pass review does not find the full operational lifecycle, movement ledger, shift attendance, meal/ingredient stock, laundry or incident domains. Capacity/active-bed concurrency and cross-institution student validation require explicit tests before relying on allocations.
+5. **Role alignment is incomplete.** `TagorePrototypeSeeder` seeds eight primary roles (Owner, Principal, Coordinator, Teacher, Parent, Student, Accounts and Fee Editor). The operations controller references HOSTEL, TRANSPORT and HR role codes, and the seeder creates Hostel/Transport/HR departments, but the dedicated superintendent, warden, mess and laundry roles are not in its primary role catalogue. Department existence is not staff authorization.
+6. **Hostel routes are generic.** `routes/tagore.php` routes hostel create/update/delete through generic `/operations/{module}` endpoints; this is not a domain-specific hostel workflow or a resident/warden/mess portal.
+7. **The existing audit service is not by itself tamper-proof.** It inserts events through application code, but the inspected service/table design does not establish database-enforced append-only permissions, cryptographic evidence integrity, independent review or immutable retention. Those properties must be designed and tested, not assumed.
+
+**Discovery conclusion:** Do not simply add more fields to the generic hostel form or more checkboxes to the existing task module. Build a dedicated assurance domain that consumes existing operational data, and a dedicated hostel domain that can reconcile its own attendance, fees, food, laundry, safety and resident experience. The first implementation slice should be the audit foundation and alert lifecycle; role-based templates can then be delivered incrementally by unit. Hostel core should follow as a separate, testable bounded context.
+
+## 11. Traceability
 
 Detailed requirements are in `feature-gaps.csv` as AUD-097–AUD-107 and HOST-001–HOST-013. This document is the canonical scope and acceptance reference for this programme.
