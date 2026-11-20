@@ -172,6 +172,18 @@ class TagoreStudentLifecycleTest extends TestCase
             ->where('role_id', $principalRoleId)
             ->update(['institution_id' => null]);
 
+        // Other tests may reuse rolled-back auto-increment IDs; compare this
+        // request's before/after counts instead of asserting global absence.
+        $eventsBefore = DB::table('tagore_student_lifecycle_events')
+            ->where('student_id', $student->id)
+            ->where('event_type', 'promotion')
+            ->count();
+        $destinationRowsBefore = DB::table('student_academics')
+            ->where('user_id', $student->id)
+            ->where('academic_year_id', $targetYear->id)
+            ->whereNull('deleted_at')
+            ->count();
+
         $this->actingAs($principal)->post(route('tagore.students.promote'), [
             'institution_id' => $institution->id,
             'source_academic_year_id' => $sourceYear->id,
@@ -180,14 +192,15 @@ class TagoreStudentLifecycleTest extends TestCase
             'student_ids' => [$student->id],
         ])->assertRedirect();
 
-        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
-            'student_id' => $student->id,
-            'event_type' => 'promotion',
-        ]);
-        $this->assertDatabaseMissing('student_academics', [
-            'user_id' => $student->id,
-            'academic_year_id' => $targetYear->id,
-        ]);
+        $this->assertSame($eventsBefore, DB::table('tagore_student_lifecycle_events')
+            ->where('student_id', $student->id)
+            ->where('event_type', 'promotion')
+            ->count());
+        $this->assertSame($destinationRowsBefore, DB::table('student_academics')
+            ->where('user_id', $student->id)
+            ->where('academic_year_id', $targetYear->id)
+            ->whereNull('deleted_at')
+            ->count());
     }
 
     public function test_promotion_rejects_destination_class_link_from_another_year(): void
