@@ -325,4 +325,98 @@ class TagoreStudentLifecycleTest extends TestCase
             'event_type' => 'promotion',
         ]);
     }
+
+    public function test_institution_coordinator_can_promote_students(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        $coordinator = User::query()->where('email', 'coordinator@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($coordinator)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_student_lifecycle_events', [
+            'institution_id' => $institution->id,
+            'student_id' => $student->id,
+            'performed_by' => $coordinator->id,
+            'event_type' => 'promotion',
+        ]);
+    }
+
+    public function test_promotion_rejects_inactive_institution(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        DB::table('tagore_institutions')->where('id', $institution->id)->update(['status' => 'inactive']);
+
+        $this->actingAs($owner)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertNotFound();
+
+        $this->assertDatabaseMissing('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+            'student_id' => $student->id,
+            'event_type' => 'promotion',
+        ]);
+    }
+
+    public function test_existing_destination_enrolment_is_skipped_without_overwriting_it(): void
+    {
+        [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
+        $otherLinkId = DB::table('standards_link')->insertGetId([
+            'school_id' => $institution->school_id,
+            'academic_year_id' => $targetYear->id,
+            'class_teacher_id' => User::query()->where('email', 'teacher@tagore-demo.local')->value('id'),
+            'standard_id' => DB::table('standards')->where('school_id', $institution->school_id)->value('id'),
+            'section_id' => DB::table('sections')->where('school_id', $institution->school_id)->value('id'),
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('student_academics')->insert([
+            'school_id' => $institution->school_id,
+            'academic_year_id' => $targetYear->id,
+            'user_id' => $student->id,
+            'standardLink_id' => $otherLinkId,
+            'roll_number' => 'EXIST-' . $student->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.students.promote'), [
+            'institution_id' => $institution->id,
+            'source_academic_year_id' => $sourceYear->id,
+            'target_academic_year_id' => $targetYear->id,
+            'target_standard_link_id' => $targetLinkId,
+            'student_ids' => [$student->id],
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame(1, DB::table('student_academics')
+            ->where('school_id', $institution->school_id)
+            ->where('academic_year_id', $targetYear->id)
+            ->where('user_id', $student->id)
+            ->whereNull('deleted_at')
+            ->count());
+        $this->assertDatabaseHas('student_academics', [
+            'user_id' => $student->id,
+            'academic_year_id' => $targetYear->id,
+            'standardLink_id' => $otherLinkId,
+            'roll_number' => 'EXIST-' . $student->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+            'student_id' => $student->id,
+            'event_type' => 'promotion',
+        ]);
+    }
 }
