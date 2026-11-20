@@ -143,9 +143,16 @@ class AdmissionsController extends Controller
         abort_unless($student, 422, 'Select a student account belonging to this institution.');
 
         $mobile = preg_replace('/[^0-9+]/', '', $data['parent_mobile']);
-        $parent = DB::table('users')->where('usergroup_id', 7)->where('school_id', $institution->school_id)
-            ->where('mobile_no', $mobile)->whereNull('deleted_at')->first();
-        abort_unless($parent, 422, 'No parent account matches this mobile number at this school. Create/verify the parent account first.');
+        // Parent identity is group-wide, but mobile matching alone is not proof of ownership.
+        // Only a single account with a verified mobile may be linked.
+        $matchingParents = DB::table('users')->where('usergroup_id', 7)
+            ->where('mobile_no', $mobile)->where('mobile_verified', true)
+            ->whereNull('deleted_at')->limit(2)->get();
+        abort_unless($matchingParents->count() === 1, 422,
+            $matchingParents->isEmpty()
+                ? 'No verified parent account matches this mobile number. Verify the parent mobile number first.'
+                : 'More than one verified parent account matches this mobile number. Resolve the duplicate accounts before linking.');
+        $parent = $matchingParents->first();
 
         DB::transaction(function () use ($parent, $student, $data, $institution, $userId) {
             DB::table('tagore_parent_students')->updateOrInsert(
