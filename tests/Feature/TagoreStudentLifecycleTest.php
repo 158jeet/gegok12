@@ -163,6 +163,11 @@ class TagoreStudentLifecycleTest extends TestCase
 
     public function test_global_principal_assignment_does_not_grant_owner_authority(): void
     {
+        // This test deliberately changes a shared demo identity. Keep every fixture
+        // mutation inside a transaction so later browser acceptance sees the seeded
+        // institution-scoped Principal assignment, not this global negative case.
+        DB::beginTransaction();
+        try {
         [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
         $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
         $principalRoleId = (int) DB::table('tagore_roles')->where('code', 'PRINCIPAL')->value('id');
@@ -219,6 +224,9 @@ class TagoreStudentLifecycleTest extends TestCase
             ->where('academic_year_id', $targetYear->id)
             ->whereNull('deleted_at')
             ->count());
+        } finally {
+            DB::rollBack();
+        }
     }
 
     public function test_promotion_rejects_destination_class_link_from_another_year(): void
