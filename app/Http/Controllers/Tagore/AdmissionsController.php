@@ -185,11 +185,12 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $data=$request->validate(['standard_link_id'=>['required','integer']]);
 
-        $result=DB::transaction(function() use($leadId,$userId,$roles,$data) {
+        $initialPassword = Str::random(40);
+        $result=DB::transaction(function() use($leadId,$userId,$roles,$data,$initialPassword) {
             $lead=TagoreAdmissionLead::whereKey($leadId)->lockForUpdate()->firstOrFail();
             abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
             $existing=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
-            if($existing) return $existing;
+            if($existing) return ['conversion' => $existing, 'created' => false];
             abort_unless($lead->status==='admitted',422,'Mark the lead as admitted before creating the student account.');
 
             $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->where('status','active')->first();
@@ -208,7 +209,7 @@ class AdmissionsController extends Controller
             $registration='TAG-'.strtoupper(Str::random(12));
             $studentId=DB::table('users')->insertGetId([
                 'usergroup_id'=>6,'school_id'=>$institution->school_id,'name'=>$lead->student_name,
-                'password'=>Hash::make(Str::random(64)),
+                'password'=>Hash::make($initialPassword),
                 'email'=>null,'mobile_no'=>null,'registration_number'=>$registration,
                 'email_verification_code'=>Str::random(40),'email_verified'=>false,
                 'mobile_verified'=>false,'status'=>'active','created_at'=>$now,'updated_at'=>$now,
@@ -241,10 +242,25 @@ class AdmissionsController extends Controller
                 'notes'=>'Lead converted to student account #'.$studentId.' and enrolled in academic year #'.$link->academic_year_id.'. Parent account was not auto-linked; verified family linking is a separate step.',
                 'completed_at'=>$now,
             ]);
-            return DB::table('tagore_admission_conversions')->where('id',$conversionId)->first();
+            return ['conversion' => DB::table('tagore_admission_conversions')->where('id',$conversionId)->first(), 'created' => true];
         });
 
-        return back()->with('success','Admission converted. Student account ID: '.$result->student_id.'. Link a parent only after the parent mobile is verified.');
+        $conversion = $result['conversion'];
+        $student = DB::table('users')->where('id', $conversion->student_id)->first(['registration_number']);
+        $response = back()->with('success', 'Admission converted. Student account ID: '.$conversion->student_id.'. Link a parent only after the parent mobile is verified.');
+
+        // The initial password is shown once to the authorized admissions operator.
+        // It is never written to logs, activity notes, or the database in plaintext.
+        if ($result['created']) {
+            $response->with('issued_student_credentials', [
+                'student_name' => TagoreAdmissionLead::whereKey($leadId)->value('student_name'),
+                'registration_number' => $student->registration_number,
+                'initial_password' => $initialPassword,
+                'message' => 'Share these credentials securely. This password is shown only once.',
+            ]);
+        }
+
+        return $response;
     }
 
     public function activity(Request $request,int $leadId)
