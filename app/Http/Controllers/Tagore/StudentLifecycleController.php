@@ -74,7 +74,7 @@ class StudentLifecycleController extends Controller
         $sourceYear = DB::table('academic_years')->where('id', $data['source_academic_year_id'])
             ->where('school_id', $schoolId)->where('status', 1)->whereNull('deleted_at')->first();
         $targetYear = DB::table('academic_years')->where('id', $data['target_academic_year_id'])
-            ->where('school_id', $schoolId)->whereNull('deleted_at')->first();
+            ->where('school_id', $schoolId)->where('status', 1)->whereNull('deleted_at')->first();
         abort_unless($sourceYear && $targetYear, 422, 'Both academic years must belong to the selected institution.');
 
         $targetLink = DB::table('standards_link')->where('id', $data['target_standard_link_id'])
