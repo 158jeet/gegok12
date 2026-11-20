@@ -2,7 +2,7 @@
 
 namespace App\Services\Tagore;
 
-use Carbon\CarbonInterface;
+use Carbon\Carbon;\nuse Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -99,8 +99,8 @@ class OperationalAuditService
             foreach ($responses as $response) {
                 $controlKey = trim((string) ($response['control_key'] ?? ''));
                 $evidenceClass = strtoupper((string) ($response['evidence_class'] ?? 'C'));
-                if ($controlKey === '' || !in_array($evidenceClass, ['A', 'B', 'C'], true)) {
-                    throw new InvalidArgumentException('Each response needs a control key and evidence class A, B or C.');
+                if ($controlKey === '' || !in_array($evidenceClass, ['B', 'C'], true)) {
+                    throw new InvalidArgumentException('User submissions require a control key and evidence class B or C. Class A is reserved for system-derived evidence.');
                 }
 
                 DB::table('tagore_operational_audit_responses')->insert([
@@ -108,9 +108,9 @@ class OperationalAuditService
                     'control_key' => $controlKey,
                     'value_json' => json_encode($response['value'] ?? null, JSON_THROW_ON_ERROR),
                     'evidence_class' => $evidenceClass,
-                    'verification_status' => $evidenceClass === 'A' ? 'system_pending' : 'unverified',
-                    'source_table' => $response['source_table'] ?? null,
-                    'source_id' => $response['source_id'] ?? null,
+                    'verification_status' => 'unverified',
+                    'source_table' => null,
+                    'source_id' => null,
                     'submitted_by' => $actorUserId,
                     'created_at' => $now,
                     'updated_at' => $now,
