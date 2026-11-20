@@ -33,7 +33,7 @@ Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::clas
 Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');\n    Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');\n    Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');\n    Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
