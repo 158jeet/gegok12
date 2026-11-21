@@ -108,3 +108,12 @@ After each feature:
 - T6 platform: new current-baseline PR #129 rebuilds encrypted backup and disposable MySQL restore verification directly from `integration/erp-7day`; head `08d2144209334abf41b6bf816ef3ea75be58dd09`. It replaces stale PR #101 as the current integration candidate. Exact-head CI, PowerShell validation and a synthetic disposable restore rehearsal remain pending.
 - The connector-created commits for #128 and #129 currently have no associated GitHub Actions check runs. Do not infer success from earlier SHAs. Obtain exact-head workflow execution before accepting either.
 - No PR was merged. No deployment, production backup, live data, payment gateway, messaging or hardware activation was performed.
+
+
+## Execution update — 2026-11-21 (next current-baseline slices)
+
+- T4 CBT: PR #130 `work/cbt-engine-current-baseline`, head `96b023df9ad383b3818251cacdbbc4b76ce4ef5f`, is a 12-commit, zero-behind rebuild of the historical JEE/NEET CBT engine. It adds nine previously absent feature/test files and applies a focused 20-route registration patch to the current route file. Candidate attempt reads/writes now join the exam and enforce the student's active institution assignments. Exact-head CI and MySQL migration smoke are pending; historical PR #106 green runs are not current-head evidence.
+- T6 backup: PR #129 current head is `d4ecb317a32f0250032096eb0d65d537883acca6`; includes the backup scripts, restore verifier, runbook, execution-board update and correction-index entry. Exact-head CI and controlled disposable restore remain pending.
+- T2 legacy admissions: PR #128 latest head `6c8db9b4d5c1faaf54cc656dc09e45d92550422e`; corrected the previously failing literal-variable assertion. No checks exist on this exact head.
+- Tool limitation affecting validation: connector-authored branch commits have not produced Actions check runs for #128, #129 or #130 (check-run count is zero on each latest head). Do not infer a pass. The latest exact-head test evidence remains the earlier green PRs #119–#127; these new heads require an Actions run before acceptance.
+- No merge or production action has been taken.
