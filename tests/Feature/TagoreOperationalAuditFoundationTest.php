@@ -174,11 +174,20 @@ class TagoreOperationalAuditFoundationTest extends TestCase
             ->where('role_id', $teacherRoleId)
             ->update(['status' => 'inactive']);
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('no longer holds an active role assignment');
-        app(OperationalAuditService::class)->submit($instanceId, $teacher->id, [
-            ['control_key' => 'attendance', 'value' => ['submitted' => true], 'evidence_class' => 'C'],
-        ]);
+        try {
+            app(OperationalAuditService::class)->submit($instanceId, $teacher->id, [
+                ['control_key' => 'attendance', 'value' => ['submitted' => true], 'evidence_class' => 'C'],
+            ]);
+            $this->fail('A revoked role assignment must not submit an audit.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('no longer holds an active role assignment', $exception->getMessage());
+        } finally {
+            DB::table('tagore_user_roles')
+                ->where('user_id', $teacher->id)
+                ->where('institution_id', $institutionId)
+                ->where('role_id', $teacherRoleId)
+                ->update(['status' => 'active']);
+        }
     }
 
 }
