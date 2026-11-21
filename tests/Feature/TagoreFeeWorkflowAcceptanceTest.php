@@ -290,6 +290,62 @@ class TagoreFeeWorkflowAcceptanceTest extends TestCase
             ->assertDontSee('QA-PRIVATE-HISTORY');
     }
 
+    public function test_parent_dashboard_consolidates_balances_across_all_linked_children(): void
+    {
+        $parent = User::query()->where('email', 'parent@tagore-demo.local')->firstOrFail();
+        $schoolId = (int) User::query()->where('email', 'student@tagore-demo.local')->value('school_id');
+        $institution = DB::table('tagore_institutions')->where('school_id', $schoolId)->where('status', 'active')->firstOrFail();
+
+        DB::table('tagore_parent_students')->where('parent_user_id', $parent->id)->delete();
+        $children = collect([
+            User::factory()->create([
+                'name' => 'Family Fee Child A',
+                'email' => 'family-fee-a-' . bin2hex(random_bytes(4)) . '@example.invalid',
+                'school_id' => $schoolId,
+                'usergroup_id' => 6,
+            ]),
+            User::factory()->create([
+                'name' => 'Family Fee Child B',
+                'email' => 'family-fee-b-' . bin2hex(random_bytes(4)) . '@example.invalid',
+                'school_id' => $schoolId,
+                'usergroup_id' => 6,
+            ]),
+        ]);
+
+        foreach ($children as $index => $child) {
+            DB::table('tagore_parent_students')->insert([
+                'parent_user_id' => $parent->id,
+                'student_id' => $child->id,
+                'relationship' => 'Guardian',
+                'is_primary' => $index === 0,
+                'is_guardian' => true,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            app(FeeService::class)->createObligation(
+                (int) $child->id,
+                (int) $institution->id,
+                [
+                    'gross_amount' => $index === 0 ? 125.00 : 75.00,
+                    'items' => [[
+                        'fee_head' => 'Family consolidation test',
+                        'code' => 'QA-FAMILY-' . $index,
+                        'gross_amount' => $index === 0 ? 125.00 : 75.00,
+                    ]],
+                ],
+                null,
+            );
+        }
+
+        $this->actingAs($parent)
+            ->get(route('tagore.parent.dashboard'))
+            ->assertOk()
+            ->assertSee('All children, one total')
+            ->assertSee('2 children')
+            ->assertSee('₹200.00');
+    }
+
     public function test_year_end_fee_vault_is_encrypted_integrity_checked_and_idempotent(): void
     {
         Storage::fake('local');
