@@ -16,7 +16,11 @@
 <div style="margin-top:18px;border-top:1px solid #e2e8f0;padding-top:14px"><strong>Recent diary history</strong>
 @forelse(($entries->get($child->student_id) ?? collect())->take(7) as $past)
 <div style="padding:10px 0;border-bottom:1px solid #edf2f7"><strong>{{ \Carbon\Carbon::parse($past->diary_date)->format('D, d M') }}</strong>@if($past->study_hours !== null)<div class="diary-muted">Home study: {{ number_format((float)$past->study_hours,2) }} hours</div>@endif @if($past->homework)<div><strong>Homework:</strong> {{ $past->homework }}</div>@endif @if($past->school_feedback)<div><strong>School:</strong> {{ $past->school_feedback }}</div>@endif @if($past->parent_feedback)<div><strong>Home:</strong> {{ $past->parent_feedback }}</div>@endif</div>
-@empty<div class="diary-muted" style="margin-top:8px">No diary history recorded in the last 30 days.</div>@endforelse</div></section>
+@empty<div class="diary-muted" style="margin-top:8px">No diary history recorded in the last 30 days.</div>@endforelse</div>
+<div style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:14px"><strong>Change audit trail</strong><p class="diary-muted">Recent edits to parent and school fields, including who changed them and the previous value.</p>
+@forelse(($auditEntries->get($child->student_id) ?? collect())->take(15) as $audit)
+<div style="padding:10px 0;border-bottom:1px solid #edf2f7"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>{{ ucfirst(str_replace('_', ' ', $audit->field_name)) }}</strong><span class="diary-muted">{{ \Carbon\Carbon::parse($audit->created_at)->format('d M, h:i A') }}</span></div><div class="diary-muted">{{ $audit->actor_name ?: 'Former user' }} · {{ ucfirst($audit->actor_role) }} · {{ \Carbon\Carbon::parse($audit->diary_date)->format('d M Y') }}</div><div style="overflow-wrap:anywhere"><span class="diary-muted">Was:</span> {{ $audit->old_value ?? '—' }}</div><div style="overflow-wrap:anywhere"><span class="diary-muted">Now:</span> {{ $audit->new_value ?? '—' }}</div></div>
+@empty<div class="diary-muted" style="margin-top:8px">No field changes recorded in the last 30 days.</div>@endforelse</div></section>
 @endforeach
 </div>@endif
 </main></div></body></html>
