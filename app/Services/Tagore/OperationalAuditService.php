@@ -2,7 +2,8 @@
 
 namespace App\Services\Tagore;
 
-use Carbon\Carbon;\nuse Carbon\CarbonInterface;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
