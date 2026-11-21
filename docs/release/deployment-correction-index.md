@@ -54,3 +54,8 @@ This index is a deployment memory aid. It does not mean every correction should 
 
 
 - **CI-003 — HR feature branch workflow inheritance:** PR #107 branch `work/ws-hr-leave-payroll-hardening` had legacy push triggers. The three workflow definitions were synchronized to integration in commit `d729b84042748edf9a6a055b71692b5f8418fcf2`. Current-head ERP CI run `44871879262` passed all five jobs. Earlier runs on `2cdf250` / `f4d108e` were triggered before synchronization and are historical. No runtime deployment or live data was involved.
+
+
+## Finance / payment reconciliation
+
+| PAY-001 | Finance / online payments | Prevent concurrent online checkouts from reserving the same outstanding fee balance; quarantine captured-but-stale allocations for office reconciliation rather than over-allocating the ledger. | Current-baseline draft PR #123, head `230a06ebe72df5ac497e9c62dd92fcc4c54372a5`; controller, service and new feature test. | Verify active reservation expiry, gateway failure release, stale capture reconciliation, idempotency and receipt suppression; use gateway sandbox only after explicit owner approval. | Implemented on current-baseline draft; exact-head ERP CI pending; not merged. |
