@@ -179,3 +179,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Historical Daily Diary PR #127 branch `d0e785296667829ab7f85f3855e91c8488f59c3c` is 13 commits behind and 11 ahead of the latest integration; supersede it. Rebuilt the six relevant files as draft PR #140 on current head `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`, branch `work/daily-diary-audit-class-scope-current-integration-2`, head `6eb4667b160b8ed2e3425afb5931541069dbdd9e`.
 - PR #140 exact-head ERP CI run `44895851964` is running. It contains Teacher/Coordinator class-scope enforcement, Parent linked-child scope, append-only field audit trail and deterministic Olympiad grade selection. Keep draft until exact-head CI and current integration acceptance pass.
 - Next finance candidate is partial fee allocation PR #125. Its historical branch includes the superseded concurrency work from closed PR #123, so it must be rebuilt/reconciled on the latest integration; do not merge PR #125 directly.
+
+
+## Parallel finance and diary execution — 2026-11-21
+
+- Draft PR #141 rebuilds parent-selected partial fee allocations and checkout reservation/concurrency safeguards on integration head `07004728ff8dcb1f95775749eccaa1251901cd35`; exact-head ERP CI run `44896021179` has been queued. Historical PR #125 and superseded PR #123 will not be merged directly.
+- PR #141 uses synthetic obligations and mocked gateway responses only. Captured payments whose balances changed before settlement are quarantined as `review_required` for manual reconciliation, with no over-allocation or automatic receipt.
+- PR #140 exact-head ERP CI run `44895851964`: backend and frontend passed; browser E2E and production Docker smoke remain in progress at this update.
+- Post-#139 full integration acceptance run `44895722308` remains in progress. Keep PR #140 and #141 unmerged until their exact-head checks and the current integration acceptance are green.
