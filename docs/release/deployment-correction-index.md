@@ -106,3 +106,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - **AUD-002:** PR #134 current head `a549c751dac076b5d41a4e8f06f774b217271c94` implements teacher class assignment and coordinator exact standard-link scope across fee statements and accounts aggregates, and removes sibling/reconciliation details from academic viewer screens. ERP CI `44885549135` and Windows Pilot Package `44885549143` are in progress. It includes #133 as its prerequisite; no merge or deployment.
 - **OWN-001:** PR #132 passed exact-head ERP CI `44884210186`; current code is an operational audit foundation, not full department task/KPI workflow acceptance.
 - **PLT-001:** PR #129 passed exact-head ERP CI `44884350353` and Windows Pilot Package `44884350403`; disposable MySQL restore and isolated staging application restore are still required.
+
+
+## Integration execution update — 2026-11-21 (current acceptance blockers)
+
+- PR #131 legacy admission institution isolation merged to `integration/erp-7day` as `1b8690ffae6dbaa0b085b9d8d6bf6a1d10ea1cd4`. Exact-head ERP CI run `44886078112` passed all five jobs, including synthetic second-school list/show/edit/update/delete regression coverage.
+- PR #126 admitted-lead conversion and verified family linking merged as `acd2718037fd6813bf5b8e4efe907ae38d7cb141`. Exact-head ERP CI run `44886653601` passed all five jobs, including conversion idempotency and verified/unverified/ambiguous parent-mobile tests.
+- Full integration acceptance on pre-#126 integration commit `1b8690ffae6dbaa0b085b9d8d6bf6a1d10ea1cd4` failed closed in run `44892596729`. PHP syntax, migrations, backend tests, frontend build, app health and mutating admin workflows passed. Browser acceptance exposed two unresolved failures: (1) institution E2E expected a disabled “No unlinked GegoK12 schools available” option even though additional unlinked schools remained; the test should assert the just-linked school ID is no longer selectable and explicitly test duplicate-link rejection; (2) mobile Operations search left the count at “2 of 2 records” after filtering a unique newly-created item, while the desktop path passed. Investigate mobile input/filter event behavior; do not weaken the assertion.
+- New full integration acceptance was triggered by merge #126 on commit `acd2718037fd6813bf5b8e4efe907ae38d7cb141`, run `44893340615`; result pending at this update.
+- Production deployment remains blocked. These are synthetic CI defects only; no live data, migration or production deployment occurred.
