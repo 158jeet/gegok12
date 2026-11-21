@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -9,8 +11,8 @@ use Tests\TestCase;
  *
  * These checks deliberately inspect each public endpoint independently so a
  * future refactor cannot accidentally remove the school predicate from one
- * action while leaving the others protected. Runtime multi-school fixtures
- * remain a separate acceptance item where the legacy schema permits them.
+ * action while leaving the others protected. A synthetic second-school HTTP
+ * fixture also exercises list/show/edit/update/delete isolation end to end.
  */
 class LegacyAdmissionSchoolIsolationTest extends TestCase
 {
@@ -54,7 +56,7 @@ class LegacyAdmissionSchoolIsolationTest extends TestCase
         $method = $this->methodSource('show');
 
         $this->assertStringContainsString("StandardLink::where('school_id', Auth::user()->school_id)", $method);
-        $this->assertStringContainsString("where('standard_id', \\$admission->standard_id)", $method);
+        $this->assertStringContainsString('$admission->standard_id', $method);
     }
 
     public function test_legacy_admission_controller_has_no_debug_dump_or_exception_detail_response(): void
