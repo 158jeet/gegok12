@@ -82,17 +82,6 @@ AI tutor/study recommendations and proctoring are later increments after core ac
 - PG College semester/examination/evaluation and OBE only after university affiliation/course requirements verified.
 - CCTV remains disabled until approved vendor/security documentation and explicit activation approval.
 
-Phase 6A — Owner Command Centre, Daily Assurance & Hostel Operations (owner-approved scope)
-
-1. Group-wide Owner cockpit with institution/unit health, audit coverage, critical alerts, source freshness, accountability and drill-down.
-2. Versioned daily audits for teachers, coordinators, principals, hostel superintendents, wardens, mess/laundry incharges, cashiers, accounts, transport, HR and department heads.
-3. Anti-fabrication: source-derived reconciliation, immutable evidence provenance, independent review, risk-based spot checks, anomaly flags and stale/unknown states.
-4. Alert acknowledgement, severity-based SLA, corrective action, independent closure, recurrence and escalation to Principal/Owner.
-5. Hostel resident lifecycle, occupancy, roll-call/movement, outpass, incidents, fees, laundry, mess procurement/consumption/waste, hygiene, morale feedback and maintenance.
-6. Reliability scorecards only after metric definitions, data quality and fairness controls; no automated disciplinary decisions.
-
-**Acceptance:** exact-once audit generation; cross-institution/role-scope denial; source reconciliation; evidence tamper/replay tests; stale feed visibility; independent review; critical alert delivery/escalation; Owner/Principal scoped cockpits; hostel occupancy/attendance/stock/meal/laundry/fee reconciliation; confidential wellbeing access tests.
-
 ## Phase 7 — Final acceptance and release readiness
 - Synthetic fixtures for every institution type and representative role.
 - Full desktop/mobile end-to-end acceptance across workflows.
