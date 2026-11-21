@@ -248,10 +248,16 @@ class AdmissionController extends Controller
             $res['success'] = $message;
             return $res;
         }
-        catch(Exception $e)
+        catch(\\Throwable $e)
         {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
+            Log::error('Admission deletion failed.', [
+                'admission_id' => $id,
+                'school_id' => Auth::user()->school_id,
+                'user_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
+            return response()->json(['message' => 'Unable to complete the admission operation right now.'], 500);
         } 
     }
 }
