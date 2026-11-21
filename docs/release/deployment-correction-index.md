@@ -54,3 +54,55 @@ This index is a deployment memory aid. It does not mean every correction should 
 
 
 - **CI-003 — HR feature branch workflow inheritance:** PR #107 branch `work/ws-hr-leave-payroll-hardening` had legacy push triggers. The three workflow definitions were synchronized to integration in commit `d729b84042748edf9a6a055b71692b5f8418fcf2`. Current-head ERP CI run `44871879262` passed all five jobs. Earlier runs on `2cdf250` / `f4d108e` were triggered before synchronization and are historical. No runtime deployment or live data was involved.
+
+
+## Finance / payment reconciliation
+
+| PAY-001 | Finance / online payments | Prevent concurrent online checkouts from reserving the same outstanding fee balance; quarantine captured-but-stale allocations for office reconciliation rather than over-allocating the ledger. | Current-baseline draft PR #123, head `4402e3a7b1067f34155e8a7fc80bb010d75efec1`; controller, service and concurrency regression test. | Verify reservation expiry, gateway failure release, stale capture reconciliation, idempotency and receipt suppression; use gateway sandbox only after explicit owner approval. | Exact-head ERP CI run `44875663835` passed all five jobs. Draft only; not merged. |
+
+
+| LIFE-001 | Academics / student promotion | Institution-scoped, bounded, idempotent promotion with immutable source-year records and audit events. | Current-baseline draft PR #124, head `9cd09eda3c0c97a4debce2c6b42fdc83352f9d0a`; controller, migration, Owner seeder, routes, UI and tests. | Validate role scoping, source/target year boundaries, no overwrite of existing target enrolment, batch cap, audit events, responsive UI and browser route audit. | Corrected shared fixture state leak, enforced Owner/Principal/Coordinator workspace authorization, removed unauthorized Academic Structure link. Exact-head ERP CI run `44876972392` passed all five jobs; Windows Pilot Package run `44876972367` passed. Draft only; no merge. |
+
+
+| PAY-002 | Finance / partial fee allocation | Allow parents to allocate a checkout amount to one or more selected fee obligations, including partial payment of each, without exceeding available balances reserved by other active checkouts. | Draft PR #125, head `9741e99f21591ab7bd356fac005ac13849651751`, stacked on #123. | Verify exact sum of allocations equals checkout total; reject duplicate, foreign, stale or over-reserved obligation IDs; preserve FIFO fallback for internal callers; test responsive parent form. | Exact-head ERP CI run `44877160843`: backend, frontend and production Docker smoke passed; browser E2E still in progress. #125 currently includes #123 dependency diff until #123 is integrated; no merge/live payment. |
+
+## Current-baseline validation note — 2026-11-21
+- PR #119 attendance, #120 gate-pass tenant isolation, #121 HR/payroll scope and #122 Owner impersonation each passed all five exact-head ERP CI jobs. They remain draft and require functional review.
+- PR #123 online payment concurrency passed all five exact-head ERP CI jobs in run `44875663835`.
+
+
+| ADMISSION-001 | Admissions / lead conversion and family linking | Convert admitted leads into actual student accounts and enrolments transactionally/idempotently; permit cross-institution family links only through a single verified parent mobile match. | Draft PR #126, head `522f4c76e69aaed0720d22cae7b2d4739436bf85`, rebuilt from historical #115 on current integration. Five files changed: AdmissionsController, conversion migration, admission detail view, Tagore routes and admissions feature tests. | Verify admitted-only conversion, institution/class/year scope, unique lead conversion, no duplicate student/enrolment on retry, one-time credential flash, verified mobile, and rejection of unverified/ambiguous matches. | First exact-head ERP CI run `44877363759` passed all five jobs. Added an explicit duplicate verified-parent-mobile rejection test on new head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e`; fresh exact-head CI is required. Draft only; no merge, deployment or live data. |
+
+
+| DIARY-001 | Academics / Daily Diary and Olympiad | Enforce class/family-scoped diary visibility and writes; preserve parent/school field ownership; write append-only field-level audit records; deterministically resolve latest student grade for Olympiad. | Draft PR #127, head `5cb8847b7903ddb1ba18a7c5d5bcc7c9346cfb16`; six files rebuilt from historical PR #100 on current integration. | Verify Teacher current class assignment, Coordinator exact standard-link scope, Parent linked-child scope, transactional audit history, unchanged-field no-op, visible audit timeline and Olympiad grade tie-break. | Exact-head ERP CI run `44877552307`: frontend passed; backend, browser E2E and production Docker smoke in progress. No merge, deployment or live data. |
+
+| ADM-LEGACY-001 | Legacy admissions / school isolation | Prevent cross-school admission disclosure or mutation, constrain Draft/Pending filters to school and academic year, constrain section choices to school, and remove debug exception dumps. | Draft PR #128, head `1f1c2e9010e84a098adf698e1810690851b0cc7b`; `app/Http/Controllers/Admin/AdmissionController.php`. Rebuilt historical #114 directly from current integration; source branch 3 ahead / 49 behind, affected file identical to merge base. | Add deterministic multi-school feature tests for list/show/edit/update/delete and status/year filtering; verify school-scoped sections and generic 500 responses with no exception leakage. | ERP CI run `44878442906` in progress. No dedicated tests yet; explicitly not accepted until added and passed. |
+
+
+## Current-baseline reconciliation — 2026-11-21 (PRs #129–#132)
+
+- Integration branch was verified at `af308809e43e6e36b3b5cf8dc62752719379a330`; PRs #129–#132 were opened against this exact commit.
+- **ADM-LEGACY-002:** PR #128 was closed unmerged after its regression-test path needed replacement. Active replacement is PR #131, branch `work/legacy-admission-isolation-current-baseline-v2`, head `e9aa07f7435b1966285b4b60a4f4944d5fc2ec36`. Exact-head ERP CI run `44883714444` passed all five jobs. Review synthetic second-school HTTP fixture and confirm actual route behavior before acceptance. Do not use #128 as a release candidate.
+- **CBT-001:** PR #130, branch `work/cbt-engine-current-baseline`, head `c9088d8805e1af44a3bae08e47d635407db2589b`, dedicated JEE/NEET CBT engine. Exact-head ERP CI run `44883870085` passed backend, frontend, browser E2E, production Docker smoke and release acceptance gate. Review question-bank lifecycle, exam configuration, mock player, scoring/rank/percentile and analytics before marking complete.
+- **BACKUP-002:** PR #129, branch `work/backup-integrity-current-baseline`, head `761e70b84273cb1d61948d5460b7f9f660f60009`. ERP CI run `44884350353` and Windows Pilot Package run `44884350403` were still in progress at this update; backend/frontend passed, browser E2E and Docker smoke were still running. No backup/restore operational acceptance yet; disposable restore proof is required and must not touch production.
+- **OWNER-OPS-001:** PR #132, branch `work/owner-assurance-hostel-current-baseline`, head `e7f328f532c8ebc68bdcf2a0298bd41ab3695332`. ERP CI run `44884210186` was still in progress; backend/frontend/Docker smoke passed, browser E2E still running. Review Owner-only visibility, institution-wide rollups, audit evidence and hostel scope before acceptance.
+- #119–#127 exact-head ERP CI runs are recorded green in the execution board. They remain draft candidates and are not merged or production accepted.
+- No merge, deployment, live data, live payment gateway, hardware activation, or production backup/restore was performed.
+
+
+## Validation refresh — 2026-11-21 (CBT scope and Cashier)
+
+- **CBT-SEC-001:** PR #130 management scope originally filtered active role assignments by status but did not enforce effective start/end dates when collecting institution IDs. Corrected `CbtManagementController::scope` on head `13a143aadf847a0d9ae7c24c8255200d21c3cffe`; added a scope regression test. The first follow-up CI run `44884647823` correctly failed because the new assertion counted qualified and unqualified SQL predicates incorrectly. Assertion was corrected on head `a099fab90f12349c877ce8d5281395af1961b04d`; fresh ERP CI run `44884930247` is in progress. Do not accept #130 on the earlier green head until the latest head passes.
+- **CASHIER-001:** Draft PR #133, head `d2af80013d5a670c450182e19a0efa2a5b609e03`, adds CASHIER to Tagore prototype role/permission seeders and demo account seed; allows institution-scoped accounts/fee statements/offline collection only; denies payment reconciliation, fee-master editing and fee-editor access; enforces effective assignment dates in FeeController; adds role-matrix and cross-institution authorization tests. Exact-head ERP CI run `44884866775` and Windows Pilot Package run `44884866727` are in progress. No acceptance claim until both relevant workflows pass.
+- PR #129 exact-head ERP CI `44884350353` passed all five jobs and Windows Pilot Package `44884350403` passed. Disposable MySQL restore and isolated application restore remain release gates.
+- PR #132 exact-head ERP CI `44884210186` passed all five jobs. It remains foundation-only until Owner/hostel role journeys are functionally accepted.
+- PR #133 does not resolve AUD-002 Teacher/Coordinator fee visibility by class/grade, nor the cashier admissions/promotions workflow. Keep those gaps open.
+
+
+## Finance / CBT acceptance update — 2026-11-21
+
+- **CBT-002 scope correction:** PR #130 includes section assignment, per-question marks, negative marks, duration and exam scheduling, but code review confirms there is no randomisation implementation in `CbtManagementController`. Keep randomisation open in the feature register; do not mark full paper blueprint complete. Latest exact-head ERP CI run `44884930247` passed all five jobs on `a099fab90f12349c877ce8d5281395af1961b04d`.
+- **CASHIER-001:** PR #133 head `a80c67b4a07f6f8566e6c8b5f86e4c9a3cdfb41b`, ERP CI `44885119214` passed all five jobs; Windows Pilot Package `44885119208` passed. Dedicated cashier permission matrix, institution scoping and negative reconciliation/fee-master tests are green. Owner assignment UX and full operational workflow review remain pending.
+- **AUD-002:** PR #134 current head `a549c751dac076b5d41a4e8f06f774b217271c94` implements teacher class assignment and coordinator exact standard-link scope across fee statements and accounts aggregates, and removes sibling/reconciliation details from academic viewer screens. ERP CI `44885549135` and Windows Pilot Package `44885549143` are in progress. It includes #133 as its prerequisite; no merge or deployment.
+- **OWN-001:** PR #132 passed exact-head ERP CI `44884210186`; current code is an operational audit foundation, not full department task/KPI workflow acceptance.
+- **PLT-001:** PR #129 passed exact-head ERP CI `44884350353` and Windows Pilot Package `44884350403`; disposable MySQL restore and isolated staging application restore are still required.
