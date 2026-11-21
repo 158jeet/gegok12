@@ -1,7 +1,7 @@
 # Tagore ERP Continuous Feature Execution Board
 
 Baseline: `integration/erp-7day`
-Updated: 2026-11-21 (CI recheck)
+Updated: 2026-11-21 (impersonation middleware failure diagnosed)
 Policy: free tooling only; no paid coding agents, subscriptions, or external AI services.
 
 ## Operating model
@@ -49,7 +49,7 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 
 | Track | Active feature | Branch / PR | State | Evidence / blocker | Next action |
 |---|---|---|---|---|---|
-| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; new redirect correction committed, validation running | `ab64fac13e588fa9ffae17888255c78383a3ec8c` fixes stop-impersonation redirect to use restored actor; `140ef05384fcd0c591868a8de26b8025564394f2` adds Owner-to-teacher regression test; workflow files aligned to integration policy in commits `8d09415`, `8e17052`, `15c6d33`. ERP CI validation is running; legacy push-triggered runs from before alignment may still complete | Validate redirect regression and recheck tenant boundaries; then reconcile #105 with #111 and current integration without blind merge. #111 remains feature-CI green and queued for integration reconciliation |
+| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; middleware restoration fix committed, validation pending | Original CI found 1 failure / 176 passes: nckg middleware uses `onceUsingId()` and package `stopImpersonating()` only clears its target session key, leaving the request guard on the impersonated teacher. Commits `a67113f` and `adfe2d8` now preserve the original login ID and explicitly restore it on stop; all four entry points use the same helper. | Re-run latest ERP CI; confirm Owner-to-teacher stop returns to `/superadmin/dashboard` and restores original authentication; then reconcile #105 with #111 and current integration. Do not accept until current-head CI is green |
 | T2 | Admissions/family reconciliation | #94, #112–#116 | Existing drafts; overlapping | Multiple separate branches and dependencies | Build changed-file/dependency matrix; choose first non-overlapping slice |
 | T3 | Checkout concurrency | #104 then #109 | Existing drafts; dependency | #109 base is #104 branch | Validate #104 before replaying #109 |
 | T4 | Diary/Olympiad reconciliation | #95–#100 | Existing drafts; overlapping | Multiple implementation/validation PRs | Consolidate patches and choose one implementation lineage |
