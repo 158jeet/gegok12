@@ -31,6 +31,7 @@
     <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
+    <a class="tg-side-link" href="{{ route('tagore.students.promotion.index') }}"><span class="tg-side-icon">⇧</span>Student promotion</a>
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
     <a class="tg-side-link" href="{{ route('tagore.staff.leave') }}"><span class="tg-side-icon">◷</span>People & leave</a>
