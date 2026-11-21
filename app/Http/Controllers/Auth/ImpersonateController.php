@@ -33,8 +33,7 @@ class ImpersonateController extends Controller
         $user = $this->resolveImpersonationTarget($id);
 
         abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
-        Auth::user()->setImpersonating($user->id);
-        $this->auditImpersonation('started', $user);
+        $this->beginImpersonation($user);
 
         return redirect('/library/dashboard');
     }
@@ -44,8 +43,7 @@ class ImpersonateController extends Controller
         $user = $this->resolveImpersonationTarget($id);
 
         abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
-        Auth::user()->setImpersonating($user->id);
-        $this->auditImpersonation('started', $user);
+        $this->beginImpersonation($user);
 
         return redirect('/student/dashboard');
     }
@@ -59,8 +57,7 @@ class ImpersonateController extends Controller
         abort_unless($actorIsOwner || (int) Auth::user()->school_id === (int) $user->school_id, 403);
         abort_if($this->isTagoreOwner($user), 403, 'The Owner account cannot be impersonated.');
 
-        Auth::user()->setImpersonating($user->id);
-        $this->auditImpersonation('started', $user);
+        $this->beginImpersonation($user);
 
         return redirect('/admin/dashboard');
     }
