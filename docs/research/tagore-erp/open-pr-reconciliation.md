@@ -144,3 +144,15 @@ The MySQL migration smoke, frontend build, browser E2E and production Docker smo
 6. Repair PR #118 syntax blockers only as a separately authorised task, then rerun the complete backend, browser, migration and full acceptance gates.
 
 No PR is closed, merged, retargeted, or deployed by this review. Branches remain preserved pending content-level verification and Owner approval.
+
+
+## Patch-level duplicate verification
+
+A direct per-file patch comparison was completed for the strongest suspected duplicate pairs:
+
+- **#85 and #87: exact patch duplicate confirmed.** Both have the same three paths and every file patch is byte-for-byte identical, including 5/3 changes in ExaminationController, 7/7 in the examination view, and 29 additions in the role-boundary test. Keep both branches preserved for now; nominate one as canonical after checking commit ancestry/checks and confirm the duplicate adds no unique commits.
+- **#86 and #88: not exact duplicates.** AdministrationController patch is identical, but the role-access matrix test differs (15 additions vs 14); compare the one-line test difference and ancestry before choosing a canonical candidate.
+- **#67 and #71: not exact duplicates.** Same benchmark document path, but different content sizes (704 vs 899 additions); consolidate the more complete/reliable research rather than declaring either superseded by title.
+- **#66 and #69: not exact duplicates.** #69 expands the controller and fee-scope behavior, adds live-acceptance workflow change and a dedicated role/device mapping test; shared migration and several files are similar. Treat #69 as an expanded candidate, but inspect the changed migration/controller hunks and test quality before superseding #66.
+
+This patch comparison upgrades #85/#87 from “suspected duplicate” to “exact patch duplicate”; no branch was closed or changed.
