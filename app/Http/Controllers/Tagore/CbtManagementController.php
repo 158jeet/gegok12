@@ -21,7 +21,10 @@ class CbtManagementController extends Controller
         $institutions = $roles->contains('OWNER')
             ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')
-                ->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+                ->whereNotNull('institution_id')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
+                ->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         abort_unless($institutions !== [], 403);
         return [$userId, $roles, $institutions];
     }
