@@ -50,3 +50,6 @@
 ## Important interpretation
 
 This index is a deployment memory aid. It does not mean every correction should be replayed manually at deployment. The final release should contain the corrected source through normal Git integration; this index ensures we remember to verify that it does.
+
+
+- **CI-003 — HR feature branch workflow inheritance:** PR #107 branch `work/ws-hr-leave-payroll-hardening` had legacy push triggers. The three workflow definitions were synchronized to integration in commit `d729b84042748edf9a6a055b71692b5f8418fcf2`. Earlier runs on `2cdf250` / `f4d108e` were triggered before the synchronization and may complete or be cancelled; current-head ERP CI is the relevant validation. No runtime deployment or live data was involved.
