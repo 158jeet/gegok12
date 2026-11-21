@@ -116,3 +116,22 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Historical PRs #101–#118 remain source material unless explicitly rebuilt/current-baseline validated; the newer current-baseline PRs above are the active candidates.
 - CI success is necessary but not sufficient: each feature still needs code review, role/institution acceptance, and combined integration testing.
 - Current baseline for the newer #129–#132 PRs is `af308809e43e6e36b3b5cf8dc62752719379a330`; keep any subsequent PR-base drift visible and reconcile before release.
+
+
+## Execution update — 2026-11-21 (validation refresh and cashier track)
+
+- PR #129 exact-head ERP CI run `44884350353` completed successfully across backend, frontend, browser E2E, production Docker smoke and release acceptance gate. Windows Pilot Package run `44884350403` also passed. This is build/CI validation only; the isolated disposable restore rehearsal and offsite recovery proof remain mandatory.
+- PR #132 exact-head ERP CI run `44884210186` completed successfully across all five ERP CI jobs. It remains a foundation slice; Owner daily assurance and hostel workflows need role-based functional acceptance.
+- PR #130 CBT scope review found that management institution assignments were checked for active status but not effective start/end dates. Added both date predicates and a regression assertion. New exact-head ERP CI run `44884930247` is in progress on head `a099fab90f12349c877ce8d5281395af1961b04d`; earlier green run `44883870085` does not validate this fix.
+- **T3 new queue item — PR #133 Cashier:** branch `work/cashier-role-institution-fee-operations`, head `d2af80013d5a670c450182e19a0efa2a5b609e03`. Adds a dedicated least-privilege CASHIER role and synthetic demo account, institution-scoped fee account/statement and offline collection access, denies reconciliation and fee-master editing, and applies effective dates to FeeController role/institution checks. ERP CI run `44884866775` and Windows Pilot Package run `44884866727` are in progress. Backend, frontend and cross-institution negative tests must pass before acceptance.
+- PR #133 explicitly does not close the separate Teacher/Coordinator class/grade fee-visibility gap (AUD-002), nor Cashier admissions/promotions workflows. Those remain on the P0/P1 backlog.
+- Integration docs were updated on this branch after the PR #129–#132 snapshot. These are documentation-only commits; feature PRs remain drafts and no merge/deployment/live data occurred.
+
+
+## Execution update — 2026-11-21 (finance and CBT acceptance refresh)
+
+- PR #130 CBT engine: corrected current-baseline head `a099fab90f12349c877ce8d5281395af1961b04d` passed all five exact-head ERP CI jobs in run `44884930247`. The earlier assertion-only failure is fixed. CBT-002 randomisation is not implemented in this slice and remains open; paper sections, marks, timers and negative marking are present. Do not mark the entire CBT blueprint requirement complete.
+- PR #133 Cashier: exact-head head `a80c67b4a07f6f8566e6c8b5f86e4c9a3cdfb41b` passed all five ERP CI jobs in run `44885119214`; Windows Pilot Package run `44885119208` passed. Cashier role and negative authorization tests are CI-green. Functional review and Owner role-assignment UX acceptance remain pending.
+- PR #134 academic fee visibility: branch `work/teacher-coordinator-fee-class-scope`, current head `a549c751dac076b5d41a4e8f06f774b217271c94`. It includes the #133 prerequisite and adds teacher class / coordinator exact standard-link scoping for statements and account aggregates, hides sibling family balances and settlement controls, and adds positive/negative tests. Exact-head ERP CI run `44885549135` and Windows Pilot Package run `44885549143` are in progress. Do not accept until all five ERP CI jobs and browser acceptance pass.
+- PR #129 backup tooling and #132 Owner assurance foundation remain CI-green; restore rehearsal and operational Owner/hostel acceptance are still open.
+- Feature gaps CSV was refreshed: AUD-001 Cashier implementation in #133, AUD-002 class/grade scope in #134, CBT-001/003/004 in #130, CBT-002 partial because randomisation is absent, PLT-001 restore pending, OWN-001 foundation only.
