@@ -1,10 +1,14 @@
 name: ERP Full Acceptance Convergence
 
 on:
-  pull_request:
-    branches: [main, 'integration/erp-7day']
   push:
-    branches: [main, 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**']
+    branches: [main, 'integration/erp-7day']
+    # Documentation/register-only commits do not change runtime behavior.
+    # Mixed docs + code commits still run full acceptance.
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '**/*.md'
   workflow_dispatch:
 
 permissions:
