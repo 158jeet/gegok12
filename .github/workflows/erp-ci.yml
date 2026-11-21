@@ -235,7 +235,9 @@ jobs:
           $files = @(
             'deploy/windows/Server-Setup.ps1',
             'deploy/windows/Renew-TagoreCertificate.ps1',
-            'deploy/windows/Install-TagoreServerTask.ps1'
+            'deploy/windows/Install-TagoreServerTask.ps1',
+            'deploy/windows/Backup-Tagore.ps1',
+            'deploy/windows/Test-TagoreBackup.ps1'
           )
           foreach ($file in $files) {
             $tokens = $null
