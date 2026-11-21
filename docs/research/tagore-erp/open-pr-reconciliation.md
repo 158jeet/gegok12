@@ -84,3 +84,63 @@ All six workflows triggered by head `2c9c6b0234255ee10deec92ab084e2ac4df3ec36` c
 5. Only after the feature register is reconciled and the Owner approves scope should implementation remediation or integration proceed.
 
 No merge, deployment, production-data mutation, or live student/employee data is authorised by this ledger. A route, UI, migration, or narrow green test alone does not prove a feature complete. Keep draft PRs open until their work is accounted for.
+
+
+## Phase-two findings — wider open-PR inventory
+
+The repository still reports 56 open PRs. The following changed-file review covers the remaining older and parallel streams. These are provisional classifications from paths and patch size; exact semantic equivalence and runtime correctness still require full diff/test review.
+
+### Additional overlap, duplicate and dependency clusters
+
+| PR(s) | Evidence | Provisional disposition |
+|---|---|---|
+| #85 + #87 | Same three changed paths: ExaminationController, examinations view, and role-boundary test; both report the same 41 additions/10 deletions. | Strong duplicate candidate. Compare patch IDs/content and checks; retain one canonical PR only after exact equivalence is verified. |
+| #86 + #88 | Same two paths: AdministrationController and role access matrix test; nearly identical 16/1 vs 15/1 patch sizes. | Strong duplicate candidate; compare final diff and base ancestry before selecting canonical. |
+| #66 + #69 | Both change BiometricDeviceController, the same biometric-device migration, TagorePrototypeSeeder, PayrollController, dashboard, routes and modernization documentation. #69 adds a workflow and role/device mapping test. | One biometric multi-site implementation line. #69 appears to be an expanded successor; inspect ancestry and extra changes before deciding whether #66 is superseded. |
+| #65 + #68 | Both deliver the biometric/bulk-import integration document; #65 additionally changes the profile self-service test. | Documentation overlap. Merge content into one canonical reference; keep the profile test change with the profile feature owner. |
+| #67 + #71 | Both add `docs/ERP_MARKET_BENCHMARK_AND_MODERNIZATION_REGISTER.md`; different addition counts (704 vs 899) indicate related versions, not proven byte-identical copies. | Select one consolidated benchmark after content comparison; avoid maintaining two competing market registers. |
+| #72 + #78 | Both touch the feature register, roadmap, role matrix, route/authorization inventory, repository evidence audit and authentication plan; #78 also adds the programme charter/master index. | Treat as one documentation baseline lineage. Compare chronology and content; designate a single authoritative register and avoid parallel drift. |
+| #74 + #75 | Both modify `routes/admin.php` and the same legacy mutation-method test; one handles academic-year deletion, the other holiday deletion. | Complementary security fixes sharing tests/routes; integrate as a combined HTTP-method regression set, not duplicates. |
+| #49 + #59 + #70 | All change `.github/workflows/live-acceptance.yml`; #59 adds acceptance documentation and live-site E2E; #70 is a one-line workflow-scope change. | One live-acceptance workflow lineage. Keep production acceptance read-only and fail-closed; compare workflow triggers/permissions before selecting final version. |
+| #42 with #95/#99/#112/#115 and fee/diary work | #42 changes AdmissionsController, DailyDiaryController, FeeController, ParentDashboardController, parent views and family-diary acceptance test. Newer PRs split these domains into targeted family linking, conversion, class access and fee acceptance work. | Legacy broad feature candidate, not safe to merge wholesale. Use it as historical implementation evidence; compare each domain against newer scoped PRs and avoid reintroducing stale code. |
+| #90 + #93 + #69 + #107 | Shared FeeController/PayrollController/dashboard/role matrix/administration surfaces appear across fee visibility, cashier, biometric and HR work. | Cross-domain integration hotspot. Sequence role/tenant authorization first; then fee/cashier and HR/biometric behavior with shared regression tests. |
+| #52 + #86/#88 | All touch AdministrationController; #52 adds owner-managed account controls and an audit migration, while #86/#88 adjust account-status display. | Complementary but overlapping owner-console work. Preserve single Owner authority; reconcile account lifecycle, audit history and status rendering in one controller review. |
+| #64 + #65 | #64 implements profile/logout UI and controller/routes; #65 adds profile self-service test coverage while documenting biometric/import workflows. | #65 test belongs with #64 profile work; keep biometric documentation separate from profile implementation. |
+| #56 + #90 | Both modify `resources/views/tagore/operations/index.blade.php`; #56 also touches production deployment workflow, #90 adds broader operations/fee authorization behavior. | Shared operations page conflict risk. Reconcile page changes; do not merge the deployment workflow change as an incidental side effect. |
+| #31 + #33 | Both modify `e2e/tests/tagore-human-style.spec.js`; #33 adds Android emulator and desktop client workflows/scripts. | Shared E2E contract. Preserve one stable human-style suite and extend it with mobile/desktop client checks without duplicating or weakening acceptance. |
+
+### Distinct candidates that should remain visible
+
+- **#111 Gate pass institution validation:** focused security fix in Tagore SecurityController with dedicated cross-institution test.
+- **#110 Staff attendance failure handling:** controller, academic process trait and Vue form changes with failure-path test.
+- **#108 Free parallel feature CI:** adds a workflow matrix across major feature areas; validate it does not mask, cancel, or replace release-blocking full acceptance.
+- **#107 HR leave/payroll scope:** distinct HR authorization work; coordinate with shared PayrollController changes in #69.
+- **#106 CBT/JEE-NEET engine:** substantial dedicated question-bank/attempt/scoring foundation with migrations, routes, UI and tests; retain as a distinct feature stream.
+- **#105 Impersonation security:** focused authorization/CSRF hardening; retain and verify against Owner-only administration.
+- **#103 Admissions fieldwork:** dedicated campaign/form workflow with migration and tests; coordinate with CRM and admission conversion schema.
+- **#101 Backup/restore:** Windows backup scripts and restore documentation; must eventually be tested on a disposable restore target, not production data.
+- **#77 MSG91 transport:** documentation/security plan only; SMS is not a current requirement for Owner recovery because email OTP is acceptable.
+- **#61 Shared UI foundation and #38 dashboard search:** foundational UI work; verify whether already present in the current integration baseline before considering any replay.
+- **#60 product audit, #67/#71 benchmark, #72/#78 programme docs:** research/documentation lineage; consolidate into one authoritative requirements source, not multiple competing documents.
+- **#27/#22/#21 production fixes:** deployment/runtime hardening candidates; verify whether their changes are already present on main and the deployed production baseline before replay.
+- **#33 Android/desktop CI, #64 profile/logout, #69 biometric, #106 CBT, #101 backup:** important functional/operational streams but still require end-to-end acceptance evidence.
+
+### Updated CI diagnosis for PR #118
+
+The latest head `b4790d863c9d76cb0c15ff0a1c54e02bd30a51f0` has six failed workflow runs (three push and three pull-request events). Logs identify two independent syntax blockers:
+
+1. `app/Services/Tagore/OperationalAuditService.php:5`: PHP parse error, unexpected namespaced name `Carbon\\CarbonInterface`.
+2. `tests/Feature/TagoreOperationalAuditFoundationTest.php:112`: PHPUnit cannot load the test file due to an unexpected backslash token.
+
+The MySQL migration smoke, frontend build, browser E2E and production Docker smoke passed. The backend syntax gate and full ERP acceptance failed; dependent backend/acceptance steps were skipped. Do not treat these partial green checks as acceptance.
+
+## Phase-two integration order
+
+1. Establish a single authoritative requirements/market-audit document lineage (#67/#71, #72/#78, #78 programme index) and reconcile it against the current 168-row feature register.
+2. Resolve exact duplicate candidates (#85/#87 and #86/#88) through patch comparison; keep branches open until verified.
+3. Reconcile security prerequisites: owner-console identity (#52/#86/#88), role boundaries (#85/#87), impersonation (#105), gate pass (#111), legacy admission scope (#113/#114), fee visibility (#90), and legacy mutation methods (#74/#75).
+4. Integrate domain work in dependency order: admissions CRM/fieldwork/conversion/family links; payment reservation then partial allocation; diary authorization/audit; cashier/fees; HR/biometric/attendance; CBT; backup/restore; client/E2E.
+5. Reconcile shared UI and workflow hotspots (#31/#33, #49/#59/#70, #56/#90, #90/#93/#69/#107) only after the underlying feature owners agree on the canonical files.
+6. Repair PR #118 syntax blockers only as a separately authorised task, then rerun the complete backend, browser, migration and full acceptance gates.
+
+No PR is closed, merged, retargeted, or deployed by this review. Branches remain preserved pending content-level verification and Owner approval.
