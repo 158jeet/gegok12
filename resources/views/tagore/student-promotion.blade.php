@@ -5,7 +5,6 @@
                 <h1 class="mb-1">Student Promotion</h1>
                 <p class="text-muted mb-0">Promote a selected batch into the next academic year. Source-year records remain unchanged.</p>
             </div>
-            <a class="btn btn-outline-secondary" href="{{ route('tagore.academic.structure') }}">Academic Structure</a>
         </div>
 
         @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
