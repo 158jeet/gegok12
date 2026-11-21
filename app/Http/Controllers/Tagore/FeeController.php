@@ -331,7 +331,7 @@ class FeeController extends Controller
                     ->whereColumn('sa.user_id', 'student.id')
                     ->whereColumn('sa.school_id', 'student.school_id')
                     ->whereNull('sa.deleted_at')
-                    ->whereRaw('sa.id = (select max(sa_latest.id) from student_academics as sa_latest where sa_latest.user_id = student.id and sa_latest.deleted_at is null)')
+                    ->whereRaw('sa.id = (select max(sa_latest.id) from student_academics as sa_latest where sa_latest.user_id = student.id and sa_latest.school_id = student.school_id and sa_latest.deleted_at is null)')
                     ->where(function ($scope) use ($userId, $roles, $feeViewId) {
                         if ($roles->contains('TEACHER')) {
                             $scope->whereExists(function ($assignment) use ($userId) {
