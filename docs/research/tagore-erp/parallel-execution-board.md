@@ -135,3 +135,12 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #134 academic fee visibility: branch `work/teacher-coordinator-fee-class-scope`, current head `a549c751dac076b5d41a4e8f06f774b217271c94`. It includes the #133 prerequisite and adds teacher class / coordinator exact standard-link scoping for statements and account aggregates, hides sibling family balances and settlement controls, and adds positive/negative tests. Exact-head ERP CI run `44885549135` and Windows Pilot Package run `44885549143` are in progress. Do not accept until all five ERP CI jobs and browser acceptance pass.
 - PR #129 backup tooling and #132 Owner assurance foundation remain CI-green; restore rehearsal and operational Owner/hostel acceptance are still open.
 - Feature gaps CSV was refreshed: AUD-001 Cashier implementation in #133, AUD-002 class/grade scope in #134, CBT-001/003/004 in #130, CBT-002 partial because randomisation is absent, PLT-001 restore pending, OWN-001 foundation only.
+
+
+## Integration update — 2026-11-21 (post admissions/security merges)
+
+- Merged #131 legacy admission institution isolation (`1b8690ffae6dbaa0b085b9d8d6bf6a1d10ea1cd4`) and #126 admitted-lead conversion/verified family linking (`acd2718037fd6813bf5b8e4efe907ae38d7cb141`) into `integration/erp-7day`; each passed all five exact-head ERP CI jobs before merge.
+- T2 admissions: #126 and #131 are integrated. Next queued work remains CRM/family lifecycle and the remaining promotion #124; do not revive superseded #128.
+- T3 cashier #133 is next candidate for review/reconciliation, but its branch is not current-baseline mergeable; do not merge without rebasing/rebuilding and exact-head CI.
+- Integration full acceptance run `44892596729` on `1b8690ff` failed at browser E2E: institution duplicate-linkage test assumes no unlinked schools remain, and mobile Operations search count remained `2 of 2` instead of filtering to `1 of 2`. Full acceptance was re-triggered on `acd27180` as run `44893340615`; poll result before next release decision. These are release blockers, not reasons to bypass acceptance.
+- Free-only policy retained; no paid agents, subscriptions, live data or production deployment.
