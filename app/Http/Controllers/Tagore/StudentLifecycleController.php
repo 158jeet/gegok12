@@ -64,8 +64,8 @@ class StudentLifecycleController extends Controller
                 ->whereNull('deleted_at')
                 ->orderByDesc('start_date')
                 ->get(['id', 'name', 'start_date', 'end_date']);
-            if (!$sourceYearId) $sourceYearId = (int) ($years->first()->id ?? 0);
-            if (!$targetYearId) $targetYearId = (int) ($years->skip(1)->first()->id ?? 0);
+            if (!$sourceYearId) $sourceYearId = (int) ($years->skip(1)->first()->id ?? $years->first()->id ?? 0);
+            if (!$targetYearId) $targetYearId = (int) ($years->first()->id ?? 0);
 
             if ($targetYearId) {
                 $classes = DB::table('standards_link')
