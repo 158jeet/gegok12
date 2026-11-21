@@ -170,3 +170,12 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Exact-head ERP CI run `44894555904` has backend, frontend, browser E2E, production Docker smoke and acceptance checks running; Windows Pilot Package run `44894555910` is queued. No acceptance claim until all complete successfully.
 - Full integration acceptance after #138 merge is run `44894435609` on `16d90ae8a955cd52af266c6e7c4ce81ac035ff35`; still in progress at this update.
 - Historical PR #124 remains unmerged and must not be merged; PR #139 is its current-integration rebuild.
+
+
+## Student promotion merge and Daily Diary current-head rebuild — 2026-11-21
+
+- PR #139 student promotion passed exact-head ERP CI run `44894555904` (backend, frontend, browser E2E, production Docker smoke, acceptance gate) and Windows Pilot Package run `44894555910`; merged as `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`.
+- Post-#139 full integration acceptance run `44895722308` on `6489cfe71fa49a236a23e0a99c106c8dd89b06f7` is still in progress; verify before release-readiness claims.
+- Historical Daily Diary PR #127 branch `d0e785296667829ab7f85f3855e91c8488f59c3c` is 13 commits behind and 11 ahead of the latest integration; supersede it. Rebuilt the six relevant files as draft PR #140 on current head `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`, branch `work/daily-diary-audit-class-scope-current-integration-2`, head `6eb4667b160b8ed2e3425afb5931541069dbdd9e`.
+- PR #140 exact-head ERP CI run `44895851964` is running. It contains Teacher/Coordinator class-scope enforcement, Parent linked-child scope, append-only field audit trail and deterministic Olympiad grade selection. Keep draft until exact-head CI and current integration acceptance pass.
+- Next finance candidate is partial fee allocation PR #125. Its historical branch includes the superseded concurrency work from closed PR #123, so it must be rebuilt/reconciled on the latest integration; do not merge PR #125 directly.
