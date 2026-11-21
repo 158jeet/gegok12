@@ -1,7 +1,7 @@
 # Tagore ERP Continuous Feature Execution Board
 
 Baseline: `integration/erp-7day`
-Updated: 2026-11-21 (HR fixture hardened; workflow inheritance aligned)
+Updated: 2026-11-21 (HR exact-head CI green; divergence refreshed)
 Policy: free tooling only; no paid coding agents, subscriptions, or external AI services.
 
 ## Operating model
@@ -31,10 +31,11 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 ## Current constraints and dependency rules
 
 - PR #118 corrected audit service/test syntax and passed ERP CI plus full acceptance on feature SHA `01499b14ddf852c8941b835a44d0019bdceb86f3`; remains draft pending current integration-baseline reconciliation.
-- PR #110 passed ERP CI, Prototype and Full Acceptance on `5066d8a5fa202f60a68bc75b3e92c780966e53b0`; its branch is 5 commits ahead / 9 behind integration, so patch reconciliation is still required.
-- PR #111 passed ERP CI, Prototype and Full Acceptance on `3aacf9bf78718cc1ee788f5fb9391aad77cb3d8d`; its branch is 2 commits ahead / 9 behind integration, so patch reconciliation is still required.
+- PR #110 passed ERP CI on `5066d8a5fa202f60a68bc75b3e92c780966e53b0` (run `44867682497`); branch comparison is now 5 ahead / 21 behind integration, so patch reconciliation is still required.
+- PR #111 passed ERP CI on `3aacf9bf78718cc1ee788f5fb9391aad77cb3d8d` (run `44867898661`); branch comparison is now 2 ahead / 21 behind integration, so patch reconciliation is still required.
 - Integration Full Acceptance passed on `ff1bc888c792e42765ac3eed5560f9b28e84c9a8` (run `44867964104`).
-- PR #110 staff-attendance transaction propagation and PR #111 deterministic cross-institution fixture are committed but remain unaccepted until their current SHA checks pass and base compatibility is rechecked.
+- PR #107 latest head `d729b84042748edf9a6a055b71692b5f8418fcf2` passed all five ERP CI jobs in run `44871879262` (backend, frontend, browser E2E, production Docker smoke, acceptance gate). Its branch is 7 ahead / 21 behind integration; payroll/staff controller and test changes still need reconciliation and current-baseline acceptance.
+- PR #105, #110 and #111 are respectively 16/21, 5/21 and 2/21 ahead/behind integration. Their earlier green feature-head CI is not a substitute for rebasing/reconciling and testing on the current integration baseline.
 - Full Acceptance now ignores documentation-only pushes on integration/main; code + docs mixed commits still trigger the release gate.
 
 - #109 is based on #104, so implement/validate the payment-concurrency foundation before replaying and validating partial allocations.
@@ -49,11 +50,11 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 
 | Track | Active feature | Branch / PR | State | Evidence / blocker | Next action |
 |---|---|---|---|---|---|
-| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; latest ERP CI green; integration reconciliation pending | Original CI exposed that nckg middleware uses `onceUsingId()` and `stopImpersonating()` only clears its target session key. Commits `a67113f` and `adfe2d8` preserve the original login ID and explicitly restore it on stop; all four entry points use the same helper. Latest head `adfe2d8ed9e96508bf7f251b16fd013d2ea7a497` passed browser E2E, backend, frontend, Docker smoke and acceptance gate in run `44869961036`. | Reconcile #105 with #111 and current integration; retain draft status until owner security review and integration-baseline validation. No merge |
+| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; feature-head ERP CI green; reconciliation pending | Original CI exposed that nckg middleware uses `onceUsingId()` and `stopImpersonating()` only clears its target session key. Commits `a67113f` and `adfe2d8` preserve and explicitly restore the original actor. Head `adfe2d8ed9e96508bf7f251b16fd013d2ea7a497` passed all five ERP CI jobs in run `44869961036`; compare is 16 ahead / 21 behind integration. | Reconcile with #111 and current integration; retain draft status until owner security review and integration-baseline validation. No merge |
 | T2 | Admissions/family reconciliation | #94, #112–#116 | Existing drafts; overlapping | Multiple separate branches and dependencies | Build changed-file/dependency matrix; choose first non-overlapping slice |
 | T3 | Checkout concurrency | #104 then #109 | Existing drafts; dependency | #109 base is #104 branch | Validate #104 before replaying #109 |
 | T4 | Diary/Olympiad reconciliation | #95–#100 | Existing drafts; overlapping | Multiple implementation/validation PRs | Consolidate patches and choose one implementation lineage |
-| T5 | HR/attendance | #110 then #107, #66/#69 | #110 historical exact-head CI green; #107 review found non-deterministic skipped fixture | #110 SHA `5066d8a5fa202f60a68bc75b3e92c780966e53b0` passed ERP CI, Prototype and Full Acceptance (run `44867678533` for Full Acceptance). #107 `e10c7dcd3ce0703a8971363b90e84d50edc484ac` scopes manager/payroll access. Its cross-institution test was hardened with a synthetic second school/institution, teacher and academic year in commits `2cdf250` and `f4d108e`; workflow files were aligned to integration in `d729b84`. | Reconcile #110 with current integration. Validate #107 latest head after deterministic fixture + workflow sync; review payroll permission semantics and shared PayrollController. Do not accept until exact-head CI is green |
+| T5 | HR/attendance | #107, #110, #66/#69 | #107 exact-head ERP CI green; reconciliation pending | #107 head `d729b84042748edf9a6a055b71692b5f8418fcf2` passed all five ERP CI jobs in run `44871879262`. Synthetic cross-institution fixture is no longer conditionally skipped. Compare: 7 ahead / 21 behind. #110 head `5066d8a5fa202f60a68bc75b3e92c780966e53b0` passed ERP CI in run `44867682497`; compare: 5 ahead / 21 behind. #111 is 2 ahead / 21 behind. Shared payroll/staff controller changes must be reconciled serially. | Reconcile #107 on current integration first; then #110 attendance patch; coordinate shared controller/test changes and keep all drafts. Do not accept until focused suites and integration acceptance pass |
 | T6 | Backup/restore | #101 `work/automated-backup-integrity` | Existing draft; historical feature CI green, operational rehearsal pending | ERP CI, Windows pilot package, Prototype and Full Acceptance passed on `c2f7db4b7225439d87ad0750705f7c80527e23a8`; actual encrypted offsite + disposable restore still require a controlled test | Audit backup script safety and restore evidence; do not run against production or create a live backup |
 
 ## Capacity and free-only policy
