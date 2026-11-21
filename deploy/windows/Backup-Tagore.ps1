@@ -37,8 +37,10 @@ try {
   if(-not(Get-Command rclone -ErrorAction SilentlyContinue)){throw "rclone is required for off-machine backup."}
   $remoteConfig=(& rclone config show $RcloneRemote 2>$null) -join [Environment]::NewLine
   if($LASTEXITCODE -ne 0 -or $remoteConfig -notmatch '(?im)^\s*type\s*=\s*crypt\s*$'){throw "Remote '$RcloneRemote' is not a readable rclone crypt remote. Refusing plaintext upload."}
-  & rclone copyto $archivePath "$RcloneRemote/$archiveName"; if($LASTEXITCODE -ne 0){throw "Encrypted archive upload failed."}
-  & rclone copyto "$archivePath.sha256" "$RcloneRemote/$archiveName.sha256"; if($LASTEXITCODE -ne 0){throw "Offsite checksum upload failed."}
+  $remoteArchive="$($RcloneRemote):$archiveName"
+  $remoteChecksum="$($RcloneRemote):$archiveName.sha256"
+  & rclone copyto $archivePath $remoteArchive; if($LASTEXITCODE -ne 0){throw "Encrypted archive upload failed."}
+  & rclone copyto "$archivePath.sha256" $remoteChecksum; if($LASTEXITCODE -ne 0){throw "Offsite checksum upload failed."}
  }
  Get-ChildItem -LiteralPath $DestinationPath -File -Filter "tagore-backup-*.zip" | Where-Object {$_.LastWriteTimeUtc -lt [DateTime]::UtcNow.AddDays(-$LocalRetentionDays)} | ForEach-Object {Remove-Item -LiteralPath $_.FullName -Force; if(Test-Path "$($_.FullName).sha256"){Remove-Item -LiteralPath "$($_.FullName).sha256" -Force}}
  [pscustomobject]@{status="created";archive=$archivePath;sha256=$archiveHash;database_bytes=(Get-Item $dumpPath).Length;uploaded_file_count=$uploadFiles.Count;offsite_encrypted_copy=(-not $LocalOnly);offsite_remote=$(if($LocalOnly){$null}else{$RcloneRemote})} | Format-List
