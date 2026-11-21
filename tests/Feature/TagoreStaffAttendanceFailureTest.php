@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Http\\Controllers\\Admin\\StaffAttendanceController;
-use App\\Http\\Requests\\StaffAttendanceRequest;
-use App\\Models\\User;
-use Illuminate\\Support\\Facades\\Log;
+use App\Http\Controllers\Admin\StaffAttendanceController;
+use App\Http\Requests\StaffAttendanceRequest;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Mockery;
 use RuntimeException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class TagoreStaffAttendanceFailureTest extends TestCase
 {
