@@ -16,12 +16,12 @@ Auth::routes();
 
 
 //Impersonate as teacher
-Route::get('/teacher/{id}/impersonate', 'Auth\ImpersonateController@impersonate')->middleware('auth', 'schooladmin');
-Route::get('/library/{id}/impersonate', 'Auth\ImpersonateController@librarianimpersonate')->middleware('auth', 'schooladmin');
-Route::get('/student/{id}/impersonate', 'Auth\ImpersonateController@studentimpersonate')->middleware('auth', 'schooladmin');
-Route::get('/teacher/impersonate/stop', 'Auth\ImpersonateController@stopImpersonate')->middleware('auth');
+Route::post('/teacher/{id}/impersonate', 'Auth\ImpersonateController@impersonate')->middleware('auth', 'schooladmin');
+Route::post('/library/{id}/impersonate', 'Auth\ImpersonateController@librarianimpersonate')->middleware('auth', 'schooladmin');
+Route::post('/student/{id}/impersonate', 'Auth\ImpersonateController@studentimpersonate')->middleware('auth', 'schooladmin');
+Route::post('/teacher/impersonate/stop', 'Auth\ImpersonateController@stopImpersonate')->middleware('auth');
 
-Route::get('/schooladmin/{id}/impersonate', 'Auth\ImpersonateController@schoolAdminimpersonate')->middleware('auth', 'superadmin');
+Route::post('/schooladmin/{id}/impersonate', 'Auth\ImpersonateController@schoolAdminimpersonate')->middleware('auth', 'superadmin');
 
 //Reset Password for member
 // Route::get('/password/reset/{token}', 'Auth\ResetPasswordController@showResetForm');
