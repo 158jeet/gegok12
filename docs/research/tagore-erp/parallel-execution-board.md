@@ -124,3 +124,6 @@ After each feature:
 - The earlier PR #128 is superseded by clean current-baseline PR #131. PR #131 contains only the legacy admission controller correction and focused regression test, rebuilt from current integration with no behind commits.
 - PR #131 head `e9aa07f7435b1966285b4b60a4f4944d5fc2ec36`; exact-head ERP CI run `44883700217` is in progress. Do not use #128's earlier green controller-only CI or failed intermediate test run as acceptance evidence.
 - Keep #131 draft until all five ERP CI jobs pass on its exact head and the synthetic second-school HTTP fixture is confirmed in backend output.
+
+
+- CI improvement in PR #129: the release-blocking ERP CI PowerShell parser now includes both `Backup-Tagore.ps1` and `Test-TagoreBackup.ps1`; exact-head parser validation remains pending.
