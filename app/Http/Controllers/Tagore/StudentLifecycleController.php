@@ -11,6 +11,90 @@ class StudentLifecycleController extends Controller
 {
     private const STAFF_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR'];
 
+    public function index(Request $request)
+    {
+        $userId = (int) $request->user()->id;
+        $isOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->whereNull('ur.institution_id')
+            ->where('ur.status', 'active')
+            ->where('r.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->where(function ($query) {
+                $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today());
+            })
+            ->exists();
+
+        $institutionsQuery = DB::table('tagore_institutions as i')
+            ->where('i.status', 'active')
+            ->whereNull('i.deleted_at');
+        if (!$isOwner) {
+            $institutionsQuery->join('tagore_user_roles as ur', 'ur.institution_id', '=', 'i.id')
+                ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->where('ur.user_id', $userId)
+                ->where('ur.status', 'active')
+                ->where('r.status', 'active')
+                ->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])
+                ->where(function ($query) {
+                    $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today());
+                });
+        }
+        $institutions = $institutionsQuery->select('i.id', 'i.display_name', 'i.school_id')
+            ->distinct()->orderBy('i.display_name')->get();
+
+        $institutionId = (int) $request->query('institution_id', $institutions->first()->id ?? 0);
+        $institution = $institutions->firstWhere('id', $institutionId);
+        $years = collect();
+        $classes = collect();
+        $students = collect();
+        $sourceYearId = (int) $request->query('source_academic_year_id', 0);
+        $targetYearId = (int) $request->query('target_academic_year_id', 0);
+
+        if ($institution) {
+            $years = DB::table('academic_years')
+                ->where('school_id', $institution->school_id)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->orderByDesc('start_date')
+                ->get(['id', 'name', 'start_date', 'end_date']);
+            if (!$sourceYearId) $sourceYearId = (int) ($years->first()->id ?? 0);
+            if (!$targetYearId) $targetYearId = (int) ($years->skip(1)->first()->id ?? 0);
+
+            if ($targetYearId) {
+                $classes = DB::table('standards_link')
+                    ->where('school_id', $institution->school_id)
+                    ->where('academic_year_id', $targetYearId)
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->orderBy('standard_id')->orderBy('section_id')
+                    ->get(['id', 'standard_id', 'section_id']);
+            }
+            if ($sourceYearId) {
+                $students = DB::table('student_academics as sa')
+                    ->join('users as u', 'u.id', '=', 'sa.user_id')
+                    ->where('sa.school_id', $institution->school_id)
+                    ->where('sa.academic_year_id', $sourceYearId)
+                    ->whereNull('sa.deleted_at')
+                    ->where('u.usergroup_id', 6)
+                    ->orderBy('u.name')
+                    ->limit(1000)
+                    ->get(['u.id', 'u.name', 'sa.roll_number', 'sa.standardLink_id']);
+            }
+        }
+
+        return view('tagore.student-promotion', compact(
+            'institutions', 'institution', 'institutionId', 'years', 'classes', 'students',
+            'sourceYearId', 'targetYearId'
+        ));
+    }
+
     /**
      * Promote a bounded batch without rewriting the source-year academic records.
      * Existing destination records are treated as idempotent skips.
