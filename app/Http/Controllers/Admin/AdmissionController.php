@@ -248,7 +248,7 @@ class AdmissionController extends Controller
             $res['success'] = $message;
             return $res;
         }
-        catch(\\Throwable $e)
+        catch(\Throwable $e)
         {
             Log::error('Admission deletion failed.', [
                 'admission_id' => $id,
