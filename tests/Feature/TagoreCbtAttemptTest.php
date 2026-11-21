@@ -126,4 +126,16 @@ class TagoreCbtAttemptTest extends TestCase
         );
     }
 
+    public function test_candidate_access_rejects_future_dated_role_assignments(): void
+    {
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+        DB::table('tagore_user_roles')->where('user_id', $student->id)->update([
+            'start_date' => today()->addDay()->toDateString(),
+        ]);
+
+        $this->actingAs($student)
+            ->getJson(route('tagore.cbt.exams.available'))
+            ->assertForbidden();
+    }
+
 }
