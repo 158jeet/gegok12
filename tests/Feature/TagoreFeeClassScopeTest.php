@@ -128,9 +128,9 @@ class TagoreFeeClassScopeTest extends TestCase
     {
         $source = file_get_contents(base_path('app/Http/Controllers/Tagore/FeeController.php'));
 
-        $this->assertStringContainsString("$summaryQuery->whereIn('student_id', $scopedStudentIds)", $source);
-        $this->assertStringContainsString("$recentQuery->whereIn('p.student_id', $scopedStudentIds)", $source);
-        $this->assertStringContainsString("$familyQuery->whereIn('ps.student_id', $scopedStudentIds)", $source);
-        $this->assertStringContainsString("$pendingReconciliation = $scopedStudentIds === null", $source);
+        $this->assertStringContainsString('$summaryQuery->whereIn(\'student_id\', $scopedStudentIds)', $source);
+        $this->assertStringContainsString('$recentQuery->whereIn(\'p.student_id\', $scopedStudentIds)', $source);
+        $this->assertStringContainsString('$familyQuery->whereIn(\'ps.student_id\', $scopedStudentIds)', $source);
+        $this->assertStringContainsString('$pendingReconciliation = $scopedStudentIds === null', $source);
     }
 }
