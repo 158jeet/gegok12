@@ -109,7 +109,7 @@ class TagoreOperationalAuditFoundationTest extends TestCase
                 ['control_key' => 'fee_reconciliation', 'value' => ['balanced' => true], 'evidence_class' => 'A'],
             ]);
             $this->fail('A user must not self-assert system-derived evidence.');
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             $this->assertStringContainsString('reserved for system-derived', $exception->getMessage());
         }
 
