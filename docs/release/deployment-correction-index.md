@@ -143,3 +143,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Ported the promotion controller, lifecycle-event migration, view, feature tests and browser test; updated the current dashboard and routes without replacing their merged admissions/fee changes; preserved the latest seeder changes while applying the global Owner-role correction.
 - Exact-head ERP CI run `44894555904` is running and Windows Pilot Package run `44894555910` is queued. Full integration acceptance after #138 merge is run `44894435609`, still in progress. Keep PR #139 draft until exact-head CI and integration acceptance pass.
 - No live student records, production migration or deployment.
+
+
+## Student promotion and Daily Diary update — 2026-11-21
+
+- PR #139 student promotion passed exact-head ERP CI run `44894555904` and Windows Pilot Package run `44894555910`; merged into `integration/erp-7day` as `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`.
+- Full integration acceptance on the combined #139 head is run `44895722308`; still in progress at this record.
+- Historical PR #127 is superseded: its branch is 13 commits behind and 11 ahead of the latest integration. Current-baseline rebuild is draft PR #140, head `6eb4667b160b8ed2e3425afb5931541069dbdd9e`, based on `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`.
+- PR #140 exact-head ERP CI run `44895851964` is running. Its audit migration and tests must pass before merge; keep the PR draft until all gates pass.
+- Partial fee allocation PR #125 contains online payment concurrency protection from closed/superseded PR #123. Rebuild this combined finance scope on latest integration before merge; no live gateway or real payment testing.
