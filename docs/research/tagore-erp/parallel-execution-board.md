@@ -187,3 +187,9 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #141 uses synthetic obligations and mocked gateway responses only. Captured payments whose balances changed before settlement are quarantined as `review_required` for manual reconciliation, with no over-allocation or automatic receipt.
 - PR #140 exact-head ERP CI run `44895851964`: backend and frontend passed; browser E2E and production Docker smoke remain in progress at this update.
 - Post-#139 full integration acceptance run `44895722308` remains in progress. Keep PR #140 and #141 unmerged until their exact-head checks and the current integration acceptance are green.
+
+
+## Historical draft cleanup — 2026-11-21
+
+- Closed superseded historical drafts #124, #127, #125 and #134 to prevent accidental merges. Their current replacements are respectively #139 (merged), #140 (current Daily Diary rebuild), #141 (current partial fee allocation + concurrency rebuild) and #138 (merged).
+- Current validation remains open: integration acceptance run `44895722308`; Daily Diary ERP CI `44895851964`; partial fee allocation ERP CI `44896021179`. Do not merge #140/#141 until all relevant exact-head jobs and the latest integration acceptance pass.
