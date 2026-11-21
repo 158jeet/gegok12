@@ -56,7 +56,7 @@ class LegacyAdmissionSchoolIsolationTest extends TestCase
         $method = $this->methodSource('show');
 
         $this->assertStringContainsString("StandardLink::where('school_id', Auth::user()->school_id)", $method);
-        $this->assertStringContainsString('$admission->standard_id', $method);
+        $this->assertStringContainsString("where('standard_id', " . '$admission->standard_id)', $method);
     }
 
     public function test_legacy_admission_controller_has_no_debug_dump_or_exception_detail_response(): void
