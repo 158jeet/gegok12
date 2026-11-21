@@ -30,9 +30,15 @@ class CbtAttemptController extends Controller
             && $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER'])->isEmpty(), 403);
     }
 
-    private function ownedAttempt(int $attemptId, int $userId)
+    private function ownedAttempt(int $attemptId, int $userId, array $institutions)
     {
-        $attempt = DB::table('tagore_cbt_attempts')->where('id', $attemptId)->where('student_id', $userId)->first();
+        $attempt = DB::table('tagore_cbt_attempts as a')
+            ->join('tagore_cbt_exams as e', 'e.id', '=', 'a.exam_id')
+            ->where('a.id', $attemptId)
+            ->where('a.student_id', $userId)
+            ->whereIn('e.institution_id', $institutions)
+            ->select('a.*')
+            ->first();
         abort_unless($attempt, 404);
         return $attempt;
     }
@@ -95,9 +101,9 @@ class CbtAttemptController extends Controller
 
     public function player(Request $request, int $attemptId)
     {
-        [$userId, $roles] = $this->context($request);
+        [$userId, $roles, $institutions] = $this->context($request);
         $this->assertCandidate($roles);
-        $attempt = $this->ownedAttempt($attemptId, $userId);
+        $attempt = $this->ownedAttempt($attemptId, $userId, $institutions);
         abort_unless($attempt->status === 'in_progress', 409);
         // Allow the candidate player to load an expired in-progress attempt so its countdown can trigger server-side submission.
         $exam = DB::table('tagore_cbt_exams')->where('id', $attempt->exam_id)->first(['id', 'title', 'exam_track', 'duration_minutes']);
@@ -119,7 +125,7 @@ class CbtAttemptController extends Controller
 
     public function saveResponse(Request $request, int $attemptId)
     {
-        [$userId, $roles] = $this->context($request);
+        [$userId, $roles, $institutions] = $this->context($request);
         $this->assertCandidate($roles);
         $data = $request->validate([
             'exam_question_id' => ['required', 'integer'],
@@ -127,8 +133,12 @@ class CbtAttemptController extends Controller
             'marked_for_review' => ['sometimes', 'boolean'],
             'time_spent_seconds' => ['sometimes', 'integer', 'min:0', 'max:86400'],
         ]);
-        $attempt = DB::transaction(function () use ($attemptId, $userId, $data) {
-            $attempt = DB::table('tagore_cbt_attempts')->where('id', $attemptId)->where('student_id', $userId)->lockForUpdate()->first();
+        $attempt = DB::transaction(function () use ($attemptId, $userId, $data, $institutions) {
+            $attempt = DB::table('tagore_cbt_attempts as a')
+                ->join('tagore_cbt_exams as e', 'e.id', '=', 'a.exam_id')
+                ->where('a.id', $attemptId)->where('a.student_id', $userId)
+                ->whereIn('e.institution_id', $institutions)
+                ->select('a.*')->lockForUpdate()->first();
             abort_unless($attempt, 404);
             abort_unless($attempt->status === 'in_progress', 409);
             abort_if(now()->gte($attempt->expires_at), 409, 'The attempt time has expired.');
@@ -186,10 +196,14 @@ class CbtAttemptController extends Controller
 
     public function submit(Request $request, int $attemptId, CbtScoringService $scorer)
     {
-        [$userId, $roles] = $this->context($request);
+        [$userId, $roles, $institutions] = $this->context($request);
         $this->assertCandidate($roles);
-        $result = DB::transaction(function () use ($attemptId, $userId, $scorer) {
-            $attempt = DB::table('tagore_cbt_attempts')->where('id', $attemptId)->where('student_id', $userId)->lockForUpdate()->first();
+        $result = DB::transaction(function () use ($attemptId, $userId, $scorer, $institutions) {
+            $attempt = DB::table('tagore_cbt_attempts as a')
+                ->join('tagore_cbt_exams as e', 'e.id', '=', 'a.exam_id')
+                ->where('a.id', $attemptId)->where('a.student_id', $userId)
+                ->whereIn('e.institution_id', $institutions)
+                ->select('a.*')->lockForUpdate()->first();
             abort_unless($attempt, 404);
             if ($attempt->status === 'submitted') return $this->resultPayload($attempt);
             abort_unless($attempt->status === 'in_progress', 409);
@@ -215,9 +229,9 @@ class CbtAttemptController extends Controller
 
     public function result(Request $request, int $attemptId)
     {
-        [$userId, $roles] = $this->context($request);
+        [$userId, $roles, $institutions] = $this->context($request);
         $this->assertCandidate($roles);
-        $attempt = $this->ownedAttempt($attemptId, $userId);
+        $attempt = $this->ownedAttempt($attemptId, $userId, $institutions);
         abort_unless($attempt->status === 'submitted', 409);
         return response()->json(['result' => $this->resultPayload($attempt)]);
     }
