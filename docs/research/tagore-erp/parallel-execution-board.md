@@ -162,3 +162,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Teacher/Coordinator fee workspace access is read-only and limited to assigned class/grade students. Payment recording remains restricted to Owner, Principal, Accounts and Cashier; forbidden POST tests assert no ledger row is created.
 - Next: rebuild student promotion PR #124 on the current integration head. Its existing head passed CI on an older base, but its base is stale and it is not currently mergeable; do not merge the stale PR directly. Preserve its existing behavior/tests while reconciling route/controller changes added since its base.
 - Continue remaining Diary, partial fee allocation, CBT randomisation, HR/biometric, Owner KPI and backup restore acceptance tracks in parallel. Production remains blocked pending post-merge full acceptance and outstanding operational acceptance.
+
+
+## Student promotion reconciliation — 2026-11-21
+
+- Rebuilt historical PR #124 on current integration as draft PR #139, branch `work/student-promotion-lifecycle-post-fee-scope`, head `9aae313dcad8612a2dd70c632adfe0260952bdea`. Eight files changed; routes and dashboard navigation were ported surgically so merged admissions and fee-scope routes remain intact.
+- Exact-head ERP CI run `44894555904` has backend, frontend, browser E2E, production Docker smoke and acceptance checks running; Windows Pilot Package run `44894555910` is queued. No acceptance claim until all complete successfully.
+- Full integration acceptance after #138 merge is run `44894435609` on `16d90ae8a955cd52af266c6e7c4ce81ac035ff35`; still in progress at this update.
+- Historical PR #124 remains unmerged and must not be merged; PR #139 is its current-integration rebuild.
