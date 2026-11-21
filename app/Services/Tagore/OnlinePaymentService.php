@@ -9,13 +9,13 @@ use App\Services\Tagore\FeeReceiptMailer;
 
 class OnlinePaymentService
 {
-    public function createOrder(int $studentId, int $parentUserId, float $amount): array
+    public function createOrder(int $studentId, int $parentUserId, float $amount, array $requestedAllocations = []): array
     {
         $this->assertGatewayConfigured();
 
         // Reserve the fee balance and persist a local order in a short transaction.
         // Never hold fee-row locks while waiting for the external payment gateway.
-        $order = DB::transaction(function () use ($studentId, $parentUserId, $amount) {
+        $order = DB::transaction(function () use ($studentId, $parentUserId, $amount, $requestedAllocations) {
             $student = DB::table('users')->where('id', $studentId)->first(['id', 'name', 'school_id']);
             if (!$student) throw ValidationException::withMessages(['student' => 'Student not found.']);
             $institutionId = DB::table('tagore_institutions')->where('school_id', $student->school_id)->where('status', 'active')->value('id');
@@ -41,14 +41,69 @@ class OnlinePaymentService
                 ->pluck('reserved_amount', 'a.fee_obligation_id');
 
             $availableByObligation = [];
-            $availableTotal = 0.0;
             foreach ($obligations as $obligation) {
-                $available = max(0, round((float) $obligation->outstanding_amount - (float) ($reserved[$obligation->id] ?? 0), 2));
-                $availableByObligation[$obligation->id] = $available;
-                $availableTotal = round($availableTotal + $available, 2);
+                $availableByObligation[(int) $obligation->id] = max(
+                    0,
+                    round((float) $obligation->outstanding_amount - (float) ($reserved[$obligation->id] ?? 0), 2)
+                );
             }
-            if ($amount <= 0 || $amount > $availableTotal + 0.009) {
-                throw ValidationException::withMessages(['amount' => 'Payment amount exceeds the fee balance available after other active checkouts. Please refresh the fee statement and try again.']);
+            if ($amount <= 0) {
+                throw ValidationException::withMessages(['amount' => 'Payment amount must be greater than zero.']);
+            }
+
+            $allocations = [];
+            if ($requestedAllocations) {
+                $seen = [];
+                foreach ($requestedAllocations as $row) {
+                    $obligationId = (int) ($row['fee_obligation_id'] ?? 0);
+                    $allocationAmount = round((float) ($row['amount'] ?? 0), 2);
+                    if (
+                        $obligationId <= 0
+                        || isset($seen[$obligationId])
+                        || !array_key_exists($obligationId, $availableByObligation)
+                        || $allocationAmount <= 0
+                        || $allocationAmount > $availableByObligation[$obligationId] + 0.009
+                    ) {
+                        throw ValidationException::withMessages([
+                            'allocations' => 'Select valid outstanding fee amounts. Refresh the statement if another checkout is active.',
+                        ]);
+                    }
+                    $seen[$obligationId] = true;
+                    $allocations[] = [
+                        'fee_obligation_id' => $obligationId,
+                        'amount' => $allocationAmount,
+                    ];
+                }
+
+                $selectedTotal = round((float) collect($allocations)->sum('amount'), 2);
+                if (abs($selectedTotal - $amount) > 0.009) {
+                    throw ValidationException::withMessages([
+                        'amount' => 'Payment amount must equal the sum of selected fee allocations.',
+                    ]);
+                }
+            } else {
+                $availableTotal = round(array_sum($availableByObligation), 2);
+                if ($amount > $availableTotal + 0.009) {
+                    throw ValidationException::withMessages([
+                        'amount' => 'Payment amount exceeds the fee balance available after other active checkouts. Please refresh the fee statement and try again.',
+                    ]);
+                }
+
+                $remaining = $amount;
+                foreach ($obligations as $obligation) {
+                    if ($remaining <= 0.009) break;
+                    $available = $availableByObligation[(int) $obligation->id] ?? 0;
+                    $allocate = min($remaining, $available);
+                    if ($allocate <= 0) continue;
+                    $allocations[] = [
+                        'fee_obligation_id' => (int) $obligation->id,
+                        'amount' => round($allocate, 2),
+                    ];
+                    $remaining = round($remaining - $allocate, 2);
+                }
+                if ($remaining > 0.009) {
+                    throw ValidationException::withMessages(['amount' => 'Unable to allocate the requested payment.']);
+                }
             }
 
             $orderId = DB::table('tagore_payment_orders')->insertGetId([
@@ -58,18 +113,15 @@ class OnlinePaymentService
                 'status' => 'created', 'gateway' => config('tagore.payment_gateway'),
                 'expires_at' => now()->addMinutes(30), 'created_at' => now(), 'updated_at' => now(),
             ]);
-            $remaining = $amount;
-            foreach ($obligations as $obligation) {
-                if ($remaining <= 0.009) break;
-                $allocate = min($remaining, $availableByObligation[$obligation->id]);
-                if ($allocate <= 0) continue;
+            foreach ($allocations as $allocation) {
                 DB::table('tagore_payment_order_allocations')->insert([
-                    'payment_order_id' => $orderId, 'fee_obligation_id' => $obligation->id,
-                    'amount' => round($allocate, 2), 'created_at' => now(), 'updated_at' => now(),
+                    'payment_order_id' => $orderId,
+                    'fee_obligation_id' => $allocation['fee_obligation_id'],
+                    'amount' => $allocation['amount'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
-                $remaining = round($remaining - $allocate, 2);
             }
-            if ($remaining > 0.009) throw ValidationException::withMessages(['amount' => 'Unable to allocate the requested payment.']);
 
             return [
                 'order_id' => $orderId, 'amount' => $amount,
