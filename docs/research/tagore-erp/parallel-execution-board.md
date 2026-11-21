@@ -144,3 +144,12 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - T3 cashier #133 is next candidate for review/reconciliation, but its branch is not current-baseline mergeable; do not merge without rebasing/rebuilding and exact-head CI.
 - Integration full acceptance run `44892596729` on `1b8690ff` failed at browser E2E: institution duplicate-linkage test assumes no unlinked schools remain, and mobile Operations search count remained `2 of 2` instead of filtering to `1 of 2`. Full acceptance was re-triggered on `acd27180` as run `44893340615`; poll result before next release decision. These are release blockers, not reasons to bypass acceptance.
 - Free-only policy retained; no paid agents, subscriptions, live data or production deployment.
+
+
+## Cashier / academic fee visibility execution update — 2026-11-21
+
+- T3 Cashier PR #133 merged into integration as `c0193d062f830f74e6be2dc39dd7d95524baf79c`; all five exact-head ERP CI jobs and Windows Pilot Package passed. Cashier role is institution-scoped and collection-only; AUD-002 remains separate.
+- T3/T4 shared fee visibility: historical PR #134 was rebuilt on current integration as draft PR #138 (`work/teacher-coordinator-fee-class-scope-current-integration`, head `636bada97bd8aef17d29efc85cd4e85c13b80fed`). It restricts Teacher to currently assigned class students and Coordinator to exact standard-link scope, applies those scopes to account aggregates/family balances, and hides settlement details. Teacher/Coordinator remain read-only; explicit forbidden payment-post tests were added. Exact-head ERP CI run `44893659594` is in progress.
+- Security clarification: `authorizeAccounts` permits Teacher/Coordinator read-only workspace access; `authorizePaymentRecording` remains OWNER/PRINCIPAL/ACCOUNTS/CASHIER only. Do not misclassify the read-only role list as a payment permission.
+- Full integration acceptance on `c0193d06` is run `44893549433`, in progress. Earlier run `44892596729` exposed two browser failures: institution test assumes no unlinked schools remain after one link; mobile Operations search count remains `2 of 2`. Keep both as release blockers until the current run passes or fixes are merged.
+- No merge of #138, no live payment data, no deployment. Free-only tooling policy remains active.
