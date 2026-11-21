@@ -217,31 +217,40 @@ class FeeController extends Controller
     private function authorizeAccounts($roles): void
     {
         // Coordinators may view the Accounts workspace but cannot record financial transactions.
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function authorizePaymentRecording($roles): void
     {
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void
     {
         if (!$roles->contains('OWNER')) {
-            $query->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id'));
+            $query->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
+                ->pluck('institution_id'));
         }
     }
 
     private function authorizeInstitution(int $userId, int $institutionId, $roles): void
     {
         if (!$roles->contains('OWNER')) {
-            abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')->exists(), 403);
+            abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
+                ->exists(), 403);
         }
     }
 
     private function roles(int $userId)
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->where('ur.user_id', $userId)->where('ur.status', 'active')->pluck('r.code')->unique()->values();
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->pluck('r.code')->unique()->values();
     }
 
     private function authorizeStudent(int $userId, int $studentId, ?int $institutionId, $roles): void
@@ -254,7 +263,7 @@ class FeeController extends Controller
             abort_unless($studentId === $userId, 403);
             return;
         }
-        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
+        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
     }
