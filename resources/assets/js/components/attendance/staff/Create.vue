@@ -276,7 +276,11 @@
           this.success = response.data.success;
           //this.resetForm();
         }).catch(error => {
-          this.errors = error.response.data.errors;
+          const response = error.response;
+          this.errors = response && response.data && response.data.errors ? response.data.errors : {};
+          this.errorMessage = response && response.data && response.data.message
+            ? response.data.message
+            : 'Unable to save staff attendance. Please try again.';
         });
       },
 

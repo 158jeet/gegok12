@@ -160,6 +160,10 @@ class TagoreManagerDashboardTest extends TestCase
         $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
 
         $this->actingAs($teacher)->get(route('tagore.staff.leave'))->assertForbidden();
+        $this->actingAs($teacher)->post(route('tagore.staff.leave.decide', 1), [
+            'decision' => 'approved',
+            'comments' => 'Non-manager must not decide leave.',
+        ])->assertForbidden();
     }
 
     public function test_staff_can_use_self_service_center_and_submit_leave(): void

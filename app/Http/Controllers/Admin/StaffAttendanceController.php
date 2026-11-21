@@ -109,8 +109,6 @@ class StaffAttendanceController extends Controller
      */
     public function store(StaffAttendanceRequest $request)
     {
-        //
-        // dd($request->all());
         try
         {
             $school_id     = Auth::user()->school_id;
@@ -135,14 +133,19 @@ class StaffAttendanceController extends Controller
                 $message
             );
 
-            $res['success'] = $message;
-
-            return $res;
+            return ['success' => $message];
         }
-        catch(Exception $e)
+        catch(\Throwable $e)
         {
-            //Log::info($e->getMessage());
-            dd($e->getMessage());
+            Log::error('Staff attendance could not be saved.', [
+                'school_id' => Auth::user()->school_id,
+                'user_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to save staff attendance. Please check the details and try again.',
+            ], 500);
         }
     }
 
