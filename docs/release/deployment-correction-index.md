@@ -89,3 +89,6 @@ This index is a deployment memory aid. It does not mean every correction should 
 
 
 | CI-004 | Windows deployment validation | Extend the release-blocking ERP CI PowerShell parser step to include `Backup-Tagore.ps1` and `Test-TagoreBackup.ps1`, so backup/restore script syntax is checked on every exact-head ERP CI run. | Draft PR #129, branch `work/backup-integrity-current-baseline`; workflow file `.github/workflows/erp-ci.yml`. | Require the exact-head `production-docker-smoke` job to complete its PowerShell parser step successfully; additionally run the disposable restore rehearsal on a non-production environment. | Committed; current-head ERP CI is pending. |
+
+
+| PLATFORM-002 | Backup / offsite path correctness | Build rclone destinations using the required `remote:path` form after validating the configured remote is a crypt backend; guard disposable-container cleanup when Docker is unavailable. | Draft PR #129, branch `work/backup-integrity-current-baseline`; commits `0bd22bb` and `4cc4e0a`. | Exact-head ERP CI PowerShell parser must pass; verify an encrypted test upload and checksum retrieval on a non-production crypt remote before relying on offsite backup. | Corrected in code; offsite upload rehearsal remains pending. |
