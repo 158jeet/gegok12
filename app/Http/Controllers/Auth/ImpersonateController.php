@@ -71,16 +71,22 @@ class ImpersonateController extends Controller
             return redirect()->guest(route('login'));
         }
 
-        $user = Auth::user();
         Auth::user()->stopImpersonating();
 
-        if ($user->usergroup_id == 5) {
-            return redirect('/teacher/dashboard');
-        } elseif ($user->usergroup_id == 3) {
+        // stopImpersonating restores the original actor. Choose the landing page
+        // from that restored account, not from the user who was being impersonated.
+        $actor = Auth::user();
+        if (!$actor) {
+            return redirect()->guest(route('login'));
+        }
+
+        if (in_array((int) $actor->usergroup_id, [1, 2, 3], true)) {
             return redirect('/superadmin/dashboard');
-        } elseif ($user->usergroup_id == 6) {
+        } elseif ((int) $actor->usergroup_id === 5) {
+            return redirect('/teacher/dashboard');
+        } elseif ((int) $actor->usergroup_id === 6) {
             return redirect('/student/dashboard');
-        } elseif ($user->usergroup_id == 8) {
+        } elseif ((int) $actor->usergroup_id === 8) {
             return redirect('/library/dashboard');
         }
 
