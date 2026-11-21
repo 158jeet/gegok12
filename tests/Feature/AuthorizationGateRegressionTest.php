@@ -225,6 +225,43 @@ class AuthorizationGateRegressionTest extends TestCase
         $this->assertAuthenticatedAs($actor);
     }
 
+    public function test_stop_impersonation_returns_to_the_original_owner_dashboard(): void
+    {
+        $school = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($school)->create(['usergroup_id' => 5]);
+
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        if (!$ownerRoleId) {
+            $ownerRoleId = DB::table('tagore_roles')->insertGetId([
+                'name' => 'Owner',
+                'code' => 'OWNER',
+                'is_system' => true,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $actor->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($actor)
+            ->post('/teacher/'.$target->id.'/impersonate')
+            ->assertRedirect('/teacher/dashboard');
+
+        $this->post('/teacher/impersonate/stop')
+            ->assertRedirect('/superadmin/dashboard');
+
+        $this->assertAuthenticatedAs($actor);
+    }
+
     public function test_post_reply_gate_checks_the_parent_post_school(): void
     {
         $school = School::factory()->create();
