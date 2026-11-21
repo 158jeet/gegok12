@@ -19,21 +19,36 @@ class TagoreHrPayrollScopeTest extends TestCase
         $principal = User::query()->findOrFail($managerAssignment->user_id);
         $managerInstitutionIds = DB::table('tagore_user_roles')->where('user_id', $principal->id)
             ->where('role_id', $principalRoleId)->where('status', 'active')->pluck('institution_id')->map(fn ($id) => (int) $id)->all();
-        $otherInstitution = DB::table('tagore_institutions')->where('status', 'active')
-            ->whereNotIn('id', $managerInstitutionIds)->whereNull('deleted_at')->first();
+        // Build a deterministic second institution instead of skipping when
+        // the seeded database happens to contain only one institution.
+        $groupId = DB::table('tagore_groups')->where('status', 'active')->whereNull('deleted_at')->value('id');
+        $this->assertNotNull($groupId, 'The core Tagore group fixture must exist.');
 
-        if (!$otherInstitution) {
-            $this->markTestSkipped('The acceptance fixture needs a second active institution.');
-        }
+        $otherSchool = School::factory()->create();
+        $otherInstitutionId = DB::table('tagore_institutions')->insertGetId([
+            'tagore_group_id' => $groupId,
+            'school_id' => $otherSchool->id,
+            'code' => 'HR-SCOPE-' . strtoupper(bin2hex(random_bytes(4))),
+            'display_name' => 'HR Scope Test Institution',
+            'type' => 'school',
+            'status' => 'active',
+            'settings_json' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $otherInstitution = DB::table('tagore_institutions')->where('id', $otherInstitutionId)->first();
 
-        $teacher = User::query()->where('school_id', $otherInstitution->school_id)
-            ->where('usergroup_id', 5)->whereNull('deleted_at')->first();
-        $academicYearId = DB::table('academic_years')->where('school_id', $otherInstitution->school_id)
-            ->whereNull('deleted_at')->orderByDesc('id')->value('id');
-
-        if (!$teacher || !$academicYearId) {
-            $this->markTestSkipped('The second institution needs a synthetic teacher and academic year fixture.');
-        }
+        $teacher = User::factory()->for($otherSchool)->create(['usergroup_id' => 5]);
+        $academicYearId = DB::table('academic_years')->insertGetId([
+            'school_id' => $otherSchool->id,
+            'name' => 'HR Scope Test Year',
+            'description' => 'Synthetic acceptance fixture',
+            'start_date' => now()->startOfYear(),
+            'end_date' => now()->endOfYear(),
+            'status' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         DB::table('tagore_user_roles')->insert([
             'user_id' => $principal->id,
