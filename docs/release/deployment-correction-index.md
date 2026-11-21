@@ -134,3 +134,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Security invariant: Teacher and Coordinator are permitted read-only fee visibility within their assigned class/grade scope. `authorizePaymentRecording` remains limited to OWNER, PRINCIPAL, ACCOUNTS and CASHIER. Regression tests confirm Teacher/Coordinator payment POST attempts return 403 and do not create ledger rows.
 - Historical PR #134 is superseded; PR #138 is the current-baseline rebuild and is now merged. Do not reopen or merge #134.
 - Next promotion work: PR #124 has passing exact-head CI on its earlier base, but that base is stale and GitHub currently reports it non-mergeable. Rebuild/reconcile on current integration before merge; do not bypass exact-head CI or acceptance.
+
+
+## Student promotion current-baseline rebuild — 2026-11-21
+
+- Historical PR #124 is not mergeable against the current integration branch and must not be merged directly.
+- Rebuilt the feature as draft PR #139 on `work/student-promotion-lifecycle-post-fee-scope`, head `9aae313dcad8612a2dd70c632adfe0260952bdea`, based on integration `007fd52365d6407d0afa1999ccc254a63bfcbb0f`.
+- Ported the promotion controller, lifecycle-event migration, view, feature tests and browser test; updated the current dashboard and routes without replacing their merged admissions/fee changes; preserved the latest seeder changes while applying the global Owner-role correction.
+- Exact-head ERP CI run `44894555904` is running and Windows Pilot Package run `44894555910` is queued. Full integration acceptance after #138 merge is run `44894435609`, still in progress. Keep PR #139 draft until exact-head CI and integration acceptance pass.
+- No live student records, production migration or deployment.
