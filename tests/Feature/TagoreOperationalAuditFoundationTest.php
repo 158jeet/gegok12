@@ -190,4 +190,23 @@ class TagoreOperationalAuditFoundationTest extends TestCase
         }
     }
 
+    public function test_owner_can_generate_audit_for_an_institution_bound_owner_assignment(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+        $templateId = $this->activeTemplate($institutionId, $owner->id, 'OWNER');
+
+        $instanceId = app(OperationalAuditService::class)->generateInstance(
+            $templateId, $institutionId, $owner->id, 'OWNER', 'INSTITUTION', $institutionId,
+            now()->startOfDay(), now()->endOfDay(), ['title' => 'Owner institution audit']
+        );
+
+        $this->assertDatabaseHas('tagore_operational_audit_instances', [
+            'id' => $instanceId,
+            'institution_id' => $institutionId,
+            'assignee_user_id' => $owner->id,
+            'assigned_role_code' => 'OWNER',
+        ]);
+    }
+
 }
