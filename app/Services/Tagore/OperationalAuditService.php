@@ -202,7 +202,7 @@ class OperationalAuditService
             ->where(fn ($builder) => $builder->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $effectiveAt->toDateString()));
 
         if (strtoupper($roleCode) === 'OWNER') {
-            $query->whereNull('ur.institution_id');
+            $query->where(fn ($builder) => $builder->whereNull('ur.institution_id')->orWhere('ur.institution_id', $institutionId));
         } else {
             $query->where('ur.institution_id', $institutionId);
         }
@@ -220,8 +220,9 @@ class OperationalAuditService
             ->where(fn ($builder) => $builder->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $effectiveAt->toDateString()))
             ->where(fn ($builder) => $builder->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $effectiveAt->toDateString()))
             ->where(function ($builder) use ($institutionId) {
-                $builder->where(fn ($owner) => $owner->where('r.code', 'OWNER')->whereNull('ur.institution_id'))
-                    ->orWhere(fn ($manager) => $manager->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])->where('ur.institution_id', $institutionId));
+                $builder->where(function ($owner) use ($institutionId) {
+                    $owner->where('r.code', 'OWNER')->where(fn ($scope) => $scope->whereNull('ur.institution_id')->orWhere('ur.institution_id', $institutionId));
+                })->orWhere(fn ($manager) => $manager->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])->where('ur.institution_id', $institutionId));
             })
             ->exists();
     }
