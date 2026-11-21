@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -17,8 +18,6 @@ class TagoreHrPayrollScopeTest extends TestCase
         $this->assertNotNull($managerAssignment, 'Acceptance fixtures need a Principal assigned to an institution.');
 
         $principal = User::query()->findOrFail($managerAssignment->user_id);
-        $managerInstitutionIds = DB::table('tagore_user_roles')->where('user_id', $principal->id)
-            ->where('role_id', $principalRoleId)->where('status', 'active')->pluck('institution_id')->map(fn ($id) => (int) $id)->all();
         // Build a deterministic second institution instead of skipping when
         // the seeded database happens to contain only one institution.
         $groupId = DB::table('tagore_groups')->where('status', 'active')->whereNull('deleted_at')->value('id');
