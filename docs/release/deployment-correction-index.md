@@ -1,0 +1,48 @@
+# Tagore ERP — Deployment Correction & Reconciliation Index
+
+**Purpose:** A compact, Git-tracked index of defects fixed, CI/workflow changes, deployment-time actions, and unresolved verification items. This is the final-release reminder; it is not a substitute for the actual code changes, migrations, tests, or release checklist.
+
+**Canonical branch:** `integration/erp-7day`  
+**Repository:** `158jeet/gegok12`  
+**Policy:** Synthetic/test data only until ERP acceptance, verified backup/restore, and explicit owner approval. Do not deploy, migrate production, activate hardware, or load live data without approval.
+
+## How to maintain this file
+
+- Add one concise row for every material correction or CI/deployment improvement made from now on.
+- Record the commit SHA, affected branch/PR, affected files or subsystem, and verification status.
+- Never mark a correction as deployment-ready solely because it was committed; require passing relevant tests and integration acceptance.
+- Before release, reconcile every row against the final integration/release commit. Cherry-pick/reimplement only where the correction is not already included; avoid duplicate application.
+- Keep unresolved items in the final section until verified. Update this index in the same change/PR as the correction whenever practical.
+
+## Correction and release-action register
+
+| ID | Area | Correction / reminder | Recorded change | Final deployment action | Status |
+|---|---|---|---|---|---|
+| CI-001 | GitHub Actions | Reduce duplicate broad pipelines on feature work: ERP CI is PR/manual; Prototype is manual-only; Full Acceptance is integration/main push plus manual dispatch. Tests were not deleted. | Integration commits `f5cecb3f55782d8eb60ff94ab42653cef7236c6b` and `7e6c7f97a409a8feb3374bd8f8ee9c446cadb669`. | Ensure final branch contains these trigger rules; verify each required test suite still runs at the intended gate. Older feature branches may retain old workflow definitions until reconciled. | Implemented on integration; branch propagation and end-to-end trigger policy still to verify. |
+| HOST-001 | Owner / hostel operational audit | Repair malformed Carbon imports in the operational audit service. | PR #118 branch `work/owner-command-centre-hostel-audits-clean`, commit `cfea987bf74f63f3674c8138ef43f45022ef031e`; file `app/Services/Tagore/OperationalAuditService.php`. | Ensure the corrected file is included in final integration/release branch; run PHP syntax, focused feature tests, migrations and full acceptance. | Committed on feature branch; validation pending. |
+| HOST-002 | Owner / hostel operational audit tests | Repair incorrectly escaped `InvalidArgumentException` in the system-derived evidence test. | PR #118 branch `work/owner-command-centre-hostel-audits-clean`, commit `01499b14ddf852c8941b835a44d0019bdceb86f3`; file `tests/Feature/TagoreOperationalAuditFoundationTest.php`. | Ensure the corrected test is included in final integration/release branch; run the focused test and full acceptance. | Committed on feature branch; validation pending. |
+
+## Known release gates and unresolved reconciliation reminders
+
+1. **PR #118:** The two syntax corrections above are on its feature branch, not yet confirmed in `integration/erp-7day`. Do not treat the Owner command-centre/hostel work as accepted until focused tests and full integration acceptance pass.
+2. **Workflow inheritance:** A push to the older PR #118 branch triggered ERP CI, TagoreK12 Prototype, and Full Acceptance because its branch still has the previous workflow files. Reconcile workflow definitions on active feature branches or ensure the final integration branch's definitions govern the release path.
+3. **Full acceptance:** A run on `integration/erp-7day` was observed in progress during the correction work. Recheck its final result and inspect failures rather than assuming success.
+4. **PR reconciliation:** Resolve duplicate/overlapping PRs and dependencies using `docs/research/tagore-erp/open-pr-reconciliation.md` before final integration. Do not merge blindly.
+5. **Production safety:** Before any production release, confirm a tested backup and restore, environment/secrets configuration, migrations, queue/worker/scheduler health, HTTPS, access controls, audit logging, and rollback procedure.
+6. **Live data and hardware:** Keep live student/parent/employee data, payment gateway activation, biometric devices, CCTV integrations, and production messaging disabled until the relevant acceptance and explicit owner approval.
+
+## Final release reconciliation checklist
+
+- [ ] All register entries reconciled against the exact release commit; no required fix left on an unmerged feature branch.
+- [ ] All feature-register P0/P1 requirements have implementation evidence and passing acceptance tests.
+- [ ] No unresolved PHP syntax, frontend build, migration, route, permission, or dependency failures.
+- [ ] Required focused suites, ERP CI, prototype checks (when applicable), and full ERP acceptance pass on the release candidate.
+- [ ] Workflow triggers are intentional; no unnecessary duplicate broad runs.
+- [ ] PR overlap/dependency reconciliation is complete and reviewed.
+- [ ] Backup and restore tested; rollback plan documented.
+- [ ] Production environment and secrets checked without exposing credentials in Git.
+- [ ] Owner explicitly approves deployment and separately approves live-data/hardware activation.
+
+## Important interpretation
+
+This index is a deployment memory aid. It does not mean every correction should be replayed manually at deployment. The final release should contain the corrected source through normal Git integration; this index ensures we remember to verify that it does.
