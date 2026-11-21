@@ -88,3 +88,9 @@ After each feature:
 - T2 admissions: PR #126 exact-head ERP CI run `44877363759` started on head `522f4c76e69aaed0720d22cae7b2d4739436bf85`.
 - T3 finance: PR #123 exact-head CI run `44875663835` all five jobs success; PR #125 exact-head run `44877160843` backend/frontend passed while browser E2E and Docker smoke were running.
 - T4 academics: PR #124 corrected head `9cd09eda3c0c97a4debce2c6b42fdc83352f9d0a`; backend/frontend/Docker smoke passed, browser E2E remained in progress; Windows Pilot Package run `44876972367` passed.
+
+## Execution update — 2026-11-21 (latest exact-head checks)
+
+- PR #126 ambiguous verified-parent mobile regression was added on head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e`; exact-head ERP CI run `44878488189` passed all five jobs (backend, frontend, browser E2E, production Docker smoke and acceptance gate). Keep draft; no merge or live-data use.
+- PR #128 initial controller-only head `1f1c2e9010e84a098adf698e1810690851b0cc7b`, run `44878442906`, passed all five jobs. Added `LegacyAdmissionSchoolIsolationTest.php` as a source-level contract covering list school/year/status filters, per-action school predicates, school-scoped sections and absence of debug/exception leakage. Test commits: `adae0c4bbdddc2e046e7cc672d60e703d8bc2e43`, then assertion correction `e4317d22af7e105f103ce6c8729d35110f498172`. A fresh exact-head run is required. This source-contract test does not replace true multi-school runtime fixture coverage; PR #128 remains unaccepted until that is supplied.
+- No PR merged, no deployment performed, no production or live data touched.
