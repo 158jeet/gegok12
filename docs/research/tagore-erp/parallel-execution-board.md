@@ -1,7 +1,7 @@
 # Tagore ERP Continuous Feature Execution Board
 
 Baseline: `integration/erp-7day`
-Updated: 2026-11-21 (Owner impersonation CI green; HR scope review)
+Updated: 2026-11-21 (HR fixture hardened; workflow inheritance aligned)
 Policy: free tooling only; no paid coding agents, subscriptions, or external AI services.
 
 ## Operating model
@@ -53,7 +53,7 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 | T2 | Admissions/family reconciliation | #94, #112–#116 | Existing drafts; overlapping | Multiple separate branches and dependencies | Build changed-file/dependency matrix; choose first non-overlapping slice |
 | T3 | Checkout concurrency | #104 then #109 | Existing drafts; dependency | #109 base is #104 branch | Validate #104 before replaying #109 |
 | T4 | Diary/Olympiad reconciliation | #95–#100 | Existing drafts; overlapping | Multiple implementation/validation PRs | Consolidate patches and choose one implementation lineage |
-| T5 | HR/attendance | #110 then #107, #66/#69 | #110 historical exact-head CI green; #107 review found non-deterministic skipped fixture | #110 SHA `5066d8a5fa202f60a68bc75b3e92c780966e53b0` passed ERP CI, Prototype and Full Acceptance (run `44867678533` for Full Acceptance). #107 `e10c7dcd3ce0703a8971363b90e84d50edc484ac` scopes manager/payroll access but its cross-institution acceptance test skips when a second institution/teacher/year is absent; fixture needs deterministic synthetic setup. | Reconcile #110 with current integration. Harden #107 test to create deterministic second-institution fixtures rather than skip; review payroll permission semantics and shared PayrollController before accepting |
+| T5 | HR/attendance | #110 then #107, #66/#69 | #110 historical exact-head CI green; #107 review found non-deterministic skipped fixture | #110 SHA `5066d8a5fa202f60a68bc75b3e92c780966e53b0` passed ERP CI, Prototype and Full Acceptance (run `44867678533` for Full Acceptance). #107 `e10c7dcd3ce0703a8971363b90e84d50edc484ac` scopes manager/payroll access. Its cross-institution test was hardened with a synthetic second school/institution, teacher and academic year in commits `2cdf250` and `f4d108e`; workflow files were aligned to integration in `d729b84`. | Reconcile #110 with current integration. Validate #107 latest head after deterministic fixture + workflow sync; review payroll permission semantics and shared PayrollController. Do not accept until exact-head CI is green |
 | T6 | Backup/restore | #101 `work/automated-backup-integrity` | Existing draft; historical feature CI green, operational rehearsal pending | ERP CI, Windows pilot package, Prototype and Full Acceptance passed on `c2f7db4b7225439d87ad0750705f7c80527e23a8`; actual encrypted offsite + disposable restore still require a controlled test | Audit backup script safety and restore evidence; do not run against production or create a live backup |
 
 ## Capacity and free-only policy
