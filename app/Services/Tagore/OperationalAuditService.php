@@ -48,7 +48,7 @@ class OperationalAuditService
             });
 
         if ($roleCode === 'OWNER') {
-            $assignment->whereNull('ur.institution_id');
+            $assignment->where(fn ($builder) => $builder->whereNull('ur.institution_id')->orWhere('ur.institution_id', $institutionId));
         } else {
             $assignment->where('ur.institution_id', $institutionId);
         }
