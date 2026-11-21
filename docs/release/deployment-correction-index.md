@@ -160,3 +160,9 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Exact-head ERP CI run `44896021179` is queued. No live payment gateway, live transaction or production payment data used; gateway tests are mocked.
 - PR #140 Daily Diary rebuild exact-head run `44895851964` has backend/frontend passed, browser E2E and production Docker smoke still in progress at this update.
 - Full integration acceptance after student promotion merge is run `44895722308`, still in progress. Neither draft PR may merge until its exact-head CI and the post-merge integration acceptance are successful.
+
+
+## Superseded draft closure — 2026-11-21
+
+- Closed historical drafts #124, #127, #125 and #134 so stale branches cannot be merged accidentally. Active replacements: #139 (student promotion, merged), #140 (Daily Diary current-integration rebuild), #141 (partial fee allocation plus checkout concurrency current-integration rebuild), and #138 (academic fee scope, merged).
+- No production release or live-data migration. The current full integration acceptance run `44895722308` and exact-head ERP CI runs `44895851964` / `44896021179` remain release blockers until they complete successfully.
