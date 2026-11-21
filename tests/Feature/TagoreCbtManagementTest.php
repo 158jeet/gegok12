@@ -215,4 +215,14 @@ class TagoreCbtManagementTest extends TestCase
             ->assertForbidden();
     }
 
+
+    public function test_management_institution_scope_honours_role_assignment_effective_dates(): void
+    {
+        $source = file_get_contents(base_path('app/Http/Controllers/Tagore/CbtManagementController.php'));
+        $scope = substr($source, strpos($source, 'private function scope('), strpos($source, 'private function bankInScope(') - strpos($source, 'private function scope('));
+
+        $this->assertSame(2, substr_count($scope, "whereNull('start_date')"));
+        $this->assertSame(2, substr_count($scope, "whereNull('end_date')"));
+    }
+
 }
