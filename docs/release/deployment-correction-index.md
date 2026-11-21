@@ -152,3 +152,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Historical PR #127 is superseded: its branch is 13 commits behind and 11 ahead of the latest integration. Current-baseline rebuild is draft PR #140, head `6eb4667b160b8ed2e3425afb5931541069dbdd9e`, based on `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`.
 - PR #140 exact-head ERP CI run `44895851964` is running. Its audit migration and tests must pass before merge; keep the PR draft until all gates pass.
 - Partial fee allocation PR #125 contains online payment concurrency protection from closed/superseded PR #123. Rebuild this combined finance scope on latest integration before merge; no live gateway or real payment testing.
+
+
+## Partial fee allocation rebuild — 2026-11-21
+
+- Draft PR #141 (`work/parent-partial-fee-allocation-current-integration`) is the current-integration rebuild of historical PR #125 plus the superseded PR #123 checkout reservation/concurrency protections. Head `ec319cb53b50ac96b09824aaf69a51beea7be264`, base `07004728ff8dcb1f95775749eccaa1251901cd35`.
+- Exact-head ERP CI run `44896021179` is queued. No live payment gateway, live transaction or production payment data used; gateway tests are mocked.
+- PR #140 Daily Diary rebuild exact-head run `44895851964` has backend/frontend passed, browser E2E and production Docker smoke still in progress at this update.
+- Full integration acceptance after student promotion merge is run `44895722308`, still in progress. Neither draft PR may merge until its exact-head CI and the post-merge integration acceptance are successful.
