@@ -1,7 +1,7 @@
 # Tagore ERP Continuous Feature Execution Board
 
 Baseline: `integration/erp-7day`
-Updated: 2026-11-21 (impersonation middleware failure diagnosed)
+Updated: 2026-11-21 (Owner impersonation CI green; HR scope review)
 Policy: free tooling only; no paid coding agents, subscriptions, or external AI services.
 
 ## Operating model
@@ -49,11 +49,11 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 
 | Track | Active feature | Branch / PR | State | Evidence / blocker | Next action |
 |---|---|---|---|---|---|
-| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; middleware restoration fix committed, validation pending | Original CI found 1 failure / 176 passes: nckg middleware uses `onceUsingId()` and package `stopImpersonating()` only clears its target session key, leaving the request guard on the impersonated teacher. Commits `a67113f` and `adfe2d8` now preserve the original login ID and explicitly restore it on stop; all four entry points use the same helper. | Re-run latest ERP CI; confirm Owner-to-teacher stop returns to `/superadmin/dashboard` and restores original authentication; then reconcile #105 with #111 and current integration. Do not accept until current-head CI is green |
+| T1 | Owner impersonation security | #105 `work/ws-owner-security-hardening` | Active draft; latest ERP CI green; integration reconciliation pending | Original CI exposed that nckg middleware uses `onceUsingId()` and `stopImpersonating()` only clears its target session key. Commits `a67113f` and `adfe2d8` preserve the original login ID and explicitly restore it on stop; all four entry points use the same helper. Latest head `adfe2d8ed9e96508bf7f251b16fd013d2ea7a497` passed browser E2E, backend, frontend, Docker smoke and acceptance gate in run `44869961036`. | Reconcile #105 with #111 and current integration; retain draft status until owner security review and integration-baseline validation. No merge |
 | T2 | Admissions/family reconciliation | #94, #112–#116 | Existing drafts; overlapping | Multiple separate branches and dependencies | Build changed-file/dependency matrix; choose first non-overlapping slice |
 | T3 | Checkout concurrency | #104 then #109 | Existing drafts; dependency | #109 base is #104 branch | Validate #104 before replaying #109 |
 | T4 | Diary/Olympiad reconciliation | #95–#100 | Existing drafts; overlapping | Multiple implementation/validation PRs | Consolidate patches and choose one implementation lineage |
-| T5 | HR/attendance | #107, #110, #66/#69 | #110 feature-branch CI green; integration reconciliation pending | ERP CI, Prototype and Full Acceptance all passed on `5066d8a5fa202f60a68bc75b3e92c780966e53b0`; compare shows 5 commits ahead / 9 behind integration | Reconcile staff-attendance patch and verify rollback/rethrow + safe controller response on current integration. Next queue: #107 leave/payroll scope; coordinate shared PayrollController ownership |
+| T5 | HR/attendance | #110 then #107, #66/#69 | #110 historical exact-head CI green; #107 review found non-deterministic skipped fixture | #110 SHA `5066d8a5fa202f60a68bc75b3e92c780966e53b0` passed ERP CI, Prototype and Full Acceptance (run `44867678533` for Full Acceptance). #107 `e10c7dcd3ce0703a8971363b90e84d50edc484ac` scopes manager/payroll access but its cross-institution acceptance test skips when a second institution/teacher/year is absent; fixture needs deterministic synthetic setup. | Reconcile #110 with current integration. Harden #107 test to create deterministic second-institution fixtures rather than skip; review payroll permission semantics and shared PayrollController before accepting |
 | T6 | Backup/restore | #101 `work/automated-backup-integrity` | Existing draft; historical feature CI green, operational rehearsal pending | ERP CI, Windows pilot package, Prototype and Full Acceptance passed on `c2f7db4b7225439d87ad0750705f7c80527e23a8`; actual encrypted offsite + disposable restore still require a controlled test | Audit backup script safety and restore evidence; do not run against production or create a live backup |
 
 ## Capacity and free-only policy
