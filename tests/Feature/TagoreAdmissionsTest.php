@@ -102,7 +102,50 @@ class TagoreAdmissionsTest extends TestCase
             'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
         ])->assertRedirect();
 
+        $this->assertNull($lead->fresh()->converted_at, 'Admitted status alone must not pretend a student was created.');
+
+        $institution=DB::table('tagore_institutions')->where('id',$institutionId)->first();
+        $schoolId=(int)$institution->school_id;
+        $academicYearId=DB::table('academic_years')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA Conversion Year '.uniqid(),
+            'start_date'=>now()->startOfYear(),'end_date'=>now()->endOfYear(),
+            'status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $standardId=DB::table('standards')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA Conversion Class','slug'=>'qa-conversion-'.uniqid(),
+            'order'=>99,'status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $sectionId=DB::table('sections')->insertGetId([
+            'school_id'=>$schoolId,'name'=>'QA','status'=>1,'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $classId=DB::table('standards_link')->insertGetId([
+            'school_id'=>$schoolId,'academic_year_id'=>$academicYearId,'class_teacher_id'=>$owner->id,
+            'standard_id'=>$standardId,'section_id'=>$sectionId,'status'=>1,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        $class=(object)['id'=>$classId];
+        $conversionResponse = $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id]);
+        $conversionResponse->assertRedirect()->assertSessionHas('issued_student_credentials');
+        $issued = session('issued_student_credentials');
+        $this->assertNotEmpty($issued['registration_number']);
+        $this->assertNotEmpty($issued['initial_password']);
+        $studentId=(int)DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->value('student_id');
+        $this->assertGreaterThan(0,$studentId);
+        $this->assertDatabaseHas('users',['id'=>$studentId,'school_id'=>$institution->school_id,'usergroup_id'=>6,'name'=>'Conversion Student']);
+        $this->assertNotEmpty(DB::table('users')->where('id',$studentId)->value('registration_number'));
+        $storedPassword = DB::table('users')->where('id',$studentId)->value('password');
+        $this->assertNotSame($issued['initial_password'], $storedPassword);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($issued['initial_password'], $storedPassword));
+        $this->assertDatabaseHas('userprofiles',['user_id'=>$studentId,'firstname'=>'Conversion Student']);
+        $this->assertDatabaseHas('student_academics',['user_id'=>$studentId,'standardLink_id'=>$class->id]);
+        $studentRoleId=DB::table('tagore_roles')->where('code','STUDENT')->value('id');
+        $this->assertNotNull($studentRoleId);
+        $this->assertDatabaseHas('tagore_user_roles',['user_id'=>$studentId,'role_id'=>$studentRoleId,'institution_id'=>$institutionId,'status'=>'active']);
         $this->assertNotNull($lead->fresh()->converted_at);
+        $retryResponse = $this->actingAs($owner)->post(route('tagore.admissions.convert',$leadId),['standard_link_id'=>$class->id]);
+        $retryResponse->assertRedirect()->assertSessionMissing('issued_student_credentials');
+        $this->assertSame(1,DB::table('tagore_admission_conversions')->where('lead_id',$leadId)->count());
+        $this->assertSame(1,DB::table('student_academics')->where('user_id',$studentId)->count());
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
             'type'=>'call','outcome'=>'Not proceeding','status'=>'lost','lost_reason'=>'Fee concern',
@@ -124,7 +167,7 @@ class TagoreAdmissionsTest extends TestCase
             ->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
 
         $mobile = '98' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
-        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile]);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => true]);
 
         $leadId = DB::table('tagore_admission_leads')->insertGetId([
             'institution_id' => $institution->id,
@@ -201,6 +244,75 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertSame($linksBefore, DB::table('tagore_parent_students')
             ->where('student_id', $student->id)
             ->count(), 'A rejected family-link attempt must not change parent/student links.');
+    }
+
+    public function test_family_link_rejects_matching_but_unverified_parent_mobile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+        $parent = User::query()->where('usergroup_id', 7)->whereNull('deleted_at')->firstOrFail();
+        $mobile = '97' . str_pad((string) $parent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->where('id', $parent->id)->update(['mobile_no' => $mobile, 'mobile_verified' => false]);
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id, 'lead_no' => 'QA-UNVERIFIED-' . uniqid(),
+            'student_name' => 'Unverified Parent Student', 'status' => 'new',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $existingLinks = DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('student_id', $student->id)
+            ->count();
+
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id, 'parent_mobile' => $mobile, 'relationship' => 'Guardian',
+        ])->assertStatus(422);
+
+        $this->assertSame($existingLinks, DB::table('tagore_parent_students')
+            ->where('parent_user_id', $parent->id)
+            ->where('student_id', $student->id)
+            ->count(), 'An unverified mobile must not create or modify a parent-child link.');
+    }
+
+    public function test_family_link_rejects_ambiguous_verified_parent_mobile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $firstParent = User::factory()->parent()->create(['school_id' => $institution->school_id]);
+        $secondParent = User::factory()->parent()->create(['school_id' => $institution->school_id]);
+        $sharedVerifiedMobile = '96' . str_pad((string) $firstParent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->whereIn('id', [$firstParent->id, $secondParent->id])->update([
+            'mobile_no' => $sharedVerifiedMobile,
+            'mobile_verified' => true,
+        ]);
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-AMBIGUOUS-' . uniqid(),
+            'student_name' => 'Ambiguous Parent Student',
+            'status' => 'new',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id,
+            'parent_mobile' => $sharedVerifiedMobile,
+            'relationship' => 'Guardian',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('tagore_parent_students', [
+            'parent_user_id' => $firstParent->id,
+            'student_id' => $student->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_parent_students', [
+            'parent_user_id' => $secondParent->id,
+            'student_id' => $student->id,
+        ]);
     }
 
 }
