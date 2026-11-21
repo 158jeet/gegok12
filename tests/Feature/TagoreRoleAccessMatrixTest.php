@@ -240,4 +240,18 @@ class TagoreRoleAccessMatrixTest extends TestCase
             $this->actingAs($user)->get('/tagore/accounts/fees/manage')->assertStatus($status);
         }
     }
+
+    public function test_owner_console_displays_disabled_user_account_status(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
+
+        DB::table('users')->where('id', $principal->id)->update(['status' => 'inactive']);
+
+        $this->actingAs($owner)
+            ->get(route('tagore.admin'))
+            ->assertOk()
+            ->assertSee('Disabled')
+            ->assertSee('Enable');
+    }
 }
