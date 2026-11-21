@@ -118,6 +118,9 @@ class OperationalAuditService
             if ((int) $instance->assignee_user_id !== $actorUserId) {
                 throw new RuntimeException('Only the assigned user can submit this audit.');
             }
+            if (!$this->hasActiveRoleAssignment($actorUserId, (string) $instance->assigned_role_code, (int) $instance->institution_id, now())) {
+                throw new RuntimeException('The assignee no longer holds an active role assignment for this institution.');
+            }
             if (!in_array($instance->status, ['pending', 'overdue'], true)) {
                 throw new RuntimeException('This audit instance is no longer editable.');
             }
@@ -166,6 +169,9 @@ class OperationalAuditService
             if ((int) $instance->assignee_user_id === $reviewerUserId) {
                 throw new RuntimeException('An audit submitter cannot independently verify their own submission.');
             }
+            if (!$this->hasActiveReviewerAssignment($reviewerUserId, (int) $instance->institution_id, now())) {
+                throw new RuntimeException('The reviewer must hold an active Owner, Principal or Coordinator role for this institution.');
+            }
             if (!in_array($instance->status, ['submitted', 'submitted_late'], true)) {
                 throw new RuntimeException('Only submitted audits can be independently verified.');
             }
@@ -182,6 +188,42 @@ class OperationalAuditService
                 'notes' => $notes,
             ]);
         });
+    }
+
+
+    private function hasActiveRoleAssignment(int $userId, string $roleCode, int $institutionId, CarbonInterface $effectiveAt): bool
+    {
+        $query = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->where('r.code', strtoupper($roleCode))
+            ->where('ur.status', 'active')
+            ->where(fn ($builder) => $builder->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $effectiveAt->toDateString()))
+            ->where(fn ($builder) => $builder->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $effectiveAt->toDateString()));
+
+        if (strtoupper($roleCode) === 'OWNER') {
+            $query->whereNull('ur.institution_id');
+        } else {
+            $query->where('ur.institution_id', $institutionId);
+        }
+
+        return $query->exists();
+    }
+
+    private function hasActiveReviewerAssignment(int $userId, int $institutionId, CarbonInterface $effectiveAt): bool
+    {
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->where('ur.status', 'active')
+            ->whereIn('r.code', ['OWNER', 'PRINCIPAL', 'COORDINATOR'])
+            ->where(fn ($builder) => $builder->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $effectiveAt->toDateString()))
+            ->where(fn ($builder) => $builder->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $effectiveAt->toDateString()))
+            ->where(function ($builder) use ($institutionId) {
+                $builder->where(fn ($owner) => $owner->where('r.code', 'OWNER')->whereNull('ur.institution_id'))
+                    ->orWhere(fn ($manager) => $manager->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])->where('ur.institution_id', $institutionId));
+            })
+            ->exists();
     }
 
     private function appendInstanceEvent(int $instanceId, ?int $actorUserId, string $eventType, array $payload): void
