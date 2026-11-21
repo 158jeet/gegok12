@@ -69,3 +69,7 @@ This index is a deployment memory aid. It does not mean every correction should 
 ## Current-baseline validation note — 2026-11-21
 - PR #119 attendance, #120 gate-pass tenant isolation, #121 HR/payroll scope and #122 Owner impersonation each passed all five exact-head ERP CI jobs. They remain draft and require functional review.
 - PR #123 online payment concurrency passed all five exact-head ERP CI jobs in run `44875663835`.
+
+
+| ADMISSION-001 | Admissions / lead conversion and family linking | Convert admitted leads into actual student accounts and enrolments transactionally/idempotently; permit cross-institution family links only through a single verified parent mobile match. | Draft PR #126, head `522f4c76e69aaed0720d22cae7b2d4739436bf85`, rebuilt from historical #115 on current integration. Five files changed: AdmissionsController, conversion migration, admission detail view, Tagore routes and admissions feature tests. | Verify admitted-only conversion, institution/class/year scope, unique lead conversion, no duplicate student/enrolment on retry, one-time credential flash, verified mobile, and rejection of unverified/ambiguous matches. | Exact-head ERP CI run `44877363759` in progress. Draft only; no merge, deployment or live data. |
+
