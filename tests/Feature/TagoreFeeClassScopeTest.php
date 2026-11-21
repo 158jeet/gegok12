@@ -81,7 +81,9 @@ class TagoreFeeClassScopeTest extends TestCase
             ->assertForbidden();
         $this->actingAs($teacher)
             ->get(route('tagore.fees.accounts'))
-            ->assertOk();
+            ->assertOk()
+            ->assertDontSee('Online settlement reconciliation')
+            ->assertDontSee('Reconcile settlement');
     }
 
     public function test_coordinator_fee_statement_requires_exact_standard_link_scope(): void
@@ -121,7 +123,9 @@ class TagoreFeeClassScopeTest extends TestCase
             ->assertForbidden();
         $this->actingAs($coordinator)
             ->get(route('tagore.fees.accounts'))
-            ->assertOk();
+            ->assertOk()
+            ->assertDontSee('Online settlement reconciliation')
+            ->assertDontSee('Reconcile settlement');
     }
 
     public function test_accounts_workspace_applies_class_scoped_student_ids_to_all_financial_aggregates(): void
