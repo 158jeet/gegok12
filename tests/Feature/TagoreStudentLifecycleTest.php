@@ -419,4 +419,16 @@ class TagoreStudentLifecycleTest extends TestCase
             'event_type' => 'promotion',
         ]);
     }
+    public function test_owner_can_open_student_promotion_workspace(): void
+    {
+        [$owner] = $this->promotionFixture();
+
+        $this->actingAs($owner)
+            ->get(route('tagore.students.promotion.index'))
+            ->assertOk()
+            ->assertSee('Student Promotion')
+            ->assertSee('Process Promotion Batch');
+    }
+
+
 }
