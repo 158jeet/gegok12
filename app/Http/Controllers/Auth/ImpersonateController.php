@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
 
 class ImpersonateController extends Controller
 {
@@ -22,8 +23,7 @@ class ImpersonateController extends Controller
         $user = $this->resolveImpersonationTarget($id);
 
         abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
-        Auth::user()->setImpersonating($user->id);
-        $this->auditImpersonation('started', $user);
+        $this->beginImpersonation($user);
 
         return redirect('/teacher/dashboard');
     }
@@ -71,10 +71,20 @@ class ImpersonateController extends Controller
             return redirect()->guest(route('login'));
         }
 
+        // The package middleware uses onceUsingId() to impersonate for this
+        // request only. stopImpersonating() clears its target flag but does not
+        // restore the original guard user, so explicitly restore the persisted
+        // login identity before choosing the destination.
+        $originalActorId = Session::pull('impersonate_original_user_id')
+            ?: Session::get(Auth::getName());
+
         Auth::user()->stopImpersonating();
 
-        // stopImpersonating restores the original actor. Choose the landing page
-        // from that restored account, not from the user who was being impersonated.
+        if (!$originalActorId || !Auth::loginUsingId($originalActorId)) {
+            Auth::logout();
+            return redirect()->guest(route('login'));
+        }
+
         $actor = Auth::user();
         if (!$actor) {
             return redirect()->guest(route('login'));
@@ -91,6 +101,21 @@ class ImpersonateController extends Controller
         }
 
         return redirect()->route('tagore.dashboard');
+    }
+
+    private function beginImpersonation(User $target): void
+    {
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+
+        // Preserve the original login only once, including when a legacy
+        // impersonation session is already active.
+        if (!$actor->isImpersonating() && !Session::has('impersonate_original_user_id')) {
+            Session::put('impersonate_original_user_id', Session::get(Auth::getName()) ?: $actor->getKey());
+        }
+
+        $actor->setImpersonating($target->id);
+        $this->auditImpersonation('started', $target);
     }
 
     /**
