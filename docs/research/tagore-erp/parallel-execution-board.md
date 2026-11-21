@@ -96,3 +96,15 @@ After each feature:
 - #126 first exact-head run `44877363759`: all five jobs success. Added explicit duplicate verified-parent-mobile regression on new head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e`; fresh exact-head run has not appeared yet and is required before acceptance.
 - #127 exact-head run `44877552307`: all five jobs success.
 - #128 current head `1f1c2e9010e84a098adf698e1810690851b0cc7b`, ERP CI run `44878442906` in progress. Dedicated functional regression tests remain a release-blocking gap.
+
+
+## Execution update — 2026-11-21 (current repository verification)
+
+- T1 security: PRs #119 attendance, #120 gate-pass institution isolation, #121 HR/payroll scope and #122 Owner impersonation each have all five exact-head ERP CI jobs successful. They remain drafts and require integration-level functional review.
+- T2 admissions: PR #126 latest head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e` has all five exact-head ERP CI jobs successful. PR #128's newest test head has been corrected after the earlier backend failure; the latest head is `6c8db9b4d5c1faaf54cc656dc09e45d92550422e`, but no exact-head checks are currently published. Do not treat #128 as accepted until its test suite runs on that exact SHA and the synthetic second-school HTTP fixture passes.
+- T3 finance: PR #123 concurrency and PR #125 partial allocation each have all five exact-head ERP CI jobs successful. #125 remains dependent on #123 and must be reviewed together for checkout reservation/partial allocation behavior.
+- T4 academics: PR #124 promotion and PR #127 Diary/Olympiad each have all five exact-head ERP CI jobs successful. #124 also has a successful Windows pilot package. Browser/role workflows still require integration review.
+- T5 HR/campus: #119 and #121 exact-head CI is green; functional leave/payroll/attendance workflows and current-base reconciliation remain required.
+- T6 platform: new current-baseline PR #129 rebuilds encrypted backup and disposable MySQL restore verification directly from `integration/erp-7day`; head `e9f8496a355ff6e43fe76526e9c01b3f50b4d79f`. It replaces stale PR #101 as the current integration candidate. Exact-head CI, PowerShell validation and a synthetic disposable restore rehearsal remain pending.
+- The connector-created commits for #128 and #129 currently have no associated GitHub Actions check runs. Do not infer success from earlier SHAs. Obtain exact-head workflow execution before accepting either.
+- No PR was merged. No deployment, production backup, live data, payment gateway, messaging or hardware activation was performed.
