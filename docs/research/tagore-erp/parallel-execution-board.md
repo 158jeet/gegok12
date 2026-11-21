@@ -105,7 +105,7 @@ After each feature:
 - T3 finance: PR #123 concurrency and PR #125 partial allocation each have all five exact-head ERP CI jobs successful. #125 remains dependent on #123 and must be reviewed together for checkout reservation/partial allocation behavior.
 - T4 academics: PR #124 promotion and PR #127 Diary/Olympiad each have all five exact-head ERP CI jobs successful. #124 also has a successful Windows pilot package. Browser/role workflows still require integration review.
 - T5 HR/campus: #119 and #121 exact-head CI is green; functional leave/payroll/attendance workflows and current-base reconciliation remain required.
-- T6 platform: new current-baseline PR #129 rebuilds encrypted backup and disposable MySQL restore verification directly from `integration/erp-7day`; head `08d2144209334abf41b6bf816ef3ea75be58dd09`. It replaces stale PR #101 as the current integration candidate. Exact-head CI, PowerShell validation and a synthetic disposable restore rehearsal remain pending.
+- T6 platform: new current-baseline PR #129 rebuilds encrypted backup and disposable MySQL restore verification directly from `integration/erp-7day`; latest PR #129 branch head (see PR metadata). It replaces stale PR #101 as the current integration candidate. Exact-head CI, PowerShell validation and a synthetic disposable restore rehearsal remain pending.
 - The connector-created commits for #128 and #129 currently have no associated GitHub Actions check runs. Do not infer success from earlier SHAs. Obtain exact-head workflow execution before accepting either.
 - No PR was merged. No deployment, production backup, live data, payment gateway, messaging or hardware activation was performed.
 
