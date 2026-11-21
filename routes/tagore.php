@@ -35,6 +35,7 @@ Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::clas
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
+    Route::get('/admin/student-promotion', [StudentLifecycleController::class, 'index'])->name('tagore.students.promotion.index');
     Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
