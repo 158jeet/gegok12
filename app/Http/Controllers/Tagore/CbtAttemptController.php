@@ -15,10 +15,15 @@ class CbtAttemptController extends Controller
     {
         $userId = (int) $request->user()->id;
         $roles = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
-            ->where('ur.user_id', $userId)->where('ur.status', 'active')->pluck('r.code')->unique()->values();
+            ->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->pluck('r.code')->unique()->values();
         $institutionIds = $roles->contains('OWNER')
             ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
                 ->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         abort_unless($institutionIds !== [], 403);
         return [$userId, $roles, $institutionIds];
