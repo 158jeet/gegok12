@@ -241,6 +241,16 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('allocations', $exception->errors());
         }
+
+        try {
+            $service->createOrder((int) $this->student->id, (int) $this->parent->id, 55.00, [
+                ['fee_obligation_id' => $this->obligationId, 'amount' => 20.00],
+                ['fee_obligation_id' => $secondObligation, 'amount' => 20.00],
+            ]);
+            $this->fail('The checkout total must equal the selected allocation total.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('amount', $exception->errors());
+        }
     }
 
 }
