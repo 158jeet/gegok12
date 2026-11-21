@@ -65,4 +65,74 @@ class LegacyAdmissionSchoolIsolationTest extends TestCase
         $this->assertStringNotContainsString('$e->getMessage()', $source);
         $this->assertStringNotContainsString('exception' . " => " . '$e->getMessage()', $source);
     }
+
+    public function test_foreign_school_admission_is_not_listed_viewed_edited_updated_or_deleted(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $suffix = bin2hex(random_bytes(5));
+        $foreignSchoolId = DB::table('schools')->insertGetId([
+            'name' => 'Legacy Admission QA School ' . $suffix,
+            'email' => 'legacy-admission-' . $suffix . '@tagore-demo.local',
+            'phone' => '9000000000',
+            'status' => 1,
+            'slug' => 'legacy-admission-' . $suffix,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $foreignYearId = DB::table('academic_years')->insertGetId([
+            'school_id' => $foreignSchoolId,
+            'name' => '2026-2027',
+            'start_date' => '2026-06-01 00:00:00',
+            'end_date' => '2027-04-30 23:59:59',
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $foreignName = 'FOREIGN-ADMISSION-' . $suffix;
+        $admissionId = DB::table('admissions')->insertGetId([
+            'school_id' => $foreignSchoolId,
+            'academic_year_id' => $foreignYearId,
+            'name' => $foreignName,
+            'date_of_birth' => '2012-01-01',
+            'gender' => 'male',
+            'height' => '140',
+            'weight' => '35',
+            'reason_for_leaving' => 'Synthetic security regression',
+            'permanent_address' => 'Synthetic address',
+            'address_for_communication' => 'Synthetic address',
+            'half_yearly_mark_details' => 'Synthetic marks',
+            'father_name' => 'Synthetic Father',
+            'father_occupation' => 'Synthetic occupation',
+            'father_mobile_no' => '9000000001',
+            'mother_name' => 'Synthetic Mother',
+            'emergency_contact_1' => '9000000002',
+            'relation_with_student_1' => 'Father',
+            'emergency_contact_2' => '9000000003',
+            'relation_with_student_2' => 'Mother',
+            'application_no' => 'QA-' . $suffix,
+            'application_status' => 'Pending',
+            'payment_status' => 'unpaid',
+            'remarks' => 'Synthetic fixture only',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->get('/admin/admissionlist')
+            ->assertOk()
+            ->assertDontSee($foreignName);
+
+        $this->get('/admin/admission/show/' . $admissionId)->assertNotFound();
+        $this->get('/admin/admission/edit/' . $admissionId)->assertNotFound();
+        $this->post('/admin/admission/update/' . $admissionId, ['section_id' => 1])->assertNotFound();
+        $this->delete('/admin/admission/delete/' . $admissionId)->assertNotFound();
+
+        $this->assertDatabaseHas('admissions', [
+            'id' => $admissionId,
+            'school_id' => $foreignSchoolId,
+            'name' => $foreignName,
+            'application_status' => 'Pending',
+        ]);
+    }
+
 }
