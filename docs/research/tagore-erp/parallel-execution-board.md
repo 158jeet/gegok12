@@ -98,35 +98,40 @@ After each feature:
 - #128 current head `1f1c2e9010e84a098adf698e1810690851b0cc7b`, ERP CI run `44878442906` in progress. Dedicated functional regression tests remain a release-blocking gap.
 
 
-## Execution update — 2026-11-21 (current repository verification)
+## Execution update — 2026-11-21 (latest repository reconciliation)
 
-- T1 security: PRs #119 attendance, #120 gate-pass institution isolation, #121 HR/payroll scope and #122 Owner impersonation each have all five exact-head ERP CI jobs successful. They remain drafts and require integration-level functional review.
-- T2 admissions: PR #126 latest head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e` has all five exact-head ERP CI jobs successful. PR #128's newest test head has been corrected after the earlier backend failure; the latest head is `6c8db9b4d5c1faaf54cc656dc09e45d92550422e`, but no exact-head checks are currently published. Do not treat #128 as accepted until its test suite runs on that exact SHA and the synthetic second-school HTTP fixture passes.
-- T3 finance: PR #123 concurrency and PR #125 partial allocation each have all five exact-head ERP CI jobs successful. #125 remains dependent on #123 and must be reviewed together for checkout reservation/partial allocation behavior.
-- T4 academics: PR #124 promotion and PR #127 Diary/Olympiad each have all five exact-head ERP CI jobs successful. #124 also has a successful Windows pilot package. Browser/role workflows still require integration review.
-- T5 HR/campus: #119 and #121 exact-head CI is green; functional leave/payroll/attendance workflows and current-base reconciliation remain required.
-- T6 platform: new current-baseline PR #129 rebuilds encrypted backup and disposable MySQL restore verification directly from `integration/erp-7day`; latest PR #129 branch head (see PR metadata). It replaces stale PR #101 as the current integration candidate. Exact-head CI, PowerShell validation and a synthetic disposable restore rehearsal remain pending.
-- The connector-created commits for #128 and #129 currently have no associated GitHub Actions check runs. Do not infer success from earlier SHAs. Obtain exact-head workflow execution before accepting either.
-- No PR was merged. No deployment, production backup, live data, payment gateway, messaging or hardware activation was performed.
+Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8dc62752719379a330`. PRs #129–#132 were opened against this exact baseline. No feature PR has been merged; no production/live data touched.
 
+| Track | Current work | Exact-head evidence | State / next action |
+|---|---|---|---|
+| T1 Owner, identity & security | #120 gate-pass institution isolation; #122 Owner impersonation | #120 run `44873348882` success; #122 run `44873655899` success (all five ERP CI jobs) | Keep drafts; complete role/tenant workflow review and current-integration acceptance. |
+| T2 Admissions & family | #126 admitted-lead conversion + verified family linking; #131 legacy admission isolation | #126 run `44878488189` success; #131 run `44883714444` success (all five ERP CI jobs). #128 was closed unmerged and superseded by #131. | Review duplicate/ambiguous family behavior and the synthetic second-school admission test; then queue remaining CRM/family lifecycle gaps. |
+| T3 Fees & finance | #123 checkout concurrency; #125 parent-selected partial fee allocations | #123 run `44875663835` success; #125 run `44877160843` success (all five ERP CI jobs) | #125 depends on #123. Review allocation ledger/idempotency and reconcile both as one finance slice; no live gateway. |
+| T4 Academics & coaching | #124 student promotion; #127 Daily Diary/audit/Olympiad; #130 JEE/NEET CBT engine | #124 run `44876972392` success + Windows Pilot Package `44876972367` success; #127 run `44877552307` success; #130 run `44883870085` success (all five ERP CI jobs) | Review role-based journeys and CBT exam lifecycle (question bank, mock, scoring, analytics); then queue next assessment feature. |
+| T5 HR, attendance & campus | #119 attendance safe failure handling; #121 HR/payroll institution scope | #119 run `44872902241` success; #121 run `44873432095` success (all five ERP CI jobs) | Review attendance and manager/Owner payroll boundaries; then queue leave/substitution and staff profile gaps. |
+| T6 Platform, data & delivery | #129 encrypted backup/restore; #132 Owner assurance/hostel foundation | #129 ERP CI run `44884350353` and Windows Pilot run `44884350403` in progress; #132 ERP CI run `44884210186` in progress. #129 backend/frontend passed so far; browser E2E and Docker smoke still running. #132 frontend/backend/Docker passed so far; browser E2E still running. | Poll exact-head runs; inspect backup/restore safety and Owner assurance evidence. No production restore, backup, deployment or live data. |
 
-## Execution update — 2026-11-21 (next current-baseline slices)
-
-- T4 CBT: PR #130 `work/cbt-engine-current-baseline`, head `96b023df9ad383b3818251cacdbbc4b76ce4ef5f`, is a 12-commit, zero-behind rebuild of the historical JEE/NEET CBT engine. It adds nine previously absent feature/test files and applies a focused 20-route registration patch to the current route file. Candidate attempt reads/writes now join the exam and enforce the student's active institution assignments. Exact-head CI and MySQL migration smoke are pending; historical PR #106 green runs are not current-head evidence.
-- T6 backup: PR #129 current head is `d4ecb317a32f0250032096eb0d65d537883acca6`; includes the backup scripts, restore verifier, runbook, execution-board update and correction-index entry. Exact-head CI and controlled disposable restore remain pending.
-- T2 legacy admissions: PR #128 latest head `6c8db9b4d5c1faaf54cc656dc09e45d92550422e`; corrected the previously failing literal-variable assertion. No checks exist on this exact head.
-- Tool limitation affecting validation: connector-authored branch commits have not produced Actions check runs for #128, #129 or #130 (check-run count is zero on each latest head). Do not infer a pass. The latest exact-head test evidence remains the earlier green PRs #119–#127; these new heads require an Actions run before acceptance.
-- No merge or production action has been taken.
-
-
-## Admissions rebuild note — 2026-11-21
-
-- The earlier PR #128 is superseded by clean current-baseline PR #131. PR #131 contains only the legacy admission controller correction and focused regression test, rebuilt from current integration with no behind commits.
-- PR #131 head `e9aa07f7435b1966285b4b60a4f4944d5fc2ec36`; exact-head ERP CI run `44883700217` is in progress. Do not use #128's earlier green controller-only CI or failed intermediate test run as acceptance evidence.
-- Keep #131 draft until all five ERP CI jobs pass on its exact head and the synthetic second-school HTTP fixture is confirmed in backend output.
+### Superseded / stale queue notes
+- PR #128 was closed unmerged; PR #131 is the active replacement. Do not validate or merge #128.
+- Historical PRs #101–#118 remain source material unless explicitly rebuilt/current-baseline validated; the newer current-baseline PRs above are the active candidates.
+- CI success is necessary but not sufficient: each feature still needs code review, role/institution acceptance, and combined integration testing.
+- Current baseline for the newer #129–#132 PRs is `af308809e43e6e36b3b5cf8dc62752719379a330`; keep any subsequent PR-base drift visible and reconcile before release.
 
 
-- CI improvement in PR #129: the release-blocking ERP CI PowerShell parser now includes both `Backup-Tagore.ps1` and `Test-TagoreBackup.ps1`; exact-head parser validation remains pending.
+## Execution update — 2026-11-21 (validation refresh and cashier track)
+
+- PR #129 exact-head ERP CI run `44884350353` completed successfully across backend, frontend, browser E2E, production Docker smoke and release acceptance gate. Windows Pilot Package run `44884350403` also passed. This is build/CI validation only; the isolated disposable restore rehearsal and offsite recovery proof remain mandatory.
+- PR #132 exact-head ERP CI run `44884210186` completed successfully across all five ERP CI jobs. It remains a foundation slice; Owner daily assurance and hostel workflows need role-based functional acceptance.
+- PR #130 CBT scope review found that management institution assignments were checked for active status but not effective start/end dates. Added both date predicates and a regression assertion. New exact-head ERP CI run `44884930247` is in progress on head `a099fab90f12349c877ce8d5281395af1961b04d`; earlier green run `44883870085` does not validate this fix.
+- **T3 new queue item — PR #133 Cashier:** branch `work/cashier-role-institution-fee-operations`, head `d2af80013d5a670c450182e19a0efa2a5b609e03`. Adds a dedicated least-privilege CASHIER role and synthetic demo account, institution-scoped fee account/statement and offline collection access, denies reconciliation and fee-master editing, and applies effective dates to FeeController role/institution checks. ERP CI run `44884866775` and Windows Pilot Package run `44884866727` are in progress. Backend, frontend and cross-institution negative tests must pass before acceptance.
+- PR #133 explicitly does not close the separate Teacher/Coordinator class/grade fee-visibility gap (AUD-002), nor Cashier admissions/promotions workflows. Those remain on the P0/P1 backlog.
+- Integration docs were updated on this branch after the PR #129–#132 snapshot. These are documentation-only commits; feature PRs remain drafts and no merge/deployment/live data occurred.
 
 
-- Backup review correction in PR #129: rclone upload targets now use the required `remote:path` syntax (the prior form could be interpreted as a local path); disposable restore cleanup no longer assumes Docker is installed when restore mode is not requested. Exact-head parser/CI and non-production encrypted upload rehearsal remain required.
+## Execution update — 2026-11-21 (finance and CBT acceptance refresh)
+
+- PR #130 CBT engine: corrected current-baseline head `a099fab90f12349c877ce8d5281395af1961b04d` passed all five exact-head ERP CI jobs in run `44884930247`. The earlier assertion-only failure is fixed. CBT-002 randomisation is not implemented in this slice and remains open; paper sections, marks, timers and negative marking are present. Do not mark the entire CBT blueprint requirement complete.
+- PR #133 Cashier: exact-head head `a80c67b4a07f6f8566e6c8b5f86e4c9a3cdfb41b` passed all five ERP CI jobs in run `44885119214`; Windows Pilot Package run `44885119208` passed. Cashier role and negative authorization tests are CI-green. Functional review and Owner role-assignment UX acceptance remain pending.
+- PR #134 academic fee visibility: branch `work/teacher-coordinator-fee-class-scope`, current head `a549c751dac076b5d41a4e8f06f774b217271c94`. It includes the #133 prerequisite and adds teacher class / coordinator exact standard-link scoping for statements and account aggregates, hides sibling family balances and settlement controls, and adds positive/negative tests. Exact-head ERP CI run `44885549135` and Windows Pilot Package run `44885549143` are in progress. Do not accept until all five ERP CI jobs and browser acceptance pass.
+- PR #129 backup tooling and #132 Owner assurance foundation remain CI-green; restore rehearsal and operational Owner/hostel acceptance are still open.
+- Feature gaps CSV was refreshed: AUD-001 Cashier implementation in #133, AUD-002 class/grade scope in #134, CBT-001/003/004 in #130, CBT-002 partial because randomisation is absent, PLT-001 restore pending, OWN-001 foundation only.
