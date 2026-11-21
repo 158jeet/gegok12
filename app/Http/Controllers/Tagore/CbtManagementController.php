@@ -13,7 +13,10 @@ class CbtManagementController extends Controller
     {
         $userId = (int) $request->user()->id;
         $roles = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
-            ->where('ur.user_id', $userId)->where('ur.status', 'active')->pluck('r.code')->unique();
+            ->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->pluck('r.code')->unique();
         abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER'])->isNotEmpty(), 403);
         $institutions = $roles->contains('OWNER')
             ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
