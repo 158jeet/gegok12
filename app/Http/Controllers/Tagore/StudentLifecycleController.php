@@ -29,6 +29,22 @@ class StudentLifecycleController extends Controller
             })
             ->exists();
 
+        $hasInstitutionManagerRole = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)
+            ->whereNotNull('ur.institution_id')
+            ->where('ur.status', 'active')
+            ->where('r.status', 'active')
+            ->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])
+            ->where(function ($query) {
+                $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today());
+            })
+            ->exists();
+        abort_unless($isOwner || $hasInstitutionManagerRole, 403);
+
         $institutionsQuery = DB::table('tagore_institutions as i')
             ->where('i.status', 'active')
             ->whereNull('i.deleted_at');
