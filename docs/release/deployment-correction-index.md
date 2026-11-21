@@ -124,3 +124,13 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Security review clarification: `TEACHER` is included in `authorizeAccounts` for read-only accounts workspace visibility, but is not included in `authorizePaymentRecording`. Payment recording remains restricted to OWNER, PRINCIPAL, ACCOUNTS and CASHIER. PR #138 adds explicit negative tests proving Teacher and Coordinator cannot record offline payments or create payment rows. Do not treat the earlier preliminary warning as a confirmed vulnerability.
 - PR #138 exact-head ERP CI run `44893659594` is in progress. Current integration Full Acceptance on `c0193d06` is run `44893549433`, also in progress. Do not merge #138 until exact-head CI and integration Full Acceptance are green.
 - The earlier integration Full Acceptance run `44892596729` failed browser acceptance on the institution test's assumption that all unlinked schools were exhausted and the mobile Operations search count remaining `2 of 2`; both remain release blockers until the newer run confirms resolution or the failures are fixed.
+
+
+## Academic fee visibility merge — 2026-11-21
+
+- PR #138 (`work/teacher-coordinator-fee-class-scope-current-integration`) passed exact-head ERP CI run `44893659594` across backend, frontend, browser E2E, production Docker smoke and release-blocking acceptance gate.
+- Merged to `integration/erp-7day` as `16d90ae8a955cd52af266c6e7c4ce81ac035ff35` (squash merge).
+- Full integration acceptance run `44893549433` passed on pre-merge integration head `c0193d062f830f74e6be2dc39dd7d95524baf79c`; post-#138 combined-head acceptance must still be verified.
+- Security invariant: Teacher and Coordinator are permitted read-only fee visibility within their assigned class/grade scope. `authorizePaymentRecording` remains limited to OWNER, PRINCIPAL, ACCOUNTS and CASHIER. Regression tests confirm Teacher/Coordinator payment POST attempts return 403 and do not create ledger rows.
+- Historical PR #134 is superseded; PR #138 is the current-baseline rebuild and is now merged. Do not reopen or merge #134.
+- Next promotion work: PR #124 has passing exact-head CI on its earlier base, but that base is stale and GitHub currently reports it non-mergeable. Rebuild/reconcile on current integration before merge; do not bypass exact-head CI or acceptance.
