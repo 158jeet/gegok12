@@ -5,10 +5,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [main, 'tagore/**', 'integration/erp-7day', 'work/**', 'fix/**', 'feature/**']
-  pull_request:
-    branches: [main, 'integration/erp-7day']
+  workflow_dispatch:
 
 jobs:
   test:
