@@ -157,9 +157,9 @@
                         @endif
 
                         @if($user->userprofile->usergroup_id=='8')
-                         <a href="{{ url('/library/'.$user->id.'/impersonate') }}" target="_blank" class="capitalize text-white blue-bg rounded px-2 py-1 ml-2 font-medium">Login as Librarian</a>
+                         <form method="POST" action="{{ url('/library/'.$user->id.'/impersonate') }}" target="_blank" class="inline">@csrf<button type="submit" class="capitalize text-white blue-bg rounded px-2 py-1 ml-2 font-medium">Login as Librarian</button></form>
                          @else
-                        <a href="{{ url('/teacher/'.$user->id.'/impersonate') }}" target="_blank" class="capitalize text-white bg-purple-500 rounded px-2 py-1 mx-2 font-medium">Login as Teacher</a>
+                        <form method="POST" action="{{ url('/teacher/'.$user->id.'/impersonate') }}" target="_blank" class="inline">@csrf<button type="submit" class="capitalize text-white bg-purple-500 rounded px-2 py-1 mx-2 font-medium">Login as Teacher</button></form>
                         @endif
 
                         <a href="{{url('/admin/teacher/id-card/'.$user->name)}}" title="ID CARD" class="text-white text-xs flex items-center blue-bg rounded p-1" id="ID CARD">
