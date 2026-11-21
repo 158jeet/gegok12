@@ -88,3 +88,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - **OWNER-OPS-001:** PR #132, branch `work/owner-assurance-hostel-current-baseline`, head `e7f328f532c8ebc68bdcf2a0298bd41ab3695332`. ERP CI run `44884210186` was still in progress; backend/frontend/Docker smoke passed, browser E2E still running. Review Owner-only visibility, institution-wide rollups, audit evidence and hostel scope before acceptance.
 - #119–#127 exact-head ERP CI runs are recorded green in the execution board. They remain draft candidates and are not merged or production accepted.
 - No merge, deployment, live data, live payment gateway, hardware activation, or production backup/restore was performed.
+
+
+## Validation refresh — 2026-11-21 (CBT scope and Cashier)
+
+- **CBT-SEC-001:** PR #130 management scope originally filtered active role assignments by status but did not enforce effective start/end dates when collecting institution IDs. Corrected `CbtManagementController::scope` on head `13a143aadf847a0d9ae7c24c8255200d21c3cffe`; added a scope regression test. The first follow-up CI run `44884647823` correctly failed because the new assertion counted qualified and unqualified SQL predicates incorrectly. Assertion was corrected on head `a099fab90f12349c877ce8d5281395af1961b04d`; fresh ERP CI run `44884930247` is in progress. Do not accept #130 on the earlier green head until the latest head passes.
+- **CASHIER-001:** Draft PR #133, head `d2af80013d5a670c450182e19a0efa2a5b609e03`, adds CASHIER to Tagore prototype role/permission seeders and demo account seed; allows institution-scoped accounts/fee statements/offline collection only; denies payment reconciliation, fee-master editing and fee-editor access; enforces effective assignment dates in FeeController; adds role-matrix and cross-institution authorization tests. Exact-head ERP CI run `44884866775` and Windows Pilot Package run `44884866727` are in progress. No acceptance claim until both relevant workflows pass.
+- PR #129 exact-head ERP CI `44884350353` passed all five jobs and Windows Pilot Package `44884350403` passed. Disposable MySQL restore and isolated application restore remain release gates.
+- PR #132 exact-head ERP CI `44884210186` passed all five jobs. It remains foundation-only until Owner/hostel role journeys are functionally accepted.
+- PR #133 does not resolve AUD-002 Teacher/Coordinator fee visibility by class/grade, nor the cashier admissions/promotions workflow. Keep those gaps open.
