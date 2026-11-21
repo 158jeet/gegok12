@@ -65,6 +65,14 @@ class TagoreOperationalAuditFoundationTest extends TestCase
             $this->assertStringContainsString('cannot independently verify', $exception->getMessage());
         }
 
+        $student = User::query()->where('email', 'student@tagore-demo.local')->firstOrFail();
+        try {
+            $service->verify($instanceId, $student->id, true, 'Unassigned student review must be blocked.');
+            $this->fail('Only an active scoped manager can verify an audit.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('active Owner, Principal or Coordinator role', $exception->getMessage());
+        }
+
         $service->verify($instanceId, $owner->id, true, 'Independent sample review passed.');
         $this->assertDatabaseHas('tagore_operational_audit_instances', [
             'id' => $instanceId,
@@ -149,4 +157,28 @@ class TagoreOperationalAuditFoundationTest extends TestCase
             'updated_at' => now(),
         ]);
     }
+    public function test_assignee_cannot_submit_after_role_assignment_is_revoked(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $teacher = User::query()->where('usergroup_id', 5)->where('school_id', $owner->school_id)->whereNull('deleted_at')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
+        $templateId = $this->activeTemplate($institutionId, $teacher->id, 'TEACHER');
+        $instanceId = app(OperationalAuditService::class)->generateInstance(
+            $templateId, $institutionId, $teacher->id, 'TEACHER', 'CLASS', 1,
+            now()->startOfDay(), now()->endOfDay(), ['title' => 'Revoked assignment test']
+        );
+        $teacherRoleId = (int) DB::table('tagore_roles')->where('code', 'TEACHER')->value('id');
+        DB::table('tagore_user_roles')
+            ->where('user_id', $teacher->id)
+            ->where('institution_id', $institutionId)
+            ->where('role_id', $teacherRoleId)
+            ->update(['status' => 'inactive']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('no longer holds an active role assignment');
+        app(OperationalAuditService::class)->submit($instanceId, $teacher->id, [
+            ['control_key' => 'attendance', 'value' => ['submitted' => true], 'evidence_class' => 'C'],
+        ]);
+    }
+
 }
