@@ -14,12 +14,38 @@ class TagoreGatepassInstitutionScopeTest extends TestCase
         $institutions = DB::table('tagore_institutions')
             ->where('status', 'active')
             ->orderBy('id')
-            ->get(['id', 'school_id']);
+            ->get(['id', 'school_id', 'tagore_group_id']);
         $selectedInstitution = $institutions->firstWhere('school_id', $owner->school_id);
         $foreignInstitution = $institutions->first(fn ($institution) => (int) $institution->school_id !== (int) $owner->school_id);
 
-        if (!$selectedInstitution || !$foreignInstitution) {
-            $this->markTestSkipped('The synthetic fixture needs two active institutions to test cross-institution rejection.');
+        $this->assertNotNull($selectedInstitution, 'The Owner fixture must have an active institution.');
+
+        // The default CI seed intentionally creates one school. Create a second
+        // isolated synthetic school/institution so the security regression never skips.
+        if (!$foreignInstitution) {
+            $suffix = bin2hex(random_bytes(5));
+            $foreignSchoolId = DB::table('schools')->insertGetId([
+                'name' => 'Gatepass QA School ' . $suffix,
+                'email' => 'gatepass-school-' . $suffix . '@tagore-demo.local',
+                'status' => 1,
+                'slug' => 'gatepass-qa-' . $suffix,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $foreignInstitutionId = DB::table('tagore_institutions')->insertGetId([
+                'tagore_group_id' => $selectedInstitution->tagore_group_id,
+                'school_id' => $foreignSchoolId,
+                'code' => 'GATEPASS-QA-' . strtoupper($suffix),
+                'display_name' => 'Gatepass QA Institution',
+                'type' => 'school',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $foreignInstitution = (object) [
+                'id' => $foreignInstitutionId,
+                'school_id' => $foreignSchoolId,
+            ];
         }
 
         $foreignStudent = User::factory()->create([
