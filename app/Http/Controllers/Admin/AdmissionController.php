@@ -57,7 +57,10 @@ class AdmissionController extends Controller
     public function admissionlist(Request $request)
     {
         $academic_year = SiteHelper::getAcademicYear(Auth::user()->school_id);
-        $admissions = Admission::where([['school_id',Auth::user()->school_id],['academic_year_id',$academic_year->id]])->where('application_status','Draft')->orWhere('application_status','Pending')->paginate(10);
+        $admissions = Admission::where('school_id', Auth::user()->school_id)
+            ->where('academic_year_id', $academic_year->id)
+            ->whereIn('application_status', ['Draft', 'Pending'])
+            ->paginate(10);
               
         $admissions = AdmissionResource::collection($admissions);
         
@@ -71,9 +74,14 @@ class AdmissionController extends Controller
      */
     public function show($id)
     {
-        $admission = Admission::where('school_id',Auth::user()->school_id)->where('id',$id)->where('application_status','Draft')->orWhere('application_status','Pending')->first();
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->whereIn('application_status', ['Draft', 'Pending'])
+            ->firstOrFail();
 
-        $sections = StandardLink::where('standard_id',$admission->standard_id)->get();
+        $sections = StandardLink::where('school_id', Auth::user()->school_id)
+            ->where('standard_id', $admission->standard_id)
+            ->get();
         
         if(class_exists('Gegok12\Fee\Models\FeeGroup'))
         {
@@ -104,9 +112,11 @@ class AdmissionController extends Controller
      */
     public function edit($id)
     {
-        $admission = Admission::where('id',$id)->first();
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->firstOrFail();
 
-        return view('/admin/admission/edit' , ['admission' => $admission]);
+        return view('/admin/admission/edit', ['admission' => $admission]);
     }
 
     /**
@@ -118,9 +128,12 @@ class AdmissionController extends Controller
      */
     public function update(AdmissionFormRequest $request, $id)
     {
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
         try
         {
-            $admission=Admission::where('id',$id)->first();
 
             $admission->application_status = $request->application_status;
 
@@ -198,19 +211,27 @@ class AdmissionController extends Controller
             $res['success'] = $message;
             return $res;
         }
-        catch(Exception $e)
+        catch(\Throwable $e)
         {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
+            Log::error('Admission operation failed.', [
+                'admission_id' => $id,
+                'school_id' => Auth::user()->school_id,
+                'user_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
+            return response()->json(['message' => 'Unable to complete the admission operation right now.'], 500);
         }
     }
 
     public function destroy($id)
     {
+        $admission = Admission::where('school_id', Auth::user()->school_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
         try
         {
-            $admission = Admission::where('id',$id)->first();
-
             $admission->delete();
 
             $message=trans('messages.delete_success_msg',['module' => 'Admission']);
