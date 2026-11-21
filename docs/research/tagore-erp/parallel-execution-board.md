@@ -127,3 +127,6 @@ After each feature:
 
 
 - CI improvement in PR #129: the release-blocking ERP CI PowerShell parser now includes both `Backup-Tagore.ps1` and `Test-TagoreBackup.ps1`; exact-head parser validation remains pending.
+
+
+- Backup review correction in PR #129: rclone upload targets now use the required `remote:path` syntax (the prior form could be interpreted as a local path); disposable restore cleanup no longer assumes Docker is installed when restore mode is not requested. Exact-head parser/CI and non-production encrypted upload rehearsal remain required.
