@@ -97,3 +97,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - PR #129 exact-head ERP CI `44884350353` passed all five jobs and Windows Pilot Package `44884350403` passed. Disposable MySQL restore and isolated application restore remain release gates.
 - PR #132 exact-head ERP CI `44884210186` passed all five jobs. It remains foundation-only until Owner/hostel role journeys are functionally accepted.
 - PR #133 does not resolve AUD-002 Teacher/Coordinator fee visibility by class/grade, nor the cashier admissions/promotions workflow. Keep those gaps open.
+
+
+## Finance / CBT acceptance update — 2026-11-21
+
+- **CBT-002 scope correction:** PR #130 includes section assignment, per-question marks, negative marks, duration and exam scheduling, but code review confirms there is no randomisation implementation in `CbtManagementController`. Keep randomisation open in the feature register; do not mark full paper blueprint complete. Latest exact-head ERP CI run `44884930247` passed all five jobs on `a099fab90f12349c877ce8d5281395af1961b04d`.
+- **CASHIER-001:** PR #133 head `a80c67b4a07f6f8566e6c8b5f86e4c9a3cdfb41b`, ERP CI `44885119214` passed all five jobs; Windows Pilot Package `44885119208` passed. Dedicated cashier permission matrix, institution scoping and negative reconciliation/fee-master tests are green. Owner assignment UX and full operational workflow review remain pending.
+- **AUD-002:** PR #134 current head `a549c751dac076b5d41a4e8f06f774b217271c94` implements teacher class assignment and coordinator exact standard-link scope across fee statements and accounts aggregates, and removes sibling/reconciliation details from academic viewer screens. ERP CI `44885549135` and Windows Pilot Package `44885549143` are in progress. It includes #133 as its prerequisite; no merge or deployment.
+- **OWN-001:** PR #132 passed exact-head ERP CI `44884210186`; current code is an operational audit foundation, not full department task/KPI workflow acceptance.
+- **PLT-001:** PR #129 passed exact-head ERP CI `44884350353` and Windows Pilot Package `44884350403`; disposable MySQL restore and isolated staging application restore are still required.
