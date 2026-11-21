@@ -135,3 +135,26 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #134 academic fee visibility: branch `work/teacher-coordinator-fee-class-scope`, current head `a549c751dac076b5d41a4e8f06f774b217271c94`. It includes the #133 prerequisite and adds teacher class / coordinator exact standard-link scoping for statements and account aggregates, hides sibling family balances and settlement controls, and adds positive/negative tests. Exact-head ERP CI run `44885549135` and Windows Pilot Package run `44885549143` are in progress. Do not accept until all five ERP CI jobs and browser acceptance pass.
 - PR #129 backup tooling and #132 Owner assurance foundation remain CI-green; restore rehearsal and operational Owner/hostel acceptance are still open.
 - Feature gaps CSV was refreshed: AUD-001 Cashier implementation in #133, AUD-002 class/grade scope in #134, CBT-001/003/004 in #130, CBT-002 partial because randomisation is absent, PLT-001 restore pending, OWN-001 foundation only.
+
+
+## Current-baseline reconciliation — 2026-11-21
+
+All active feature branches below were rebuilt on the current `integration/erp-7day` tree at `a6c4d12f3d31ee0ac059a4a080642d91252704a4`. Reconciliation used the current integration tree plus only the feature files confirmed unchanged from each PR's original base; historical branch history and stale documentation were not copied over.
+
+| Track | Current PR | Exact-head ERP CI | State / remaining gate |
+|---|---:|---|---|
+| Platform backup/restore | #129 | `44885968894` — 5/5 passed; Windows Pilot `44885968977` passed | Encrypted offsite upload/retrieval, disposable MySQL restore and staging restore rehearsal remain |
+| CBT JEE/NEET | #130 | `44886033376` — 5/5 passed | Core question-bank/player/scoring/analytics slice; exam randomisation remains unimplemented |
+| Admissions isolation | #131 | `44886078112` — 5/5 passed | Synthetic second-school HTTP regression passed |
+| Owner assurance / hostel foundation | #132 | `44886201464` — 5/5 passed | Foundation only; cockpit UI, scheduler/alerts and full hostel lifecycle remain |
+| Cashier + class fee visibility | #134 | current run `44887064281` in progress | Supersedes #133; await exact-head backend/E2E/Docker gate |
+| HR / attendance / payroll | #135 | `44886250001` — 5/5 passed | Supersedes #119 and #121 |
+| Gate-pass + Owner impersonation | #137 | `44885808737` — 5/5 passed | Supersedes #120 and #122 |
+| Student promotion lifecycle | #124 | `44886529355` — 5/5 passed; Windows Pilot `44886529290` passed | Current-baseline validation passed |
+| Online payment concurrency + partial allocation | #125 | `44886430332` — 5/5 passed | Supersedes #123 |
+| Admissions conversion / verified family linking | #126 | `44886653601` — 5/5 passed | Current-baseline validation passed |
+| Daily Diary / Olympiad class scope | #127 | `44886578238` — 5/5 passed | Current-baseline validation passed |
+
+Superseded historical PRs closed: #101, #105, #106, #107, #110, #111, #118, #119, #120, #121, #122, #123, #128 and #136. PR #133 is retained only until #134 completes validation, then should be closed as superseded.
+
+No PR has been merged into integration. No live data, production payment, offsite credential, biometric/CCTV hardware or deployment has been activated.
