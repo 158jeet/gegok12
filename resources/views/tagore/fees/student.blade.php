@@ -51,7 +51,7 @@
         @foreach($fees as $index => $fee)
           @if((float)$fee->outstanding_amount > 0)
           <tr>
-            <td>{{ $fee->due_date ? \\Carbon\\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td>
+            <td>{{ $fee->due_date ? \Carbon\Carbon::parse($fee->due_date)->format('d M Y') : '—' }}</td>
             <td>Fee #{{ $fee->id }}</td>
             <td>₹{{ number_format($fee->outstanding_amount,2) }}</td>
             <td>
