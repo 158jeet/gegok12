@@ -153,3 +153,12 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Security clarification: `authorizeAccounts` permits Teacher/Coordinator read-only workspace access; `authorizePaymentRecording` remains OWNER/PRINCIPAL/ACCOUNTS/CASHIER only. Do not misclassify the read-only role list as a payment permission.
 - Full integration acceptance on `c0193d06` is run `44893549433`, in progress. Earlier run `44892596729` exposed two browser failures: institution test assumes no unlinked schools remain after one link; mobile Operations search count remains `2 of 2`. Keep both as release blockers until the current run passes or fixes are merged.
 - No merge of #138, no live payment data, no deployment. Free-only tooling policy remains active.
+
+
+## Academic fee visibility integration update — 2026-11-21
+
+- PR #138 passed all five exact-head ERP CI jobs in run `44893659594` (backend, frontend, browser E2E, production Docker smoke and release-blocking acceptance gate) and was merged into `integration/erp-7day` as `16d90ae8a955cd52af266c6e7c4ce81ac035ff35`.
+- Full integration acceptance on the immediately preceding integration baseline `c0193d062f830f74e6be2dc39dd7d95524baf79c` passed in run `44893549433`. Re-run/verify integration acceptance after the #138 merge before treating the new combined head as release-ready.
+- Teacher/Coordinator fee workspace access is read-only and limited to assigned class/grade students. Payment recording remains restricted to Owner, Principal, Accounts and Cashier; forbidden POST tests assert no ledger row is created.
+- Next: rebuild student promotion PR #124 on the current integration head. Its existing head passed CI on an older base, but its base is stale and it is not currently mergeable; do not merge the stale PR directly. Preserve its existing behavior/tests while reconciling route/controller changes added since its base.
+- Continue remaining Diary, partial fee allocation, CBT randomisation, HR/biometric, Owner KPI and backup restore acceptance tracks in parallel. Production remains blocked pending post-merge full acceptance and outstanding operational acceptance.
