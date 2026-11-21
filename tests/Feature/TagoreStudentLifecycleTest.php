@@ -352,22 +352,27 @@ class TagoreStudentLifecycleTest extends TestCase
         [$owner, $student, $institution, $sourceYear, $targetYear, $targetLinkId] = $this->promotionFixture();
         DB::table('tagore_institutions')->where('id', $institution->id)->update(['status' => 'inactive']);
 
-        $this->actingAs($owner)->post(route('tagore.students.promote'), [
-            'institution_id' => $institution->id,
-            'source_academic_year_id' => $sourceYear->id,
-            'target_academic_year_id' => $targetYear->id,
-            'target_standard_link_id' => $targetLinkId,
-            'student_ids' => [$student->id],
-        ])->assertNotFound();
+        try {
+            $this->actingAs($owner)->post(route('tagore.students.promote'), [
+                'institution_id' => $institution->id,
+                'source_academic_year_id' => $sourceYear->id,
+                'target_academic_year_id' => $targetYear->id,
+                'target_standard_link_id' => $targetLinkId,
+                'student_ids' => [$student->id],
+            ])->assertNotFound();
 
-        $this->assertDatabaseMissing('student_academics', [
-            'user_id' => $student->id,
-            'academic_year_id' => $targetYear->id,
-        ]);
-        $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
-            'student_id' => $student->id,
-            'event_type' => 'promotion',
-        ]);
+            $this->assertDatabaseMissing('student_academics', [
+                'user_id' => $student->id,
+                'academic_year_id' => $targetYear->id,
+            ]);
+            $this->assertDatabaseMissing('tagore_student_lifecycle_events', [
+                'student_id' => $student->id,
+                'event_type' => 'promotion',
+            ]);
+        } finally {
+            // Keep the shared demo institution usable by the following tests.
+            DB::table('tagore_institutions')->where('id', $institution->id)->update(['status' => 'active']);
+        }
     }
 
     public function test_existing_destination_enrolment_is_skipped_without_overwriting_it(): void
