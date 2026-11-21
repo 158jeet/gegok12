@@ -116,3 +116,13 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Historical PRs #101–#118 remain source material unless explicitly rebuilt/current-baseline validated; the newer current-baseline PRs above are the active candidates.
 - CI success is necessary but not sufficient: each feature still needs code review, role/institution acceptance, and combined integration testing.
 - Current baseline for the newer #129–#132 PRs is `af308809e43e6e36b3b5cf8dc62752719379a330`; keep any subsequent PR-base drift visible and reconcile before release.
+
+
+## Execution update — 2026-11-21 (validation refresh and cashier track)
+
+- PR #129 exact-head ERP CI run `44884350353` completed successfully across backend, frontend, browser E2E, production Docker smoke and release acceptance gate. Windows Pilot Package run `44884350403` also passed. This is build/CI validation only; the isolated disposable restore rehearsal and offsite recovery proof remain mandatory.
+- PR #132 exact-head ERP CI run `44884210186` completed successfully across all five ERP CI jobs. It remains a foundation slice; Owner daily assurance and hostel workflows need role-based functional acceptance.
+- PR #130 CBT scope review found that management institution assignments were checked for active status but not effective start/end dates. Added both date predicates and a regression assertion. New exact-head ERP CI run `44884930247` is in progress on head `a099fab90f12349c877ce8d5281395af1961b04d`; earlier green run `44883870085` does not validate this fix.
+- **T3 new queue item — PR #133 Cashier:** branch `work/cashier-role-institution-fee-operations`, head `d2af80013d5a670c450182e19a0efa2a5b609e03`. Adds a dedicated least-privilege CASHIER role and synthetic demo account, institution-scoped fee account/statement and offline collection access, denies reconciliation and fee-master editing, and applies effective dates to FeeController role/institution checks. ERP CI run `44884866775` and Windows Pilot Package run `44884866727` are in progress. Backend, frontend and cross-institution negative tests must pass before acceptance.
+- PR #133 explicitly does not close the separate Teacher/Coordinator class/grade fee-visibility gap (AUD-002), nor Cashier admissions/promotions workflows. Those remain on the P0/P1 backlog.
+- Integration docs were updated on this branch after the PR #129–#132 snapshot. These are documentation-only commits; feature PRs remain drafts and no merge/deployment/live data occurred.
