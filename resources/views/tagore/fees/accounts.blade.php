@@ -86,7 +86,13 @@
 <main class="tg-main">
   <section class="tg-hero">
     <h1>Accounts & fee collection</h1>
-    <p>One operational view of fee balances, family-level dues, receipts and online settlement reconciliation for your permitted institutions.</p>
+    @if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())
+      <p>Fee balances, family-level dues, receipts and online settlement reconciliation for your permitted institutions.</p>
+    @elseif($roles->intersect(['TEACHER','COORDINATOR'])->isNotEmpty() && $roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS','CASHIER'])->isEmpty())
+      <p>Read-only fee balances and payment status for your currently assigned classes and grades.</p>
+    @else
+      <p>Fee balances, family-level dues, collections and receipts for your permitted institutions.</p>
+    @endif
     <div class="tg-hero-actions">
       @if($roles->intersect(['OWNER','PRINCIPAL'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.import') }}">⇧ Import legacy fees</a>
@@ -148,7 +154,7 @@
   @endif
 
   <section class="tg-section" id="transactions">
-    <div class="tg-section-head"><div><h2>Payment transactions</h2><p>Recent successful payments, receipts and gateway settlement references.</p></div><span class="tg-status">{{ $recent->count() }} recent records</span></div>
+    <div class="tg-section-head"><div><h2>Payment transactions</h2><p>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())Recent successful payments, receipts and gateway settlement references.@else Recent successful payments and receipts in your authorised scope.@endif</p></div><span class="tg-status">{{ $recent->count() }} recent records</span></div>
     <div class="tg-card" style="padding:16px">
       <div class="tg-accounts-tools"><input type="search" class="tg-local-filter" data-table="payments-table" placeholder="Filter by receipt, student, gateway or reference…" aria-label="Filter payment transactions"><span class="tg-accounts-subtle">Latest 100 successful payments</span></div>
       <div class="tg-table-wrap"><table class="table tg-accounts-table" id="payments-table"><thead><tr><th>Receipt</th><th>Student</th><th>Institution</th><th>Paid at</th><th>Payment mode</th>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())<th>Gateway IDs</th><th>Reference</th><th>Settlement</th>@endif<th>Amount</th><th>Actions</th></tr></thead><tbody>
@@ -175,7 +181,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="10"><div class="tg-accounts-empty"><strong>No successful payments recorded</strong>Payments will appear here after they are posted to the ledger.</div></td></tr>
+        <tr><td colspan="{{ $roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty() ? 10 : 7 }}"><div class="tg-accounts-empty"><strong>No successful payments recorded</strong>Payments will appear here after they are posted to the ledger.</div></td></tr>
       @endforelse
       </tbody></table></div>
     </div>
