@@ -34,4 +34,4 @@ try {
   $restoreStatus="PASS ($tableCount tables in disposable container)"
  }
  [pscustomobject]@{checksum="PASS";database_manifest_hash="PASS";uploaded_files="PASS ($($uploadFiles.Count) files)";disposable_mysql_restore=$restoreStatus} | Format-List
-} finally {& docker rm -f $container *> $null;if(Test-Path $work){Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue}}
+} finally {if(Get-Command docker -ErrorAction SilentlyContinue){& docker rm -f $container *> $null};if(Test-Path $work){Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue}}
