@@ -86,3 +86,6 @@ This index is a deployment memory aid. It does not mean every correction should 
 
 
 | ADM-LEGACY-002 | Admissions / legacy school isolation current-baseline rebuild | Supersede the drifted PR #128 with a clean two-file current-baseline patch: school/year/status-scoped list, school-scoped show/edit/update/delete and sections, safe failure handling, source-contract and synthetic second-school HTTP tests. | Draft PR #131, branch `work/legacy-admission-isolation-current-baseline-v2`, head `e9aa07f7435b1966285b4b60a4f4944d5fc2ec36`. | Exact-head ERP CI run `44883700217` must pass all jobs; verify the multi-school test executes and leaves the foreign admission unchanged. | CI in progress; no merge, deployment or live admissions data. PR #128 is superseded. |
+
+
+| CI-004 | Windows deployment validation | Extend the release-blocking ERP CI PowerShell parser step to include `Backup-Tagore.ps1` and `Test-TagoreBackup.ps1`, so backup/restore script syntax is checked on every exact-head ERP CI run. | Draft PR #129, branch `work/backup-integrity-current-baseline`; workflow file `.github/workflows/erp-ci.yml`. | Require the exact-head `production-docker-smoke` job to complete its PowerShell parser step successfully; additionally run the disposable restore rehearsal on a non-production environment. | Committed; current-head ERP CI is pending. |
