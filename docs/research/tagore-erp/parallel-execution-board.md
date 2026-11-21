@@ -96,3 +96,23 @@ After each feature:
 - #126 first exact-head run `44877363759`: all five jobs success. Added explicit duplicate verified-parent-mobile regression on new head `a4e752ecbd81e82c38aa4cf86cde205dd0c6e77e`; fresh exact-head run has not appeared yet and is required before acceptance.
 - #127 exact-head run `44877552307`: all five jobs success.
 - #128 current head `1f1c2e9010e84a098adf698e1810690851b0cc7b`, ERP CI run `44878442906` in progress. Dedicated functional regression tests remain a release-blocking gap.
+
+
+## Execution update — 2026-11-21 (latest repository reconciliation)
+
+Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8dc62752719379a330`. PRs #129–#132 were opened against this exact baseline. No feature PR has been merged; no production/live data touched.
+
+| Track | Current work | Exact-head evidence | State / next action |
+|---|---|---|---|
+| T1 Owner, identity & security | #120 gate-pass institution isolation; #122 Owner impersonation | #120 run `44873348882` success; #122 run `44873655899` success (all five ERP CI jobs) | Keep drafts; complete role/tenant workflow review and current-integration acceptance. |
+| T2 Admissions & family | #126 admitted-lead conversion + verified family linking; #131 legacy admission isolation | #126 run `44878488189` success; #131 run `44883714444` success (all five ERP CI jobs). #128 was closed unmerged and superseded by #131. | Review duplicate/ambiguous family behavior and the synthetic second-school admission test; then queue remaining CRM/family lifecycle gaps. |
+| T3 Fees & finance | #123 checkout concurrency; #125 parent-selected partial fee allocations | #123 run `44875663835` success; #125 run `44877160843` success (all five ERP CI jobs) | #125 depends on #123. Review allocation ledger/idempotency and reconcile both as one finance slice; no live gateway. |
+| T4 Academics & coaching | #124 student promotion; #127 Daily Diary/audit/Olympiad; #130 JEE/NEET CBT engine | #124 run `44876972392` success + Windows Pilot Package `44876972367` success; #127 run `44877552307` success; #130 run `44883870085` success (all five ERP CI jobs) | Review role-based journeys and CBT exam lifecycle (question bank, mock, scoring, analytics); then queue next assessment feature. |
+| T5 HR, attendance & campus | #119 attendance safe failure handling; #121 HR/payroll institution scope | #119 run `44872902241` success; #121 run `44873432095` success (all five ERP CI jobs) | Review attendance and manager/Owner payroll boundaries; then queue leave/substitution and staff profile gaps. |
+| T6 Platform, data & delivery | #129 encrypted backup/restore; #132 Owner assurance/hostel foundation | #129 ERP CI run `44884350353` and Windows Pilot run `44884350403` in progress; #132 ERP CI run `44884210186` in progress. #129 backend/frontend passed so far; browser E2E and Docker smoke still running. #132 frontend/backend/Docker passed so far; browser E2E still running. | Poll exact-head runs; inspect backup/restore safety and Owner assurance evidence. No production restore, backup, deployment or live data. |
+
+### Superseded / stale queue notes
+- PR #128 was closed unmerged; PR #131 is the active replacement. Do not validate or merge #128.
+- Historical PRs #101–#118 remain source material unless explicitly rebuilt/current-baseline validated; the newer current-baseline PRs above are the active candidates.
+- CI success is necessary but not sufficient: each feature still needs code review, role/institution acceptance, and combined integration testing.
+- Current baseline for the newer #129–#132 PRs is `af308809e43e6e36b3b5cf8dc62752719379a330`; keep any subsequent PR-base drift visible and reconcile before release.
