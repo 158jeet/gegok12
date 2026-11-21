@@ -1,7 +1,7 @@
 # Tagore ERP Continuous Feature Execution Board
 
 Baseline: `integration/erp-7day`
-Updated: 2026-11-21
+Updated: 2026-11-21 (CI recheck)
 Policy: free tooling only; no paid coding agents, subscriptions, or external AI services.
 
 ## Operating model
@@ -30,7 +30,10 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 
 ## Current constraints and dependency rules
 
-- PR #118 corrected audit service/test syntax and passed its ERP CI plus full-acceptance workflows on feature SHA `01499b14ddf852c8941b835a44d0019bdceb86f3`; remains draft pending current integration-baseline reconciliation.
+- PR #118 corrected audit service/test syntax and passed ERP CI plus full acceptance on feature SHA `01499b14ddf852c8941b835a44d0019bdceb86f3`; remains draft pending current integration-baseline reconciliation.
+- PR #110 passed ERP CI, Prototype and Full Acceptance on `5066d8a5fa202f60a68bc75b3e92c780966e53b0`; its branch is 5 commits ahead / 9 behind integration, so patch reconciliation is still required.
+- PR #111 passed ERP CI, Prototype and Full Acceptance on `3aacf9bf78718cc1ee788f5fb9391aad77cb3d8d`; its branch is 2 commits ahead / 9 behind integration, so patch reconciliation is still required.
+- Integration Full Acceptance passed on `ff1bc888c792e42765ac3eed5560f9b28e84c9a8` (run `44867964104`).
 - PR #110 staff-attendance transaction propagation and PR #111 deterministic cross-institution fixture are committed but remain unaccepted until their current SHA checks pass and base compatibility is rechecked.
 - Full Acceptance now ignores documentation-only pushes on integration/main; code + docs mixed commits still trigger the release gate.
 
@@ -46,12 +49,12 @@ Before implementation, inspect open PRs and branches for existing work. Reconcil
 
 | Track | Active feature | Branch / PR | State | Evidence / blocker | Next action |
 |---|---|---|---|---|---|
-| T1 | Gate-pass institution validation | #111 `work/gatepass-institution-validation` | Active draft; test hardening committed | `3aacf9bf78718cc1ee788f5fb9391aad77cb3d8d` creates a second synthetic school/institution when the default seed has one; focused CI pending | Verify no skip, same-institution success, cross-institution rejection, and current-base compatibility |
+| T1 | Gate-pass institution validation | #111 `work/gatepass-institution-validation` | Feature-branch CI green; integration reconciliation pending | ERP CI, Prototype and Full Acceptance all passed on `3aacf9bf78718cc1ee788f5fb9391aad77cb3d8d`; compare shows 2 commits ahead / 9 behind integration | Reconcile the two-file security patch onto current integration baseline; then mark accepted only after integration tests pass. Next queue: #105 impersonation hardening |
 | T2 | Admissions/family reconciliation | #94, #112–#116 | Existing drafts; overlapping | Multiple separate branches and dependencies | Build changed-file/dependency matrix; choose first non-overlapping slice |
 | T3 | Checkout concurrency | #104 then #109 | Existing drafts; dependency | #109 base is #104 branch | Validate #104 before replaying #109 |
 | T4 | Diary/Olympiad reconciliation | #95–#100 | Existing drafts; overlapping | Multiple implementation/validation PRs | Consolidate patches and choose one implementation lineage |
-| T5 | HR/attendance | #107, #110, #66/#69 | Active drafts; attendance failure propagation hardened | #110 commit `5066d8a5fa202f60a68bc75b3e92c780966e53b0` changes the staff attendance transaction to rollback and rethrow `Throwable`; focused CI pending | Verify rollback/rethrow path, safe controller response, and reconcile #107/#66/#69 before shared-file work |
-| T6 | Backup/restore | #101 | Existing draft | Restore verification required | Inspect scripts, encryption and disposable restore evidence |
+| T5 | HR/attendance | #107, #110, #66/#69 | #110 feature-branch CI green; integration reconciliation pending | ERP CI, Prototype and Full Acceptance all passed on `5066d8a5fa202f60a68bc75b3e92c780966e53b0`; compare shows 5 commits ahead / 9 behind integration | Reconcile staff-attendance patch and verify rollback/rethrow + safe controller response on current integration. Next queue: #107 leave/payroll scope; coordinate shared PayrollController ownership |
+| T6 | Backup/restore | #101 `work/automated-backup-integrity` | Existing draft; historical feature CI green, operational rehearsal pending | ERP CI, Windows pilot package, Prototype and Full Acceptance passed on `c2f7db4b7225439d87ad0750705f7c80527e23a8`; actual encrypted offsite + disposable restore still require a controlled test | Audit backup script safety and restore evidence; do not run against production or create a live backup |
 
 ## Capacity and free-only policy
 
