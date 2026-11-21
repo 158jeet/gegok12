@@ -307,7 +307,8 @@ class FeeController extends Controller
 
         if ($roles->contains('COORDINATOR')) {
             $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
-            return $feeViewId && DB::table('tagore_user_scopes')
+            if (!$feeViewId) return false;
+            return DB::table('tagore_user_scopes')
                 ->where('user_id', $userId)->where('scope_type', 'standard_link')
                 ->where('scope_id', $academic->standardLink_id)->where('permission_id', $feeViewId)->exists();
         }
@@ -328,6 +329,7 @@ class FeeController extends Controller
             ->whereExists(function ($academic) use ($userId, $roles, $feeViewId) {
                 $academic->selectRaw('1')->from('student_academics as sa')
                     ->whereColumn('sa.user_id', 'student.id')
+                    ->whereColumn('sa.school_id', 'student.school_id')
                     ->whereNull('sa.deleted_at')
                     ->whereRaw('sa.id = (select max(sa_latest.id) from student_academics as sa_latest where sa_latest.user_id = student.id and sa_latest.deleted_at is null)')
                     ->where(function ($scope) use ($userId, $roles, $feeViewId) {
@@ -342,14 +344,18 @@ class FeeController extends Controller
                             });
                         }
                         if ($roles->contains('COORDINATOR')) {
-                            $coordinatorScope = fn ($sub) => $sub->selectRaw('1')->from('tagore_user_scopes as us')
-                                ->whereColumn('us.scope_id', 'sa.standardLink_id')
-                                ->where('us.user_id', $userId)->where('us.scope_type', 'standard_link')
-                                ->where('us.permission_id', $feeViewId);
-                            if ($roles->contains('TEACHER')) {
-                                $scope->orWhereExists($coordinatorScope);
-                            } else {
-                                $scope->whereExists($coordinatorScope);
+                            if ($feeViewId) {
+                                $coordinatorScope = fn ($sub) => $sub->selectRaw('1')->from('tagore_user_scopes as us')
+                                    ->whereColumn('us.scope_id', 'sa.standardLink_id')
+                                    ->where('us.user_id', $userId)->where('us.scope_type', 'standard_link')
+                                    ->where('us.permission_id', $feeViewId);
+                                if ($roles->contains('TEACHER')) {
+                                    $scope->orWhereExists($coordinatorScope);
+                                } else {
+                                    $scope->whereExists($coordinatorScope);
+                                }
+                            } elseif (!$roles->contains('TEACHER')) {
+                                $scope->whereRaw('1 = 0');
                             }
                         }
                     });
