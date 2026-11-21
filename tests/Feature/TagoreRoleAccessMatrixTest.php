@@ -41,6 +41,10 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'has' => ['dashboard.view', 'fee.manage', 'payment.reconcile', 'report.export'],
                 'lacks' => ['fee.edit', 'user.manage'],
             ],
+            'CASHIER' => [
+                'has' => ['dashboard.view', 'student.view', 'fee.view', 'payment.view'],
+                'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
+            ],
             'FEE_EDITOR' => [
                 'has' => ['dashboard.view', 'fee.view', 'fee.edit', 'report.view'],
                 'lacks' => ['fee.manage', 'payment.reconcile', 'user.manage'],
@@ -83,6 +87,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
             'coordinator@tagore-demo.local',
             'teacher@tagore-demo.local',
             'accounts@tagore-demo.local',
+            'cashier@tagore-demo.local',
             'fees@tagore-demo.local',
             'parent@tagore-demo.local',
             'student@tagore-demo.local',
