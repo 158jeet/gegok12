@@ -275,4 +275,44 @@ class TagoreAdmissionsTest extends TestCase
             ->count(), 'An unverified mobile must not create or modify a parent-child link.');
     }
 
+    public function test_family_link_rejects_ambiguous_verified_parent_mobile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institution = DB::table('tagore_institutions')->first();
+        $this->assertNotNull($institution);
+        $student = User::query()->where('usergroup_id', 6)->where('school_id', $institution->school_id)->whereNull('deleted_at')->firstOrFail();
+
+        $firstParent = User::factory()->parent()->create(['school_id' => $institution->school_id]);
+        $secondParent = User::factory()->parent()->create(['school_id' => $institution->school_id]);
+        $sharedVerifiedMobile = '96' . str_pad((string) $firstParent->id, 8, '0', STR_PAD_LEFT);
+        DB::table('users')->whereIn('id', [$firstParent->id, $secondParent->id])->update([
+            'mobile_no' => $sharedVerifiedMobile,
+            'mobile_verified' => true,
+        ]);
+
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institution->id,
+            'lead_no' => 'QA-AMBIGUOUS-' . uniqid(),
+            'student_name' => 'Ambiguous Parent Student',
+            'status' => 'new',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.link-family', $leadId), [
+            'student_id' => $student->id,
+            'parent_mobile' => $sharedVerifiedMobile,
+            'relationship' => 'Guardian',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('tagore_parent_students', [
+            'parent_user_id' => $firstParent->id,
+            'student_id' => $student->id,
+        ]);
+        $this->assertDatabaseMissing('tagore_parent_students', [
+            'parent_user_id' => $secondParent->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
 }
