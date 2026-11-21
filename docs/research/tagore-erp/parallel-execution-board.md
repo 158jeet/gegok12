@@ -117,3 +117,10 @@ After each feature:
 - T2 legacy admissions: PR #128 latest head `6c8db9b4d5c1faaf54cc656dc09e45d92550422e`; corrected the previously failing literal-variable assertion. No checks exist on this exact head.
 - Tool limitation affecting validation: connector-authored branch commits have not produced Actions check runs for #128, #129 or #130 (check-run count is zero on each latest head). Do not infer a pass. The latest exact-head test evidence remains the earlier green PRs #119–#127; these new heads require an Actions run before acceptance.
 - No merge or production action has been taken.
+
+
+## Admissions rebuild note — 2026-11-21
+
+- The earlier PR #128 is superseded by clean current-baseline PR #131. PR #131 contains only the legacy admission controller correction and focused regression test, rebuilt from current integration with no behind commits.
+- PR #131 head `e9aa07f7435b1966285b4b60a4f4944d5fc2ec36`; exact-head ERP CI run `44883700217` is in progress. Do not use #128's earlier green controller-only CI or failed intermediate test run as acceptance evidence.
+- Keep #131 draft until all five ERP CI jobs pass on its exact head and the synthetic second-school HTTP fixture is confirmed in backend output.
