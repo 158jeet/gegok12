@@ -108,4 +108,22 @@ class TagoreCbtAttemptTest extends TestCase
         $this->actingAs($fixture['owner'])
             ->getJson(route('tagore.cbt.attempts.player', $attemptId))->assertForbidden();
     }
+    public function test_candidate_attempt_reads_are_scoped_to_active_institution_assignments(): void
+    {
+        $source = file_get_contents(base_path('app/Http/Controllers/Tagore/CbtAttemptController.php'));
+
+        $this->assertStringContainsString(
+            'private function ownedAttempt(int $attemptId, int $userId, array $institutions)',
+            $source
+        );
+        $this->assertStringContainsString(
+            '$this->ownedAttempt($attemptId, $userId, $institutions)',
+            $source
+        );
+        $this->assertSame(
+            3,
+            substr_count($source, "->whereIn('e.institution_id', \$institutions)")
+        );
+    }
+
 }
