@@ -209,3 +209,6 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Post-merge full acceptance run `45114388345` failed only in the focused Operations live-search check: desktop expected `1 of` after entering the newly created unique inventory item but displayed `2 of 2`; mobile passed. Backend, route bootstrap, scheduler, backend tests, production frontend build, mutating administrator workflows and the other completed checks passed.
 - Failure is not waived. New branch `fix/operations-search-direct-control-binding` binds listeners directly to the current search/status controls and rebinds after DOM replacement via MutationObserver; each filter pass re-reads current rows and controls. The desktop/mobile assertion remains unchanged.
 - Commit `7c5daae687135e4068ecefcc9dfda02e99aebb3a`. Exact-head CI and fresh full integration acceptance are required. No production records changed; no production deployment/migration.
+
+
+- Follow-up review on 2026-11-23 caught an over-escaped whitespace regex in the new Operations filter (`/\\s+/g` in the branch source). Corrected it to `/\s+/g` in commit `d0316e33f720e530a36ebea9982e14fab3e50e24`. Treat the earlier CI result as superseded; require fresh exact-head CI and full integration acceptance.
