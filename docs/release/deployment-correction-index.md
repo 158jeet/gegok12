@@ -193,3 +193,10 @@ This index is a deployment memory aid. It does not mean every correction should 
 - CBT is refreshed onto that new integration head in `work/cbt-engine-post-operations-fix`; all nine CBT implementation/migration/view/test files were reintroduced and current `routes/tagore.php` was patched without replacing other routes.
 - The previous CBT branch's backend, frontend and Docker smoke passed; its browser E2E failure was the already-known Operations search defect on the pre-#145 base. The new branch's exact-head CI must pass on the corrected base before any merge.
 - Per-attempt question/option snapshots and section-preserving randomization remain included. No live exam or candidate data.
+
+
+## CBT section-preserving randomization defect — 2026-11-23
+
+- Strengthened PR #148's regression test to include two questions in section A and one in section B. Exact-head CI `45110109787` exposed a real defect: the randomization query selected question ID and options but omitted `eq.section_code`, while the grouping code attempted to group by that absent property. All rows therefore collapsed into one null section and could cross section boundaries.
+- Fixed the query projection to include `eq.section_code` before grouping. The test asserts the two A questions occupy the first section block (in either randomized order), B remains after them, and both player reloads reuse the persisted order.
+- Prior PR #148 CI success on `60b67c90...` did not include this stronger test; run `45110109787` correctly failed on the regression, so the new exact-head CI must pass before merge.
