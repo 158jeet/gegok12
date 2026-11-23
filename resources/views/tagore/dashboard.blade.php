@@ -29,6 +29,9 @@
   <a class="tg-side-link active" href="{{ route('tagore.dashboard') }}"><span class="tg-side-icon">⌂</span>Overview</a>
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
+    @if($roles->contains('OWNER') || $roles->contains('ACCOUNTS') || $roles->intersect(['PRINCIPAL','HR'])->isNotEmpty())
+      <a class="tg-side-link" href="{{ route('tagore.biometric.index') }}"><span class="tg-side-icon">◉</span>Biometric devices</a>
+    @endif
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.students.promotion.index') }}"><span class="tg-side-icon">⇧</span>Student promotion</a>
