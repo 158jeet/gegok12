@@ -30,11 +30,9 @@
     </section>
     <section class="tg-bio-card">
       <h2>Integration readiness</h2>
-      <p>Vendor connector: RealtimeBioConnect</p>
-      <p>Endpoint: <code>https://apirealtime.com/RealtimeBioConnect.asmx</code></p>
-      <p>Model: Realtime T304F</p>
-      <p>Polling: 5-minute target, overlapping retrieval window, idempotent event storage</p>
-      <div class="tg-bio-warn">Automatic sync is not enabled yet. The serial number, API entitlement, vendor credentials, device cloud-server settings and WSDL operation contract must be confirmed before any device is polled.</div>
+      <p>Device model: Realtime T304F</p>
+      <p>Connection mode: Manual configuration pending vendor confirmation</p>
+      <div class="tg-bio-warn">Automatic sync is disabled. No vendor endpoint or API operation is assumed. Confirm the exact model/firmware, API or SDK documentation, credentials, network/cloud settings and read-only test procedure before enabling any connector.</div>
       <p class="tg-bio-muted">No face/fingerprint templates are copied into ERP. Only attendance event metadata is required.</p>
     </section>
   </div>
