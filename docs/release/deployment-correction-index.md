@@ -176,3 +176,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - PR #142 encrypted backup and disposable restore verification passed ERP CI run `44897560584` and Windows Pilot Package run `44897560590`; it remains draft/unmerged pending integration gate and operational review. No live backup or restore was run.
 - Institution duplicate-school-linkage browser scenario was reported flaky in the failing acceptance log. Retain it as an investigation item; do not skip or weaken the test.
 - No production data, live payment gateway, production migration or deployment used.
+
+
+## Operations search and parallel rebuild updates — 2026-11-23
+
+- Full integration acceptance run `45107100304` failed after PR #143 because Operations search used a cached row collection; desktop remained `2 of 2`, mobile `3 of 3`. The institution duplicate-school-linkage browser scenario passed.
+- New fix PR #145 (`fix/operations-search-dynamic-dom-rows`) resolves the live row/control collection on each filter pass and delegates events to survive dynamic DOM replacement. Exact-head CI run `45107594183` is still running; do not merge until all jobs pass and a post-merge full acceptance run passes.
+- CBT rebuild PR #144 (`work/cbt-engine-integration-e88c5b6`) was rebuilt from post-#143 head. Initial CI backend run `45107457378` failed because two negative role-date tests mutated the shared demo Owner/Student role fixtures without restoring them; the CBT tests themselves, including randomization persistence, passed. Both tests now restore original start dates in `finally`; fresh exact-head CI run `45107783263` is queued. Historical PR #130 is closed as superseded.
+- Owner assurance/hostel foundation is being rebuilt from post-#143 head on `work/owner-assurance-hostel-post-search-fix`; service, migration, test and scope doc plus 23 gap-register rows and Phase 6A roadmap were ported. Exact-head CI and security review are pending.
+- PR #141 and #142 remain blocked. No production data, live payments, production migrations or deployment.
