@@ -176,3 +176,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - PR #142 encrypted backup and disposable restore verification passed ERP CI run `44897560584` and Windows Pilot Package run `44897560590`; it remains draft/unmerged pending integration gate and operational review. No live backup or restore was run.
 - Institution duplicate-school-linkage browser scenario was reported flaky in the failing acceptance log. Retain it as an investigation item; do not skip or weaken the test.
 - No production data, live payment gateway, production migration or deployment used.
+
+
+## Operations search root-cause correction — 2026-11-23
+
+- PR #143 merged after its exact-head CI passed, but full integration acceptance run `45107100304` failed again on desktop and mobile Operations live search. The institution duplicate-school-linkage scenario now passed.
+- Failure evidence: desktop search count remained `2 of 2`; mobile remained `3 of 3` after the test created a new inventory row and searched for it.
+- Root cause identified in the view: the script cached the record-row NodeList at initial page load. The create workflow inserts/replaces rows later, so filtering/counting continued to use stale rows. The previous fix updated input listeners but did not refresh the row collection.
+- New correction branch `fix/operations-search-dynamic-dom-rows` resolves the current search/status controls, rows, count and empty state on every filter pass and uses delegated document listeners so replacement controls remain functional. No acceptance assertion is weakened.
+- Exact-head CI and a new full integration acceptance run are required before release or finance/backup merges.
