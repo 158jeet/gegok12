@@ -58,6 +58,35 @@ class CbtAttemptController extends Controller
                 'q.subject_code', 'q.chapter', 'q.difficulty', 'q.question_type', 'q.stem', 'q.options_json']);
     }
 
+    private function persistAttemptRandomization(int $attemptId, int $examId, bool $shuffleQuestions, bool $shuffleOptions): void
+    {
+        $rows = DB::table('tagore_cbt_exam_questions as eq')
+            ->join('tagore_cbt_questions as q', 'q.id', '=', 'eq.question_id')
+            ->where('eq.exam_id', $examId)
+            ->orderBy('eq.display_order')
+            ->get(['eq.id as exam_question_id', 'q.options_json']);
+
+        $questionIds = $rows->pluck('exam_question_id')->map(fn ($id) => (int) $id)->all();
+        if ($shuffleQuestions) {
+            shuffle($questionIds);
+        }
+
+        $optionOrder = [];
+        foreach ($rows as $row) {
+            $keys = array_keys(json_decode($row->options_json ?? '[]', true) ?: []);
+            if ($shuffleOptions) {
+                shuffle($keys);
+            }
+            $optionOrder[(string) $row->exam_question_id] = $keys;
+        }
+
+        DB::table('tagore_cbt_attempts')->where('id', $attemptId)->update([
+            'question_order_json' => json_encode($questionIds, JSON_THROW_ON_ERROR),
+            'option_order_json' => json_encode($optionOrder, JSON_THROW_ON_ERROR),
+            'updated_at' => now(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         [, $roles] = $this->context($request);
@@ -89,7 +118,13 @@ class CbtAttemptController extends Controller
             abort_if($exam->ends_at && $now->gte($exam->ends_at), 409, 'The exam window has closed.');
             $existing = DB::table('tagore_cbt_attempts')->where('exam_id', $examId)->where('student_id', $userId)
                 ->where('status', 'in_progress')->lockForUpdate()->first();
-            if ($existing) return $existing;
+            if ($existing) {
+                if (!$existing->question_order_json || !$existing->option_order_json) {
+                    $this->persistAttemptRandomization((int) $existing->id, $examId, (bool) $exam->shuffle_questions, (bool) $exam->shuffle_options);
+                    return DB::table('tagore_cbt_attempts')->where('id', $existing->id)->first();
+                }
+                return $existing;
+            }
             $attemptNo = (int) DB::table('tagore_cbt_attempts')->where('exam_id', $examId)->where('student_id', $userId)->max('attempt_no') + 1;
             $expiresAt = $now->copy()->addMinutes((int) $exam->duration_minutes);
             if ($exam->ends_at && $expiresAt->gt($exam->ends_at)) $expiresAt = Carbon::parse($exam->ends_at);
@@ -98,6 +133,7 @@ class CbtAttemptController extends Controller
                 'status' => 'in_progress', 'started_at' => $now, 'expires_at' => $expiresAt,
                 'created_at' => $now, 'updated_at' => $now,
             ]);
+            $this->persistAttemptRandomization($id, $examId, (bool) $exam->shuffle_questions, (bool) $exam->shuffle_options);
             return DB::table('tagore_cbt_attempts')->where('id', $id)->first();
         });
         return response()->json(['attempt_id' => $attempt->id, 'status' => $attempt->status, 'expires_at' => Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String(),
@@ -113,11 +149,26 @@ class CbtAttemptController extends Controller
         // Allow the candidate player to load an expired in-progress attempt so its countdown can trigger server-side submission.
         $exam = DB::table('tagore_cbt_exams')->where('id', $attempt->exam_id)->first(['id', 'title', 'exam_track', 'duration_minutes']);
         $attempt->expires_at = Carbon::parse($attempt->expires_at, config('app.timezone'))->toIso8601String();
-        $questions = $this->examQuestions((int) $attempt->exam_id)->map(function ($question) {
-            $question->options = json_decode($question->options_json ?? '[]', true) ?: [];
+        $questionOrder = json_decode($attempt->question_order_json ?? '[]', true) ?: [];
+        $optionOrder = json_decode($attempt->option_order_json ?? '[]', true) ?: [];
+        $questionRows = $this->examQuestions((int) $attempt->exam_id)->keyBy('exam_question_id');
+        $orderedQuestions = $questionOrder !== []
+            ? collect($questionOrder)->map(fn ($id) => $questionRows->get($id))->filter()
+            : $questionRows->values();
+        $questions = $orderedQuestions->map(function ($question) use ($optionOrder) {
+            $options = json_decode($question->options_json ?? '[]', true) ?: [];
+            $keys = $optionOrder[(string) $question->exam_question_id] ?? array_keys($options);
+            $orderedOptions = [];
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $options)) $orderedOptions[$key] = $options[$key];
+            }
+            foreach ($options as $key => $value) {
+                if (!array_key_exists($key, $orderedOptions)) $orderedOptions[$key] = $value;
+            }
+            $question->options = $orderedOptions;
             unset($question->options_json);
             return $question;
-        });
+        })->values();
         $responses = DB::table('tagore_cbt_responses')->where('attempt_id', $attemptId)
             ->get(['exam_question_id', 'answer_json', 'marked_for_review', 'time_spent_seconds'])
             ->mapWithKeys(fn ($response) => [(string) $response->exam_question_id => [
