@@ -185,3 +185,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Root cause identified in the view: the script cached the record-row NodeList at initial page load. The create workflow inserts/replaces rows later, so filtering/counting continued to use stale rows. The previous fix updated input listeners but did not refresh the row collection.
 - New correction branch `fix/operations-search-dynamic-dom-rows` resolves the current search/status controls, rows, count and empty state on every filter pass and uses delegated document listeners so replacement controls remain functional. No acceptance assertion is weakened.
 - Exact-head CI and a new full integration acceptance run are required before release or finance/backup merges.
+
+
+## CBT current-baseline refresh after Operations fix — 2026-11-23
+
+- Operations search fix PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd` after all four functional CI jobs and the release-blocking gate passed.
+- CBT is refreshed onto that new integration head in `work/cbt-engine-post-operations-fix`; all nine CBT implementation/migration/view/test files were reintroduced and current `routes/tagore.php` was patched without replacing other routes.
+- The previous CBT branch's backend, frontend and Docker smoke passed; its browser E2E failure was the already-known Operations search defect on the pre-#145 base. The new branch's exact-head CI must pass on the corrected base before any merge.
+- Per-attempt question/option snapshots and section-preserving randomization remain included. No live exam or candidate data.
