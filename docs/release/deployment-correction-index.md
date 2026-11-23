@@ -176,3 +176,13 @@ This index is a deployment memory aid. It does not mean every correction should 
 - PR #142 encrypted backup and disposable restore verification passed ERP CI run `44897560584` and Windows Pilot Package run `44897560590`; it remains draft/unmerged pending integration gate and operational review. No live backup or restore was run.
 - Institution duplicate-school-linkage browser scenario was reported flaky in the failing acceptance log. Retain it as an investigation item; do not skip or weaken the test.
 - No production data, live payment gateway, production migration or deployment used.
+
+
+## T304F registry current-baseline rebuild — 2026-11-23
+
+- Historical biometric/finance PR #69 is on a stale base and is not being merged directly. A focused current-integration rebuild is underway on `work/biometric-registry-current-integration`.
+- Ported the multi-device/site registry, institution-scoped employee mapping, restrictive evidence-preserving foreign keys, biometric workspace view, route/dashboard navigation and synthetic mapping tests.
+- Removed the unverified hardcoded vendor endpoint from the UI. Device records use `manual_config`, `api_endpoint = null`, and `sync_enabled = false` until exact model/firmware/API documentation and credentials are supplied.
+- Tightened device access and employee mapping to active, date-effective roles and institution scope. Added a test that device registration cannot enable sync or store guessed credentials.
+- Added `docs/research/tagore-erp/biometric-device-integration.md` and updated HR-002 to registry/mapping partial; live ingestion, connector, immutable punch processing and payroll posting remain blocked on vendor contract and separate acceptance.
+- Exact-head CI pending. No real device calls, credentials, biometric templates, live imports or payroll posting.
