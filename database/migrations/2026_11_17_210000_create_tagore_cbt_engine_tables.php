@@ -86,6 +86,8 @@ return new class extends Migration {
             $table->string('status', 20)->default('in_progress');
             $table->timestamp('started_at');
             $table->timestamp('expires_at');
+            $table->json('question_order_json')->nullable();
+            $table->json('option_order_json')->nullable();
             $table->timestamp('submitted_at')->nullable();
             $table->decimal('score', 9, 2)->nullable();
             $table->decimal('max_score', 9, 2)->nullable();
