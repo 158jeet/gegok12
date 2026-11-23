@@ -9,32 +9,173 @@ use App\Services\Tagore\FeeReceiptMailer;
 
 class OnlinePaymentService
 {
-    public function createOrder(int $studentId, int $parentUserId, float $amount): array
+    public function createOrder(int $studentId, int $parentUserId, float $amount, array $requestedAllocations = []): array
     {
         $this->assertGatewayConfigured();
-        return DB::transaction(function () use ($studentId, $parentUserId, $amount) {
+
+        // Reserve the fee balance and persist a local order in a short transaction.
+        // Never hold fee-row locks while waiting for the external payment gateway.
+        $order = DB::transaction(function () use ($studentId, $parentUserId, $amount, $requestedAllocations) {
             $student = DB::table('users')->where('id', $studentId)->first(['id', 'name', 'school_id']);
             if (!$student) throw ValidationException::withMessages(['student' => 'Student not found.']);
             $institutionId = DB::table('tagore_institutions')->where('school_id', $student->school_id)->where('status', 'active')->value('id');
             if (!$institutionId) throw ValidationException::withMessages(['student' => 'Student institution is not configured.']);
             $amount = round($amount, 2);
-            $outstanding = (float) DB::table('tagore_fee_obligations')->where('student_id', $studentId)->where('institution_id', $institutionId)->whereIn('status', ['pending','partial','overdue'])->sum('outstanding_amount');
-            if ($amount <= 0 || $amount > round($outstanding, 2) + 0.009) throw ValidationException::withMessages(['amount' => 'Payment amount must be positive and cannot exceed outstanding fees.']);
-            $orderId = DB::table('tagore_payment_orders')->insertGetId(['student_id'=>$studentId,'parent_user_id'=>$parentUserId,'institution_id'=>$institutionId,'amount'=>$amount,'currency'=>'INR','purpose'=>'School fee payment','status'=>'created','gateway'=>config('tagore.payment_gateway'),'expires_at'=>now()->addMinutes(30),'created_at'=>now(),'updated_at'=>now()]);
-            $remaining = $amount;
-            foreach (DB::table('tagore_fee_obligations')->where('student_id',$studentId)->where('institution_id',$institutionId)->where('outstanding_amount','>',0)->orderBy('due_date')->orderBy('id')->lockForUpdate()->get() as $obligation) {
-                if ($remaining <= 0.009) break;
-                $allocate = min($remaining, (float)$obligation->outstanding_amount);
-                DB::table('tagore_payment_order_allocations')->insert(['payment_order_id'=>$orderId,'fee_obligation_id'=>$obligation->id,'amount'=>round($allocate,2),'created_at'=>now(),'updated_at'=>now()]);
-                $remaining = round($remaining-$allocate,2);
+
+            $obligations = DB::table('tagore_fee_obligations')
+                ->where('student_id', $studentId)
+                ->where('institution_id', $institutionId)
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->where('outstanding_amount', '>', 0)
+                ->orderBy('due_date')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+            $reserved = DB::table('tagore_payment_order_allocations as a')
+                ->join('tagore_payment_orders as o', 'o.id', '=', 'a.payment_order_id')
+                ->whereIn('o.status', ['created', 'payment_initiated'])
+                ->where('o.expires_at', '>', now())
+                ->whereIn('a.fee_obligation_id', $obligations->pluck('id'))
+                ->groupBy('a.fee_obligation_id')
+                ->select('a.fee_obligation_id', DB::raw('SUM(a.amount) as reserved_amount'))
+                ->pluck('reserved_amount', 'a.fee_obligation_id');
+
+            $availableByObligation = [];
+            foreach ($obligations as $obligation) {
+                $availableByObligation[(int) $obligation->id] = max(
+                    0,
+                    round((float) $obligation->outstanding_amount - (float) ($reserved[$obligation->id] ?? 0), 2)
+                );
             }
-            if ($remaining > 0.009) throw ValidationException::withMessages(['amount' => 'Unable to allocate the requested payment.']);
-            $gateway = Http::timeout(15)->withBasicAuth((string)config('services.razorpay.key'),(string)config('services.razorpay.secret'))->post('https://api.razorpay.com/v1/orders',['amount'=>(int)round($amount*100),'currency'=>'INR','receipt'=>'TAG-PAY-'.$orderId,'notes'=>['tagore_payment_order_id'=>(string)$orderId,'student_id'=>(string)$studentId]]);
-            if (!$gateway->successful() || !$gateway->json('id')) throw ValidationException::withMessages(['payment' => 'Payment gateway order could not be created.']);
-            $gatewayOrderId=(string)$gateway->json('id');
-            DB::table('tagore_payment_orders')->where('id',$orderId)->update(['gateway_order_id'=>$gatewayOrderId,'status'=>'payment_initiated','updated_at'=>now()]);
-            return ['order_id'=>$orderId,'gateway_order_id'=>$gatewayOrderId,'amount'=>$amount,'currency'=>'INR','key'=>config('services.razorpay.key'),'student_name'=>$student->name];
+            if ($amount <= 0) {
+                throw ValidationException::withMessages(['amount' => 'Payment amount must be greater than zero.']);
+            }
+
+            $allocations = [];
+            if ($requestedAllocations) {
+                $seen = [];
+                foreach ($requestedAllocations as $row) {
+                    $obligationId = (int) ($row['fee_obligation_id'] ?? 0);
+                    $allocationAmount = round((float) ($row['amount'] ?? 0), 2);
+                    if (
+                        $obligationId <= 0
+                        || isset($seen[$obligationId])
+                        || !array_key_exists($obligationId, $availableByObligation)
+                        || $allocationAmount <= 0
+                        || $allocationAmount > $availableByObligation[$obligationId] + 0.009
+                    ) {
+                        throw ValidationException::withMessages([
+                            'allocations' => 'Select valid outstanding fee amounts. Refresh the statement if another checkout is active.',
+                        ]);
+                    }
+                    $seen[$obligationId] = true;
+                    $allocations[] = [
+                        'fee_obligation_id' => $obligationId,
+                        'amount' => $allocationAmount,
+                    ];
+                }
+
+                $selectedTotal = round((float) collect($allocations)->sum('amount'), 2);
+                if (abs($selectedTotal - $amount) > 0.009) {
+                    throw ValidationException::withMessages([
+                        'amount' => 'Payment amount must equal the sum of selected fee allocations.',
+                    ]);
+                }
+            } else {
+                $availableTotal = round(array_sum($availableByObligation), 2);
+                if ($amount > $availableTotal + 0.009) {
+                    throw ValidationException::withMessages([
+                        'amount' => 'Payment amount exceeds the fee balance available after other active checkouts. Please refresh the fee statement and try again.',
+                    ]);
+                }
+
+                $remaining = $amount;
+                foreach ($obligations as $obligation) {
+                    if ($remaining <= 0.009) break;
+                    $available = $availableByObligation[(int) $obligation->id] ?? 0;
+                    $allocate = min($remaining, $available);
+                    if ($allocate <= 0) continue;
+                    $allocations[] = [
+                        'fee_obligation_id' => (int) $obligation->id,
+                        'amount' => round($allocate, 2),
+                    ];
+                    $remaining = round($remaining - $allocate, 2);
+                }
+                if ($remaining > 0.009) {
+                    throw ValidationException::withMessages(['amount' => 'Unable to allocate the requested payment.']);
+                }
+            }
+
+            $orderId = DB::table('tagore_payment_orders')->insertGetId([
+                'student_id' => $studentId, 'parent_user_id' => $parentUserId,
+                'institution_id' => $institutionId, 'amount' => $amount,
+                'currency' => 'INR', 'purpose' => 'School fee payment',
+                'status' => 'created', 'gateway' => config('tagore.payment_gateway'),
+                'expires_at' => now()->addMinutes(30), 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            foreach ($allocations as $allocation) {
+                DB::table('tagore_payment_order_allocations')->insert([
+                    'payment_order_id' => $orderId,
+                    'fee_obligation_id' => $allocation['fee_obligation_id'],
+                    'amount' => $allocation['amount'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return [
+                'order_id' => $orderId, 'amount' => $amount,
+                'student_name' => $student->name,
+            ];
         });
+
+        // Gateway I/O happens after the reservation transaction commits.
+        try {
+            $gateway = Http::timeout(15)
+                ->withBasicAuth((string) config('services.razorpay.key'), (string) config('services.razorpay.secret'))
+                ->post('https://api.razorpay.com/v1/orders', [
+                    'amount' => (int) round($order['amount'] * 100),
+                    'currency' => 'INR',
+                    'receipt' => 'TAG-PAY-' . $order['order_id'],
+                    'notes' => [
+                        'tagore_payment_order_id' => (string) $order['order_id'],
+                        'student_id' => (string) $studentId,
+                    ],
+                ]);
+        } catch (\Throwable $exception) {
+            DB::table('tagore_payment_orders')->where('id', $order['order_id'])
+                ->where('status', 'created')
+                ->update(['status' => 'failed', 'updated_at' => now()]);
+            throw ValidationException::withMessages(['payment' => 'Payment gateway order could not be created.']);
+        }
+
+        $gatewayOrderId = $gateway->json('id');
+        if (!$gateway->successful() || !$gatewayOrderId) {
+            DB::table('tagore_payment_orders')->where('id', $order['order_id'])
+                ->where('status', 'created')
+                ->update(['status' => 'failed', 'updated_at' => now()]);
+            throw ValidationException::withMessages(['payment' => 'Payment gateway order could not be created.']);
+        }
+
+        $updated = DB::table('tagore_payment_orders')->where('id', $order['order_id'])
+            ->where('status', 'created')
+            ->update([
+                'gateway_order_id' => (string) $gatewayOrderId,
+                'status' => 'payment_initiated',
+                'updated_at' => now(),
+            ]);
+        if ($updated !== 1) {
+            throw ValidationException::withMessages(['payment' => 'Payment order could not be finalized. Please refresh the fee statement before trying again.']);
+        }
+
+        return [
+            'order_id' => $order['order_id'],
+            'gateway_order_id' => (string) $gatewayOrderId,
+            'amount' => $order['amount'],
+            'currency' => 'INR',
+            'key' => config('services.razorpay.key'),
+            'student_name' => $order['student_name'],
+        ];
     }
 
     public function confirm(array $data): int
@@ -62,7 +203,9 @@ class OnlinePaymentService
             }
             return 0;
         });
-        if ($paymentId) app(FeeReceiptMailer::class)->send((int)$paymentId);
+        if ($paymentId && DB::table('tagore_payments')->where('id',$paymentId)->where('status','success')->exists()) {
+            app(FeeReceiptMailer::class)->send((int)$paymentId);
+        }
     }
 
     private function assertGatewayConfigured(): void
@@ -84,16 +227,64 @@ class OnlinePaymentService
         return DB::transaction(function() use($orderId,$gatewayPaymentId){
             $order=DB::table('tagore_payment_orders')->where('id',$orderId)->lockForUpdate()->first();
             if(!$order) throw ValidationException::withMessages(['payment'=>'Payment order not found.']);
-            $existing=DB::table('tagore_payments')->where('payment_order_id',$orderId)->where('status','success')->first();
+            $existing=DB::table('tagore_payments')->where('payment_order_id',$orderId)->whereIn('status',['success','review_required'])->first();
             if($existing) return (int)$existing->id;
+            if (!in_array($order->status, ['payment_initiated', 'created'], true)) {
+                throw ValidationException::withMessages(['payment' => 'This payment order is no longer eligible for settlement.']);
+            }
+
             $now=now();
+            $allocations=DB::table('tagore_payment_order_allocations')
+                ->where('payment_order_id',$orderId)
+                ->orderBy('fee_obligation_id')
+                ->get();
+            $obligationIds=$allocations->pluck('fee_obligation_id')->unique()->sort()->values();
+            $lockedObligations=DB::table('tagore_fee_obligations')
+                ->whereIn('id',$obligationIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+            $allocatedTotal=round((float)$allocations->sum('amount'),2);
+            $allocationIsCurrent=abs($allocatedTotal-(float)$order->amount)<=0.009;
+            foreach($allocations as $allocation){
+                $obligation=$lockedObligations->get($allocation->fee_obligation_id);
+                if(!$obligation
+                    || (int)$obligation->student_id !== (int)$order->student_id
+                    || (int)$obligation->institution_id !== (int)$order->institution_id
+                    || (float)$allocation->amount > (float)$obligation->outstanding_amount + 0.009){
+                    $allocationIsCurrent=false;
+                    break;
+                }
+            }
+
+            if (!$allocationIsCurrent) {
+                // The gateway has captured money, but the reserved fee balance changed
+                // after checkout. Record it for reconciliation; never over-allocate it.
+                $paymentId=DB::table('tagore_payments')->insertGetId([
+                    'payment_order_id'=>$orderId,'student_id'=>$order->student_id,
+                    'parent_user_id'=>$order->parent_user_id,'institution_id'=>$order->institution_id,
+                    'amount'=>$order->amount,'currency'=>'INR','gateway'=>'razorpay',
+                    'gateway_order_id'=>$order->gateway_order_id,'gateway_payment_id'=>$gatewayPaymentId,
+                    'status'=>'review_required','paid_at'=>$now,'notes'=>'Gateway captured payment; fee balances changed after checkout. Manual reconciliation or refund is required.',
+                    'created_at'=>$now,'updated_at'=>$now,
+                ]);
+                DB::table('tagore_payment_reconciliations')->insert([
+                    'payment_id'=>$paymentId,'gateway'=>'razorpay','settlement_amount'=>$order->amount,
+                    'status'=>'pending','notes'=>'Captured payment could not be allocated because one or more fee obligations changed after checkout. Review allocation and refund if necessary.',
+                    'created_at'=>$now,'updated_at'=>$now,
+                ]);
+                DB::table('tagore_payment_orders')->where('id',$orderId)->update(['status'=>'review_required','updated_at'=>$now]);
+                return $paymentId;
+            }
+
             $receiptNo=$this->nextReceiptNo((int)$order->institution_id);
             $paymentId=DB::table('tagore_payments')->insertGetId(['payment_order_id'=>$orderId,'receipt_no'=>$receiptNo,'student_id'=>$order->student_id,'parent_user_id'=>$order->parent_user_id,'institution_id'=>$order->institution_id,'amount'=>$order->amount,'currency'=>'INR','gateway'=>'razorpay','gateway_order_id'=>$order->gateway_order_id,'gateway_payment_id'=>$gatewayPaymentId,'status'=>'success','paid_at'=>$now,'created_at'=>$now,'updated_at'=>$now]);
-            foreach(DB::table('tagore_payment_order_allocations')->where('payment_order_id',$orderId)->get() as $allocation){
+            foreach($allocations as $allocation){
+                $obligation=$lockedObligations->get($allocation->fee_obligation_id);
                 DB::table('tagore_payment_allocations')->insert(['payment_id'=>$paymentId,'fee_obligation_id'=>$allocation->fee_obligation_id,'fee_installment_id'=>$allocation->fee_installment_id,'amount'=>$allocation->amount,'created_at'=>$now,'updated_at'=>$now]);
-                $obligation=DB::table('tagore_fee_obligations')->where('id',$allocation->fee_obligation_id)->lockForUpdate()->first();
-                if(!$obligation) throw ValidationException::withMessages(['payment'=>'Fee obligation no longer exists.']);
-                $paid=round((float)$obligation->paid_amount+(float)$allocation->amount,2); $outstanding=max(0,round((float)$obligation->net_amount-$paid,2));
+                $paid=round((float)$obligation->paid_amount+(float)$allocation->amount,2);
+                $outstanding=max(0,round((float)$obligation->net_amount-$paid,2));
                 DB::table('tagore_fee_obligations')->where('id',$obligation->id)->update(['paid_amount'=>$paid,'outstanding_amount'=>$outstanding,'status'=>$outstanding<=0.009?'paid':'partial','updated_at'=>$now]);
             }
             DB::table('tagore_financial_transactions')->insert(['institution_id'=>$order->institution_id,'student_id'=>$order->student_id,'parent_user_id'=>$order->parent_user_id,'transaction_type'=>'PAYMENT','reference_type'=>'tagore_payment','reference_id'=>$paymentId,'debit'=>0,'credit'=>$order->amount,'description'=>'Online fee payment','transaction_date'=>$now,'created_at'=>$now,'updated_at'=>$now]);

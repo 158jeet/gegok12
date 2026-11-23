@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tagore;
 
 use App\Http\Controllers\Controller;
 use App\Services\Tagore\OnlinePaymentService;
+use App\Services\Tagore\FeeReceiptMailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,11 +14,11 @@ class OnlinePaymentController extends Controller
     {
         $userId=(int)$request->user()->id;
         abort_unless(DB::table('tagore_parent_students')->where('parent_user_id',$userId)->where('student_id',$studentId)->where('status','active')->exists(),403);
-        $data=$request->validate(['amount'=>['required','numeric','min:1']]);
+        $data=$request->validate(['amount'=>['required','numeric','min:1'],'allocations'=>['required','array','min:1'],'allocations.*.fee_obligation_id'=>['required','integer'],'allocations.*.amount'=>['required','numeric','gt:0']]);
         if (config('tagore.payment_gateway') !== 'razorpay' || !config('services.razorpay.key') || !config('services.razorpay.secret')) {
             return back()->with('error', 'Online payments are not configured yet. Please contact the school office to arrange payment.');
         }
-        $order=$service->createOrder($studentId,$userId,(float)$data['amount']);
+        $order=$service->createOrder($studentId,$userId,(float)$data['amount'],$data['allocations']);
         return view('tagore.payments.checkout',compact('order'));
     }
 
@@ -32,8 +33,12 @@ class OnlinePaymentController extends Controller
         $authorizedStaff=$roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty();
         abort_unless($authorizedParent || $authorizedStaff,403);
         $paymentId=$service->confirm($data);
+        $payment=DB::table('tagore_payments')->where('id',$paymentId)->firstOrFail();
+        if ($payment->status === 'review_required') {
+            return redirect()->route('tagore.fees.student',['studentId'=>$payment->student_id])
+                ->with('error','Your payment was captured, but the fee balance changed before settlement. The amount is safely flagged for office reconciliation. Please do not pay again; contact the accounts office.');
+        }
         app(FeeReceiptMailer::class)->send($paymentId);
-        $payment=DB::table('tagore_payments')->where('id',$paymentId)->first();
         return redirect()->route('tagore.fees.student',['studentId'=>$payment->student_id])->with('success','Payment received successfully. Receipt '.$payment->receipt_no.'.');
     }
 
