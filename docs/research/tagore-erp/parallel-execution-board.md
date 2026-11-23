@@ -203,3 +203,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #142 backup/restore: ERP CI and Windows Pilot Package both passed; hold merge until integration acceptance passes and scripts receive operational review.
 - After the acceptance defect is cleared, integrate #141, then #142, with full integration acceptance after each merge. Next feature track: rebuild CBT engine on current integration and add deterministic per-attempt question/option randomisation, preserving exam section/marks and attempt integrity; then Owner assurance/hostel and HR/biometric.
 - Free-only tooling. No live data, production migrations, production restore or deployment.
+
+
+## 2026-11-23 — Operations live-search root cause and correction
+
+- PR #143's exact-head CI passed and it merged as `e88c5b607a2183cf675a5f1f0aa8f03672fa90a8`, but full acceptance run `45107100304` failed again: Operations search count remained `2 of 2` desktop and `3 of 3` mobile. The institution duplicate-linkage scenario passed.
+- Root cause: Operations filtering cached the row collection before the create action inserted/replaced rows. The search count therefore operated on stale DOM nodes. PR #143 corrected input handling but did not make the row collection live.
+- New branch `fix/operations-search-dynamic-dom-rows` resolves current rows and controls on every apply, with delegated listeners that survive DOM replacement. Exact-head CI and post-merge integration acceptance must validate it; do not bypass the test.
+- PR #141 and #142 remain blocked. CBT work is proceeding in parallel on draft PR #144; no production activity.
