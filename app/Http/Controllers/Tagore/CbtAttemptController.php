@@ -66,9 +66,14 @@ class CbtAttemptController extends Controller
             ->orderBy('eq.display_order')
             ->get(['eq.id as exam_question_id', 'q.options_json']);
 
-        $questionIds = $rows->pluck('exam_question_id')->map(fn ($id) => (int) $id)->all();
-        if ($shuffleQuestions) {
-            shuffle($questionIds);
+        // Shuffle only within each section so the published section blueprint remains intact.
+        $questionIds = [];
+        foreach ($rows->groupBy('section_code') as $sectionRows) {
+            $sectionIds = $sectionRows->pluck('exam_question_id')->map(fn ($id) => (int) $id)->all();
+            if ($shuffleQuestions) {
+                shuffle($sectionIds);
+            }
+            array_push($questionIds, ...$sectionIds);
         }
 
         $optionOrder = [];
