@@ -193,3 +193,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 
 - Closed superseded historical drafts #124, #127, #125 and #134 to prevent accidental merges. Their current replacements are respectively #139 (merged), #140 (current Daily Diary rebuild), #141 (current partial fee allocation + concurrency rebuild) and #138 (merged).
 - Current validation remains open: integration acceptance run `44895722308`; Daily Diary ERP CI `44895851964`; partial fee allocation ERP CI `44896021179`. Do not merge #140/#141 until all relevant exact-head jobs and the latest integration acceptance pass.
+
+
+## 2026-11-23 — Parallel CI wave initiated
+
+- Track: Backup and restore (existing PR branch).
+- Purpose: trigger an independent exact-head ERP CI run while Operations search correction PR #153 is validated.
+- This is a branch-level feature regression run only. The branch has not yet been rebased onto latest integration commit `85c808678cfc380ed244176b1658164195935d1d`; a green result will not authorize merge. Refresh/reconcile against current integration and rerun CI plus acceptance before merging.
+- No production data, migrations, live gateway, biometric hardware or backup restore used.
