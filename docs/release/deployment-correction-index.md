@@ -185,3 +185,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Root cause identified in the view: the script cached the record-row NodeList at initial page load. The create workflow inserts/replaces rows later, so filtering/counting continued to use stale rows. The previous fix updated input listeners but did not refresh the row collection.
 - New correction branch `fix/operations-search-dynamic-dom-rows` resolves the current search/status controls, rows, count and empty state on every filter pass and uses delegated document listeners so replacement controls remain functional. No acceptance assertion is weakened.
 - Exact-head CI and a new full integration acceptance run are required before release or finance/backup merges.
+
+
+## Daily Diary full-acceptance correction — 2026-11-23
+
+- After PR #145 merged, full integration acceptance run `45108815439` confirmed the Operations search failure was cleared; 91 browser tests passed, one Daily Diary desktop test failed.
+- Failure: the E2E test saved school homework using the first diary card in the Owner's multi-student view, then asserted against the parent's linked-child view. The Owner view is not guaranteed to put that same student first; the test could write a different child's diary, leaving the parent view with an older coordinator entry.
+- New branch `fix/daily-diary-acceptance-student-target` captures the linked student's card ID from the Parent view, targets that exact student card in the Owner view, and asserts the updated homework/feedback in that same Parent card. No application authorization or feature assertions were relaxed.
+- Exact-head ERP CI and a new full integration acceptance run are required. PR #141/#142 remain blocked until full acceptance is green.
