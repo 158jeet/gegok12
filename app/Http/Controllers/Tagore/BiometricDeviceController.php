@@ -15,13 +15,20 @@ class BiometricDeviceController extends Controller
         $roles = DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
             ->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
             ->pluck('r.code')->unique()->values();
-        abort_unless($roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty() || $roles->intersect(['PRINCIPAL', 'HR'])->isNotEmpty(), 403);
+        $groupWide = $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty();
+        abort_unless($groupWide || $roles->contains('PRINCIPAL') || $roles->contains('HR'), 403);
 
-        $ids = $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()
-            ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
-            : DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')
-                ->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $ids = $groupWide
+            ? DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->where('ur.user_id', $userId)->where('ur.status', 'active')
+                ->whereIn('r.code', ['PRINCIPAL', 'HR'])->whereNotNull('ur.institution_id')
+                ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+                ->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
 
         return [$userId, $roles, $ids];
     }
@@ -92,16 +99,18 @@ class BiometricDeviceController extends Controller
         $schoolId = DB::table('tagore_institutions')->where('id', $device->institution_id)->value('school_id');
         $employee = DB::table('users')->where('id', $data['employee_id'])
             ->where('school_id', $schoolId)->whereNull('deleted_at')
-            ->where(function ($query) {
-                // Legacy employee user groups; explicitly exclude student and parent groups.
-                $query->whereIn('usergroup_id', [3, 4, 5, 8, 10, 11, 12, 13])
-                    ->orWhereExists(function ($roles) {
-                        $roles->selectRaw('1')
-                            ->from('tagore_user_roles as ur')
-                            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
-                            ->whereColumn('ur.user_id', 'users.id')
-                            ->where('ur.status', 'active')
-                            ->whereIn('r.code', ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER', 'HR']);
+            ->whereExists(function ($roles) use ($device) {
+                $roles->selectRaw('1')
+                    ->from('tagore_user_roles as ur')
+                    ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                    ->whereColumn('ur.user_id', 'users.id')
+                    ->where('ur.status', 'active')
+                    ->whereIn('r.code', ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER', 'HR', 'FEE_EDITOR'])
+                    ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+                    ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+                    ->where(function ($scope) use ($device) {
+                        $scope->where('ur.institution_id', $device->institution_id)
+                            ->orWhere(fn ($owner) => $owner->where('r.code', 'OWNER')->whereNull('ur.institution_id'));
                     });
             })->first();
         abort_unless($employee, 422, 'Select an active staff/employee account belonging to this institution.');
