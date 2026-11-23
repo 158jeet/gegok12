@@ -193,3 +193,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Failure: the E2E test saved school homework using the first diary card in the Owner's multi-student view, then asserted against the parent's linked-child view. The Owner view is not guaranteed to put that same student first; the test could write a different child's diary, leaving the parent view with an older coordinator entry.
 - New branch `fix/daily-diary-acceptance-student-target` captures the linked student's card ID from the Parent view, targets that exact student card in the Owner view, and asserts the updated homework/feedback in that same Parent card. No application authorization or feature assertions were relaxed.
 - Exact-head ERP CI and a new full integration acceptance run are required. PR #141/#142 remain blocked until full acceptance is green.
+
+
+## CBT post-Diary rebuild — PR #152 — 2026-11-23
+
+- Daily Diary acceptance fix PR #151 merged as `f1408c263fea88ccba22d330f7ec08f44774f0de`; exact-head CI and release-blocking gate passed.
+- Rebuilt CBT on that post-Diary integration head in PR #152. The prior PR #148 was closed as superseded; do not merge it.
+- Expanded regression in run `45110109787` exposed real defect: `persistAttemptRandomization` grouped by `section_code` without selecting it in the query. Added `eq.section_code` to projection and strengthened the regression with two A questions and one B question.
+- PR #152 exact-head ERP CI run `45113041748` queued at record time. Merge remains blocked until all CI and full integration acceptance are green.
