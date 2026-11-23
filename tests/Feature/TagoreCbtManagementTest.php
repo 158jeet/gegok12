@@ -206,13 +206,22 @@ class TagoreCbtManagementTest extends TestCase
     public function test_management_access_rejects_future_dated_role_assignments(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
-        DB::table('tagore_user_roles')->where('user_id', $owner->id)->update([
-            'start_date' => today()->addDay()->toDateString(),
-        ]);
+        $originalStartDates = DB::table('tagore_user_roles')
+            ->where('user_id', $owner->id)->pluck('start_date', 'id')->all();
 
-        $this->actingAs($owner)
-            ->get(route('tagore.cbt.manage'))
-            ->assertForbidden();
+        try {
+            DB::table('tagore_user_roles')->where('user_id', $owner->id)->update([
+                'start_date' => today()->addDay()->toDateString(),
+            ]);
+
+            $this->actingAs($owner)
+                ->get(route('tagore.cbt.manage'))
+                ->assertForbidden();
+        } finally {
+            foreach ($originalStartDates as $roleId => $startDate) {
+                DB::table('tagore_user_roles')->where('id', $roleId)->update(['start_date' => $startDate]);
+            }
+        }
     }
 
 
