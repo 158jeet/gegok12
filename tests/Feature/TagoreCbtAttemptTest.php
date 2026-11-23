@@ -148,6 +148,18 @@ class TagoreCbtAttemptTest extends TestCase
             'display_order' => 2, 'marks' => 4, 'negative_marks' => 1,
             'created_at' => $now, 'updated_at' => $now,
         ]);
+        $thirdQuestionId = DB::table('tagore_cbt_questions')->insertGetId([
+            'question_bank_id' => $bankId, 'subject_code' => 'physics', 'chapter' => 'Work and Energy',
+            'difficulty' => 'medium', 'question_type' => 'single_choice',
+            'stem' => 'Third question?', 'options_json' => json_encode(['A' => 'One', 'B' => 'Two', 'C' => 'Three']),
+            'answer_key_json' => json_encode('B'), 'default_marks' => 4, 'default_negative_marks' => 1,
+            'status' => 'approved', 'created_by' => $owner->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $thirdExamQuestionId = DB::table('tagore_cbt_exam_questions')->insertGetId([
+            'exam_id' => $examId, 'question_id' => $thirdQuestionId, 'section_code' => 'A',
+            'display_order' => 3, 'marks' => 4, 'negative_marks' => 1,
+            'created_at' => $now, 'updated_at' => $now,
+        ]);
         DB::table('tagore_cbt_exam_questions')->where('id', $fixture['examQuestionId'])->update(['section_code' => 'A']);
 
         $start = $this->actingAs($student)
@@ -157,8 +169,9 @@ class TagoreCbtAttemptTest extends TestCase
         $questionOrder = json_decode($snapshot->question_order_json, true);
         $optionOrder = json_decode($snapshot->option_order_json, true);
 
-        $this->assertCount(2, $questionOrder);
-        $this->assertEqualsCanonicalizing([$fixture['examQuestionId'], $secondExamQuestionId], $questionOrder);
+        $this->assertCount(3, $questionOrder);
+        $this->assertEqualsCanonicalizing([$fixture['examQuestionId'], $thirdExamQuestionId], array_slice($questionOrder, 0, 2));
+        $this->assertSame($secondExamQuestionId, $questionOrder[2]);
 
         $firstLoad = $this->getJson(route('tagore.cbt.attempts.player', $attemptId))->assertOk();
         $secondLoad = $this->getJson(route('tagore.cbt.attempts.player', $attemptId))->assertOk();
