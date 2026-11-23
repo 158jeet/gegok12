@@ -64,7 +64,7 @@ class CbtAttemptController extends Controller
             ->join('tagore_cbt_questions as q', 'q.id', '=', 'eq.question_id')
             ->where('eq.exam_id', $examId)
             ->orderBy('eq.display_order')
-            ->get(['eq.id as exam_question_id', 'q.options_json']);
+            ->get(['eq.id as exam_question_id', 'eq.section_code', 'q.options_json']);
 
         // Shuffle only within each section so the published section blueprint remains intact.
         $questionIds = [];
