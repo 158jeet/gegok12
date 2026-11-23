@@ -185,3 +185,12 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Root cause identified in the view: the script cached the record-row NodeList at initial page load. The create workflow inserts/replaces rows later, so filtering/counting continued to use stale rows. The previous fix updated input listeners but did not refresh the row collection.
 - New correction branch `fix/operations-search-dynamic-dom-rows` resolves the current search/status controls, rows, count and empty state on every filter pass and uses delegated document listeners so replacement controls remain functional. No acceptance assertion is weakened.
 - Exact-head CI and a new full integration acceptance run are required before release or finance/backup merges.
+
+
+## T304F and HR current-baseline refresh — 2026-11-23
+
+- PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd`; this biometric/HR branch is refreshed on that corrected Operations baseline.
+- Reintroduced the multi-site T304F registry, employee mappings, restrictive evidence-preserving schema, dashboard workspace and tests. Removed the unverified vendor endpoint; device sync remains disabled, credentials and endpoint null.
+- Added least-privilege HR Manager role and access-matrix coverage. PayrollController grants group-wide payroll institution scope to Central Accounts and applies effective-date checks to role assignments. Added tests for HR institution isolation and Central Accounts visibility.
+- Preserved Accounts/HR/Assessment modernization requirements; HR-002 now records registry/mapping partial. Actual polling, ingestion, immutable raw-punch service and payroll posting remain blocked on the exact vendor contract and separate acceptance.
+- Exact-head CI pending; no real device calls, credentials, biometric templates, payroll run or live data.

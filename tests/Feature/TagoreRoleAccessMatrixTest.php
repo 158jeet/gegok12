@@ -45,6 +45,10 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'has' => ['dashboard.view', 'student.view', 'fee.view', 'payment.view'],
                 'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
             ],
+            'HR' => [
+                'has' => ['dashboard.view', 'attendance.view', 'attendance.manage', 'report.view', 'task.view', 'task.manage'],
+                'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
+            ],
             'FEE_EDITOR' => [
                 'has' => ['dashboard.view', 'fee.view', 'fee.edit', 'report.view'],
                 'lacks' => ['fee.manage', 'payment.reconcile', 'user.manage'],
