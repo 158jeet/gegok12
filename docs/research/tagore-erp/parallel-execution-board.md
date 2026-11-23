@@ -212,3 +212,10 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Removed the unverified vendor endpoint from the UI. Device registration remains `manual_config`, endpoint null, sync disabled and credentials absent until exact model/firmware/API contract is provided.
 - Added vendor prerequisite and future connector acceptance document; HR-002 now records registry/mapping as partial only. Actual ingestion, immutable event processing and payroll integration remain unimplemented pending vendor documentation and separate validation.
 - Exact-head CI pending; no real device calls or live data.
+
+
+## 2026-11-23 — HR role and central Accounts scope
+
+- Biometric rebuild PR #147 now includes a seeded least-privilege HR Manager role and access-matrix coverage. PayrollController grants group-wide institution scope to central Accounts and retains date-effective institution scope for local roles.
+- Added synthetic tests for HR device visibility isolation and Central Accounts group-wide payroll visibility. Preserved Accounts/HR/Assessment modernization business rules in a dedicated requirements document.
+- PR #147 remains draft pending exact-head CI and security review; no payroll run/payment, live employee data, biometric template or real device call.
