@@ -203,3 +203,12 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #142 backup/restore: ERP CI and Windows Pilot Package both passed; hold merge until integration acceptance passes and scripts receive operational review.
 - After the acceptance defect is cleared, integrate #141, then #142, with full integration acceptance after each merge. Next feature track: rebuild CBT engine on current integration and add deterministic per-attempt question/option randomisation, preserving exam section/marks and attempt integrity; then Owner assurance/hostel and HR/biometric.
 - Free-only tooling. No live data, production migrations, production restore or deployment.
+
+
+## 2026-11-23 — T304F biometric registry parallel track
+
+- Historical PR #69 is stale and is not being merged directly. Focused current-baseline rebuild branch: `work/biometric-registry-current-integration`.
+- Ported device/site registry, employee mapping, view, routes, dashboard link and schema. Tightened date-effective role and same-institution checks; student/parent mapping is rejected.
+- Removed the unverified vendor endpoint from the UI. Device registration remains `manual_config`, endpoint null, sync disabled and credentials absent until exact model/firmware/API contract is provided.
+- Added vendor prerequisite and future connector acceptance document; HR-002 now records registry/mapping as partial only. Actual ingestion, immutable event processing and payroll integration remain unimplemented pending vendor documentation and separate validation.
+- Exact-head CI pending; no real device calls or live data.
