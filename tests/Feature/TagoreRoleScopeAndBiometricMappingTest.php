@@ -76,6 +76,49 @@ class TagoreRoleScopeAndBiometricMappingTest extends TestCase
         $this->assertNull($device->encrypted_credentials);
     }
 
+    public function test_hr_manager_sees_only_devices_for_the_assigned_institution(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+        $institutions = DB::table('tagore_institutions')->where('status', 'active')->orderBy('id')->limit(2)->get();
+        $this->assertCount(2, $institutions);
+
+        $hr = User::factory()->create([
+            'name' => 'Tagore HR Manager',
+            'email' => 'hr-scope-' . bin2hex(random_bytes(4)) . '@example.invalid',
+            'school_id' => $institutions[0]->school_id,
+            'usergroup_id' => 4,
+        ]);
+        $hrRoleId = DB::table('tagore_roles')->where('code', 'HR')->value('id');
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $hr->id,
+            'role_id' => $hrRoleId,
+            'institution_id' => $institutions[0]->id,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ($institutions as $index => $institution) {
+            DB::table('tagore_biometric_devices')->insert([
+                'institution_id' => $institution->id,
+                'site_name' => 'Site ' . $index,
+                'device_name' => 'HR Scope Device ' . $index,
+                'model' => 'Realtime T304F',
+                'serial_number' => 'HR-' . strtoupper(bin2hex(random_bytes(6))),
+                'connection_mode' => 'manual_config',
+                'sync_enabled' => false,
+                'created_by' => $owner->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($hr)->get(route('tagore.biometric.index'))
+            ->assertOk()
+            ->assertSee('HR Scope Device 0')
+            ->assertDontSee('HR Scope Device 1');
+    }
+
     public function test_biometric_mapping_rejects_a_student_account(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
