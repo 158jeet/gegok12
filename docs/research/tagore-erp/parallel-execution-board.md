@@ -219,3 +219,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Includes multi-site T304F registry and same-institution employee mapping, least-privilege HR role, central Accounts group-wide payroll scope and date-effective role checks.
 - Removed unverified vendor endpoint; sync remains disabled pending official device/firmware/API contract. HR-002 marked registry/mapping partial only.
 - Exact-head CI pending. No live device call, biometric template, payroll run or employee data.
+
+
+## 2026-11-23 — Parallel CI wave initiated
+
+- Track: HR and biometric registry (existing PR branch).
+- Purpose: trigger an independent exact-head ERP CI run while Operations search correction PR #153 is validated.
+- This is a branch-level feature regression run only. The branch has not yet been rebased onto latest integration commit `85c808678cfc380ed244176b1658164195935d1d`; a green result will not authorize merge. Refresh/reconcile against current integration and rerun CI plus acceptance before merging.
+- No production data, migrations, live gateway, biometric hardware or backup restore used.
