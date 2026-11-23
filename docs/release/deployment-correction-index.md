@@ -185,3 +185,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Root cause identified in the view: the script cached the record-row NodeList at initial page load. The create workflow inserts/replaces rows later, so filtering/counting continued to use stale rows. The previous fix updated input listeners but did not refresh the row collection.
 - New correction branch `fix/operations-search-dynamic-dom-rows` resolves the current search/status controls, rows, count and empty state on every filter pass and uses delegated document listeners so replacement controls remain functional. No acceptance assertion is weakened.
 - Exact-head CI and a new full integration acceptance run are required before release or finance/backup merges.
+
+
+## Owner assurance/hostel current-baseline refresh — 2026-11-23
+
+- PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd` after all functional CI and the release-blocking gate passed.
+- Owner assurance/hostel foundation refreshed onto that corrected baseline in `work/owner-assurance-hostel-post-ops-search-fix`: operational audit service, schema migration, feature tests, scope document, 23 AUD/HOST gap rows and Phase 6A roadmap are present.
+- Earlier PR #146 passed exact-head CI on the pre-#145 base; this refreshed branch must pass exact-head CI and full acceptance before merge. Owner cockpit UI, scheduling/alerts and dedicated hostel workflows remain follow-on implementation.
+- No live operational data, production migration, hardware activation or deployment.
