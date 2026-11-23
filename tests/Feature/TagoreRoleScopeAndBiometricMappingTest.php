@@ -51,6 +51,33 @@ class TagoreRoleScopeAndBiometricMappingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_central_accounts_payroll_scope_is_group_wide(): void
+    {
+        $institutions = DB::table('tagore_institutions')->where('status', 'active')->orderBy('id')->limit(2)->get();
+        $this->assertCount(2, $institutions);
+
+        $accounts = User::factory()->create([
+            'name' => 'Central Accounts',
+            'email' => 'central-accounts-' . bin2hex(random_bytes(4)) . '@example.invalid',
+            'school_id' => $institutions[0]->school_id,
+            'usergroup_id' => 4,
+        ]);
+        $accountsRoleId = DB::table('tagore_roles')->where('code', 'ACCOUNTS')->value('id');
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $accounts->id,
+            'role_id' => $accountsRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($accounts)->get(route('tagore.payroll.index'))->assertOk();
+        foreach ($institutions as $institution) {
+            $response->assertSee($institution->display_name);
+        }
+    }
+
     public function test_owner_device_registration_keeps_sync_disabled_without_vendor_contract(): void
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
