@@ -218,3 +218,6 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd` after all functional CI and release-blocking gate passed.
 - Fresh CBT branch `work/cbt-engine-post-operations-fix` starts from that merge and reintroduces the CBT feature/migration/views/tests plus current route registrations. This removes the old-base Operations E2E failure from the new CBT validation run.
 - CBT includes per-attempt immutable question/option order snapshots and shuffles questions only within sections. Exact-head CI and integration acceptance remain required.
+
+
+- CBT randomization regression was strengthened to use two questions in section A and one in section B, proving that randomized question order cannot cross section boundaries while repeated player loads retain the same order. The exact-head CI rerun is required.
