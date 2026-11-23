@@ -203,3 +203,13 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #142 backup/restore: ERP CI and Windows Pilot Package both passed; hold merge until integration acceptance passes and scripts receive operational review.
 - After the acceptance defect is cleared, integrate #141, then #142, with full integration acceptance after each merge. Next feature track: rebuild CBT engine on current integration and add deterministic per-attempt question/option randomisation, preserving exam section/marks and attempt integrity; then Owner assurance/hostel and HR/biometric.
 - Free-only tooling. No live data, production migrations, production restore or deployment.
+
+
+## 2026-11-23 — acceptance recovery and CBT parallel track
+
+- PR #143 merged as `e88c5b607a2183cf675a5f1f0aa8f03672fa90a8` after exact-head CI `44997534824` passed all five jobs. Full ERP Acceptance Convergence run `45107100304` is running on that exact integration head; release remains blocked until it completes successfully.
+- PR #141 (partial fee allocation/concurrency) and PR #142 (backup/restore) remain unmerged pending the latest full integration acceptance and their respective current-head review.
+- Started a fresh CBT rebuild branch `work/cbt-engine-integration-e88c5b6` from the post-#143 integration commit. Ported the nine CBT feature files and added route registrations to the current route file without replacing existing routes.
+- Added per-attempt immutable question/option order snapshots, shuffled questions only within their original sections, and added a regression test proving the same order is returned on repeated player loads. Exact-head CI is still required; randomization behavior is not accepted until the test and migration pass.
+- Next CBT review items: exam-window and attempt concurrency, published-exam immutability, role capabilities, institution isolation, scoring edge cases, MySQL migration smoke, and exact-head browser/production smoke. Continue Owner assurance/hostel and HR/biometric after CBT is validated; free tooling only.
+- No live data, live payment, production migration, restore or deployment.
