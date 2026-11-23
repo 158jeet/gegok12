@@ -29,7 +29,8 @@ class TagoreCbtAttemptTest extends TestCase
         ]);
         $examId = DB::table('tagore_cbt_exams')->insertGetId([
             'institution_id' => $institutionId, 'title' => 'Attempt lifecycle mock',
-            'exam_track' => 'JEE_MAIN', 'duration_minutes' => 60, 'status' => 'published',
+            'exam_track' => 'JEE_MAIN', 'duration_minutes' => 60, 'shuffle_questions' => true,
+            'shuffle_options' => true, 'status' => 'published',
             'created_by' => $owner->id, 'published_by' => $owner->id, 'published_at' => $now,
             'created_at' => $now, 'updated_at' => $now,
         ]);
@@ -124,6 +125,50 @@ class TagoreCbtAttemptTest extends TestCase
             3,
             substr_count($source, "->whereIn('e.institution_id', \$institutions)")
         );
+    }
+
+    public function test_attempt_randomization_is_persisted_and_keeps_questions_within_their_sections(): void
+    {
+        $fixture = $this->publishedExam();
+        $owner = $fixture['owner'];
+        $student = $fixture['student'];
+        $examId = $fixture['examId'];
+        $now = now();
+
+        $bankId = (int) DB::table('tagore_cbt_question_banks')->where('name', 'Attempt lifecycle test bank')->value('id');
+        $secondQuestionId = DB::table('tagore_cbt_questions')->insertGetId([
+            'question_bank_id' => $bankId, 'subject_code' => 'physics', 'chapter' => 'Dynamics',
+            'difficulty' => 'medium', 'question_type' => 'single_choice',
+            'stem' => 'Second question?', 'options_json' => json_encode(['A' => 'Alpha', 'B' => 'Beta', 'C' => 'Gamma']),
+            'answer_key_json' => json_encode('A'), 'default_marks' => 4, 'default_negative_marks' => 1,
+            'status' => 'approved', 'created_by' => $owner->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $secondExamQuestionId = DB::table('tagore_cbt_exam_questions')->insertGetId([
+            'exam_id' => $examId, 'question_id' => $secondQuestionId, 'section_code' => 'B',
+            'display_order' => 2, 'marks' => 4, 'negative_marks' => 1,
+            'created_at' => $now, 'updated_at' => $now,
+        ]);
+        DB::table('tagore_cbt_exam_questions')->where('id', $fixture['examQuestionId'])->update(['section_code' => 'A']);
+
+        $start = $this->actingAs($student)
+            ->postJson(route('tagore.cbt.attempts.start', $examId))->assertOk();
+        $attemptId = (int) $start->json('attempt_id');
+        $snapshot = DB::table('tagore_cbt_attempts')->where('id', $attemptId)->first();
+        $questionOrder = json_decode($snapshot->question_order_json, true);
+        $optionOrder = json_decode($snapshot->option_order_json, true);
+
+        $this->assertCount(2, $questionOrder);
+        $this->assertEqualsCanonicalizing([$fixture['examQuestionId'], $secondExamQuestionId], $questionOrder);
+
+        $firstLoad = $this->getJson(route('tagore.cbt.attempts.player', $attemptId))->assertOk();
+        $secondLoad = $this->getJson(route('tagore.cbt.attempts.player', $attemptId))->assertOk();
+        $this->assertSame($questionOrder, array_column($firstLoad->json('questions'), 'exam_question_id'));
+        $this->assertSame($questionOrder, array_column($secondLoad->json('questions'), 'exam_question_id'));
+
+        foreach ($firstLoad->json('questions') as $question) {
+            $expectedKeys = $optionOrder[(string) $question['exam_question_id']];
+            $this->assertSame($expectedKeys, array_keys($question['options']));
+        }
     }
 
     public function test_candidate_access_rejects_future_dated_role_assignments(): void
