@@ -221,3 +221,10 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 
 
 - CBT randomization regression was strengthened to use two questions in section A and one in section B, proving that randomized question order cannot cross section boundaries while repeated player loads retain the same order. The exact-head CI rerun is required.
+
+
+## 2026-11-23 — CBT randomization defect discovered and fixed
+
+- The expanded section-boundary test in PR #148 exposed a real bug: `section_code` was omitted from the attempt-randomization query projection, so collection grouping treated every row as one null section.
+- Added `eq.section_code` to the selected fields; the regression covers two A questions and one B question, verifies section blocks remain in order and checks stable question/option order across reloads.
+- Fix committed to `work/cbt-engine-post-operations-fix`; exact-head CI pending. No live exams/candidates.
