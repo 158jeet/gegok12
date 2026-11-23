@@ -186,3 +186,11 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Tightened device access and employee mapping to active, date-effective roles and institution scope. Added a test that device registration cannot enable sync or store guessed credentials.
 - Added `docs/research/tagore-erp/biometric-device-integration.md` and updated HR-002 to registry/mapping partial; live ingestion, connector, immutable punch processing and payroll posting remain blocked on vendor contract and separate acceptance.
 - Exact-head CI pending. No real device calls, credentials, biometric templates, live imports or payroll posting.
+
+
+## HR role and central Accounts scope reconciliation — 2026-11-23
+
+- Added the missing seeded `HR` role with least-privilege dashboard, attendance, report and task permissions; added it to the role access matrix. No HR demo identity or production account was created.
+- Updated PayrollController context so group-wide `ACCOUNTS`, like `OWNER`, can see payroll across active institutions. Local HR/Principal assignments remain institution-scoped and role-date-effective. Added a synthetic regression test for central Accounts visibility.
+- Preserved the Accounts/HR/Assessment modernization requirements in `docs/ACCOUNTS_HR_AND_ASSESSMENT_MODERNIZATION.md`.
+- These changes are in draft PR #147 and remain subject to exact-head CI; no payroll run/payment or live employee data was processed.
