@@ -203,3 +203,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #142 backup/restore: ERP CI and Windows Pilot Package both passed; hold merge until integration acceptance passes and scripts receive operational review.
 - After the acceptance defect is cleared, integrate #141, then #142, with full integration acceptance after each merge. Next feature track: rebuild CBT engine on current integration and add deterministic per-attempt question/option randomisation, preserving exam section/marks and attempt integrity; then Owner assurance/hostel and HR/biometric.
 - Free-only tooling. No live data, production migrations, production restore or deployment.
+
+
+## 2026-11-23 — Parallel operations, CBT and Owner assurance tracks
+
+- PR #143 merge did not clear Operations live-search acceptance: run `45107100304` failed because the page cached table rows before create/update replaced them. New PR #145 uses live DOM resolution and delegated event listeners; exact-head ERP CI `45107594183` remains in progress.
+- CBT rebuild PR #144 is based on post-#143 integration and includes per-attempt order snapshots, section-preserving question shuffle, option shuffle and reload-stability tests. First backend CI run `45107457378` failed due negative role-date tests leaving shared demo role fixtures in a future-dated state; fixed both tests with `finally` restoration. Fresh run `45107783263` is queued. Historical PR #130 closed as superseded.
+- Started Owner assurance/hostel rebuild on `work/owner-assurance-hostel-post-search-fix`: operational audit service, schema migration, feature tests, owner/hostel scope doc, 23 AUD/HOST gap rows and Phase 6A roadmap ported to current baseline. Further UI/scheduler/hostel lifecycle remains follow-on work.
+- PR #141/#142 remain blocked by full acceptance. Free tooling only; no live data, payments, production migration or deployment.
