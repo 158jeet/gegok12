@@ -218,3 +218,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Full acceptance run `45108815439` on `8bde75e2f34dd47683ba12f250a2a529ec5635dd` cleared Operations search, with 91 tests passing and one Daily Diary desktop test failing.
 - Root cause is test targeting: Owner's multi-student diary view used the first card, not necessarily the Parent's linked student. The E2E now captures the student ID from the Parent view, saves to that exact Owner card, then verifies that same Parent card.
 - New branch `fix/daily-diary-acceptance-student-target`; exact-head CI and full integration acceptance pending. No assertions weakened; no production changes.
+
+
+## 2026-11-23 — CBT PR #152 refreshed after Diary merge
+
+- PR #151 merged as `f1408c263fea88ccba22d330f7ec08f44774f0de` after exact-head CI and release-blocking acceptance gate passed.
+- CBT rebuilt on that integration head as PR #152; old PR #148 closed as superseded.
+- Section-preserving randomization regression exposed omitted `section_code` projection. Fixed query and expanded test: two A questions, one B question; verify section order and stable reload snapshots.
+- Exact-head CI run `45113041748` queued; no live exams/candidates.
