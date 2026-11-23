@@ -199,7 +199,7 @@
     rows.forEach(row => {
       const cells = Array.from(row.cells || []).slice(0, -1);
       const rowText = cells.map(cell => cell.textContent || '')
-        .join(' ').normalize('NFKC').replace(/\\s+/g, ' ').trim().toLocaleLowerCase();
+        .join(' ').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
