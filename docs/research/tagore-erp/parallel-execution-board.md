@@ -193,3 +193,13 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 
 - Closed superseded historical drafts #124, #127, #125 and #134 to prevent accidental merges. Their current replacements are respectively #139 (merged), #140 (current Daily Diary rebuild), #141 (current partial fee allocation + concurrency rebuild) and #138 (merged).
 - Current validation remains open: integration acceptance run `44895722308`; Daily Diary ERP CI `44895851964`; partial fee allocation ERP CI `44896021179`. Do not merge #140/#141 until all relevant exact-head jobs and the latest integration acceptance pass.
+
+
+## Integration recovery and next tracks — 2026-11-22
+
+- Merged PR #140 Daily Diary + audit as `8ebee123a82f29bcad927f8eb9b0d7d4683f58dd`; its exact-head ERP CI passed.
+- Full integration acceptance run `44897369398` failed on desktop Operations live search (`2 of 2` instead of one matching record); mobile passed. Current fix PR #143 is on `fix/operations-live-search-desktop-acceptance`, head `1a3b0fb677b751e753396c41bd1062b1eba1ca79`, and exact-head ERP CI run `44997441946` is in progress. Institution duplicate-school-linkage was also marked flaky; investigate without disabling it.
+- PR #141 partial fee allocation + checkout concurrency: exact-head ERP CI passed; hold merge until #143 fix is validated and full integration acceptance passes.
+- PR #142 backup/restore: ERP CI and Windows Pilot Package both passed; hold merge until integration acceptance passes and scripts receive operational review.
+- After the acceptance defect is cleared, integrate #141, then #142, with full integration acceptance after each merge. Next feature track: rebuild CBT engine on current integration and add deterministic per-attempt question/option randomisation, preserving exam section/marks and attempt integrity; then Owner assurance/hostel and HR/biometric.
+- Free-only tooling. No live data, production migrations, production restore or deployment.

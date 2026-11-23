@@ -166,3 +166,13 @@ This index is a deployment memory aid. It does not mean every correction should 
 
 - Closed historical drafts #124, #127, #125 and #134 so stale branches cannot be merged accidentally. Active replacements: #139 (student promotion, merged), #140 (Daily Diary current-integration rebuild), #141 (partial fee allocation plus checkout concurrency current-integration rebuild), and #138 (academic fee scope, merged).
 - No production release or live-data migration. The current full integration acceptance run `44895722308` and exact-head ERP CI runs `44895851964` / `44896021179` remain release blockers until they complete successfully.
+
+
+## Diary merge, partial fee and backup validation — 2026-11-22
+
+- PR #140 Daily Diary and field-level audit work merged as `8ebee123a82f29bcad927f8eb9b0d7d4683f58dd` after exact-head CI passed. The follow-on integration acceptance run `44897369398` failed; do not describe this baseline as release-ready.
+- Failure evidence: the desktop Operations live-search acceptance expected `1 of` after searching a newly created unique inventory record, but the count remained `2 of 2 records`. Mobile passed. The correction is PR #143, branch `fix/operations-live-search-desktop-acceptance`, head `1a3b0fb677b751e753396c41bd1062b1eba1ca79`; exact-head CI is pending. The fix removes inline event dependence, reads live controls, and searches rendered record cells only. No assertion was weakened.
+- PR #141 parent partial fee allocation + checkout concurrency passed exact-head ERP CI run `44896021179`; it remains unmerged pending a green integration acceptance on a corrected combined head.
+- PR #142 encrypted backup and disposable restore verification passed ERP CI run `44897560584` and Windows Pilot Package run `44897560590`; it remains draft/unmerged pending integration gate and operational review. No live backup or restore was run.
+- Institution duplicate-school-linkage browser scenario was reported flaky in the failing acceptance log. Retain it as an investigation item; do not skip or weaken the test.
+- No production data, live payment gateway, production migration or deployment used.
