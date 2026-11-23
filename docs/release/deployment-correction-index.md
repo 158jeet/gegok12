@@ -176,3 +176,13 @@ This index is a deployment memory aid. It does not mean every correction should 
 - PR #142 encrypted backup and disposable restore verification passed ERP CI run `44897560584` and Windows Pilot Package run `44897560590`; it remains draft/unmerged pending integration gate and operational review. No live backup or restore was run.
 - Institution duplicate-school-linkage browser scenario was reported flaky in the failing acceptance log. Retain it as an investigation item; do not skip or weaken the test.
 - No production data, live payment gateway, production migration or deployment used.
+
+
+## Operations search correction merged and CBT rebuild started — 2026-11-23
+
+- PR #143 was marked ready after exact-head ERP CI run `44997534824` passed all five jobs, then squash-merged as `e88c5b607a2183cf675a5f1f0aa8f03672fa90a8`.
+- The corrected integration head automatically queued Full ERP Acceptance Convergence run `45107100304`. It is still in progress at this update; the prior failure run `44897369398` remains historical evidence, not a current green result. Keep PRs #141 and #142 blocked until run `45107100304` completes successfully.
+- The fix retains the full desktop live-search behavior and corrects the institution-linkage browser assertion to check the specific attached school, not assume all other schools are exhausted. No test was skipped or weakened.
+- Rebuilt the CBT feature as a fresh branch `work/cbt-engine-integration-e88c5b6` from merge commit `e88c5b607a2183cf675a5f1f0aa8f03672fa90a8`; nine feature/migration/view/test files were reintroduced and current `routes/tagore.php` was patched surgically.
+- Added per-attempt question/option order snapshots. Question shuffling is constrained within each section, preserving section sequence; option order is snapshotted per question. Added feature coverage for stable reload order. This work is unvalidated until exact-head CI and MySQL migration smoke pass.
+- No production migration, deployment, live student/exam data or paid tooling used.
