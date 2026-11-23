@@ -13,6 +13,10 @@ test.describe('Daily diary acceptance workflow', () => {
     await expect(page.getByText('Home study time (hours)')).toBeVisible();
     await expect(page.getByLabel('Parent feedback / questions')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save diary entry' }).first()).toBeVisible();
+    const parentStudentCard = page.locator('section[aria-labelledby^="diary-student-"]').first();
+    const studentHeadingId = await parentStudentCard.getAttribute('aria-labelledby');
+    expect(studentHeadingId).toMatch(/^diary-student-\\d+$/);
+    const studentId = studentHeadingId.replace('diary-student-', '');
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     expect(overflow, 'daily diary must not horizontally overflow its viewport').toBeFalsy();
@@ -33,19 +37,22 @@ test.describe('Daily diary acceptance workflow', () => {
     await page.goto('/tagore/diary?date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Daily learning diary' })).toBeVisible();
     await expect(page.locator('body')).toContainText(parentNote);
-    await expect(page.getByLabel('Homework / classwork').first()).toBeVisible();
+    const schoolStudentCard = page.locator('section[aria-labelledby="diary-student-' + studentId + '"]');
+    await expect(schoolStudentCard).toBeVisible();
+    await expect(schoolStudentCard.getByLabel('Homework / classwork')).toBeVisible();
     const homework = 'E2E homework ' + Date.now();
-    await page.getByLabel('Homework / classwork').first().fill(homework);
-    await page.getByLabel('School feedback').first().fill('E2E school feedback');
-    await page.getByRole('button', { name: 'Save diary entry' }).first().click();
+    await schoolStudentCard.getByLabel('Homework / classwork').fill(homework);
+    await schoolStudentCard.getByLabel('School feedback').fill('E2E school feedback');
+    await schoolStudentCard.getByRole('button', { name: 'Save diary entry' }).click();
     await expect(page.getByRole('status')).toContainText('Daily diary saved.');
 
     await authenticate(page, 'parent');
     await page.goto('/tagore/diary?date=' + encodeURIComponent(date), { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(parentNote);
-    await expect(page.locator('body')).toContainText(homework);
-    await expect(page.locator('body')).toContainText('E2E school feedback');
-    await expect(page.locator('input[name="study_hours"]').first()).toHaveValue('2.5');
+    const parentStudentCardAfterSchoolSave = page.locator('section[aria-labelledby="diary-student-' + studentId + '"]');
+    await expect(parentStudentCardAfterSchoolSave).toContainText(parentNote);
+    await expect(parentStudentCardAfterSchoolSave).toContainText(homework);
+    await expect(parentStudentCardAfterSchoolSave).toContainText('E2E school feedback');
+    await expect(parentStudentCardAfterSchoolSave.locator('input[name="study_hours"]').first()).toHaveValue('2.5');
     await page.screenshot({ path: 'test-results/daily-diary-parent-desktop.png', fullPage: true });
   });
 });
