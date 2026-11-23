@@ -179,3 +179,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Historical Daily Diary PR #127 branch `d0e785296667829ab7f85f3855e91c8488f59c3c` is 13 commits behind and 11 ahead of the latest integration; supersede it. Rebuilt the six relevant files as draft PR #140 on current head `6489cfe71fa49a236a23e0a99c106c8dd89b06f7`, branch `work/daily-diary-audit-class-scope-current-integration-2`, head `6eb4667b160b8ed2e3425afb5931541069dbdd9e`.
 - PR #140 exact-head ERP CI run `44895851964` is running. It contains Teacher/Coordinator class-scope enforcement, Parent linked-child scope, append-only field audit trail and deterministic Olympiad grade selection. Keep draft until exact-head CI and current integration acceptance pass.
 - Next finance candidate is partial fee allocation PR #125. Its historical branch includes the superseded concurrency work from closed PR #123, so it must be rebuilt/reconciled on the latest integration; do not merge PR #125 directly.
+
+
+## 2026-11-23 — Parallel CI wave initiated
+
+- Track: Parent partial fee allocation (existing PR branch).
+- Purpose: trigger an independent exact-head ERP CI run while Operations search correction PR #153 is validated.
+- This is a branch-level feature regression run only. The branch has not yet been rebased onto latest integration commit `85c808678cfc380ed244176b1658164195935d1d`; a green result will not authorize merge. Refresh/reconcile against current integration and rerun CI plus acceptance before merging.
+- No production data, migrations, live gateway, biometric hardware or backup restore used.
