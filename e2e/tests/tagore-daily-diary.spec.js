@@ -15,7 +15,7 @@ test.describe('Daily diary acceptance workflow', () => {
     await expect(page.getByRole('button', { name: 'Save diary entry' }).first()).toBeVisible();
     const parentStudentCard = page.locator('section[aria-labelledby^="diary-student-"]').first();
     const studentHeadingId = await parentStudentCard.getAttribute('aria-labelledby');
-    expect(studentHeadingId).toMatch(/^diary-student-\\d+$/);
+    expect(studentHeadingId).toMatch(/^diary-student-\d+$/);
     const studentId = studentHeadingId.replace('diary-student-', '');
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
