@@ -211,3 +211,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Root cause: Operations filtering cached the row collection before the create action inserted/replaced rows. The search count therefore operated on stale DOM nodes. PR #143 corrected input handling but did not make the row collection live.
 - New branch `fix/operations-search-dynamic-dom-rows` resolves current rows and controls on every apply, with delegated listeners that survive DOM replacement. Exact-head CI and post-merge integration acceptance must validate it; do not bypass the test.
 - PR #141 and #142 remain blocked. CBT work is proceeding in parallel on draft PR #144; no production activity.
+
+
+## 2026-11-23 — HR/biometric branch refreshed after Operations fix
+
+- PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd`. Fresh HR/biometric branch `work/biometric-registry-post-operations-fix` now starts from that corrected integration head.
+- Includes multi-site T304F registry and same-institution employee mapping, least-privilege HR role, central Accounts group-wide payroll scope and date-effective role checks.
+- Removed unverified vendor endpoint; sync remains disabled pending official device/firmware/API contract. HR-002 marked registry/mapping partial only.
+- Exact-head CI pending. No live device call, biometric template, payroll run or employee data.
