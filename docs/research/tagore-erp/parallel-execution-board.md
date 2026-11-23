@@ -218,3 +218,11 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - PR #145 merged as `8bde75e2f34dd47683ba12f250a2a529ec5635dd` with all CI jobs and release-blocking gate green.
 - Fresh Owner assurance/hostel branch `work/owner-assurance-hostel-post-ops-search-fix` starts from that commit. It contains the operational audit foundation, 23 feature-gap rows and Phase 6A roadmap.
 - Exact-head CI and full acceptance pending. Owner cockpit, scheduler/alerts and full hostel lifecycle still require separate implementation.
+
+
+## 2026-11-23 — Parallel CI wave initiated
+
+- Track: Owner assurance/hostel (existing PR branch).
+- Purpose: trigger an independent exact-head ERP CI run while Operations search correction PR #153 is validated.
+- This is a branch-level feature regression run only. The branch has not yet been rebased onto latest integration commit `85c808678cfc380ed244176b1658164195935d1d`; a green result will not authorize merge. Refresh/reconcile against current integration and rerun CI plus acceptance before merging.
+- No production data, migrations, live gateway, biometric hardware or backup restore used.
