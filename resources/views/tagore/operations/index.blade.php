@@ -181,24 +181,24 @@
  
 <script>
 (() => {
-  const search = document.getElementById('tg-operations-search');
-  const status = document.getElementById('tg-operations-status');
-  const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
-  const count = document.getElementById('tg-operations-count');
-  const empty = document.getElementById('tg-operations-empty');
-  if (!count) return;
-
   const apply = () => {
+    // Resolve the current DOM on every run: creating a record can replace table rows
+    // or controls after this script has initially executed.
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+    const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
+    const count = document.getElementById('tg-operations-count');
+    const empty = document.getElementById('tg-operations-empty');
+    if (!count) return;
+
     const query = String(search?.value || '').normalize('NFKC').trim().toLocaleLowerCase();
     const wantedStatus = String(status?.value || '');
     let visible = 0;
 
     rows.forEach(row => {
-      // Restrict matching to rendered record cells; hidden edit controls and action labels
-      // must not influence search results.
       const cells = Array.from(row.cells || []).slice(0, -1);
       const rowText = cells.map(cell => cell.textContent || '')
-        .join(' ').normalize('NFKC').replace(/\\s+/g, ' ').trim().toLocaleLowerCase();
+        .join(' ').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
@@ -210,20 +210,33 @@
   };
 
   window.tagoreOperationsFilter = apply;
-  if (search) {
-    ['input', 'search', 'change', 'keyup'].forEach(type => search.addEventListener(type, apply));
-  }
-  if (status) status.addEventListener('change', apply);
+  const onSearch = event => {
+    if (event.target?.id === 'tg-operations-search') apply();
+  };
+  const onStatus = event => {
+    if (event.target?.id === 'tg-operations-status') apply();
+  };
+
+  // Delegation survives table/control replacement after create/update actions.
+  document.addEventListener('input', onSearch, true);
+  document.addEventListener('search', onSearch, true);
+  document.addEventListener('keyup', onSearch, true);
+  document.addEventListener('change', event => {
+    onSearch(event);
+    onStatus(event);
+  }, true);
   document.addEventListener('keydown', event => {
+    const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
       search?.focus();
     }
-    if (event.key === 'Escape' && event.target === search) {
-      search.value = '';
+    if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
+      event.target.value = '';
       apply();
     }
   }, true);
+
   apply();
 })();
 </script>
