@@ -7,8 +7,6 @@ on:
       - '.github/workflows/live-acceptance.yml'
       - 'e2e/**'
       - 'docs/ACCEPTANCE_SYSTEM.md'
-  push:
-    branches: [main, 'work/**']
   workflow_dispatch:
     inputs:
       base_url:
@@ -31,7 +29,7 @@ permissions:
 
 concurrency:
   group: tagore-live-acceptance
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate-live-suite:
@@ -62,7 +60,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   live-browser-acceptance:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch'
     name: Live browser acceptance (read-only)
     runs-on: ubuntu-latest
     timeout-minutes: 20
