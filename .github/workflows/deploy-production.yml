@@ -21,7 +21,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
           # Enumerate individual paths instead of recursively copying untracked directories.
           # Generated build/cache trees can change while other CI jobs use this machine.
@@ -71,7 +71,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           if (-not (Test-Path (Join-Path $root '.git'))) { throw "Expected production checkout not found: $root" }
           if (-not (Test-Path (Join-Path $root '.env.school'))) { throw 'Production .env.school is missing.' }
           if (-not (Test-Path 'G:\TagoreSecrets\nginx-certs\59.90.66.12\fullchain.pem')) { throw 'Production TLS certificate export is missing.' }
@@ -87,7 +87,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $backup = "G:\TagoreBackups\predeploy-$stamp"
           New-Item -ItemType Directory -Force -Path $backup | Out-Null
@@ -116,7 +116,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           git -c "safe.directory=$root" -C $root fetch origin main
           if ($LASTEXITCODE -ne 0) { throw 'Git fetch failed.' }
           git -c "safe.directory=$root" -C $root reset --hard $env:GITHUB_SHA
@@ -133,7 +133,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           Push-Location $root
           try {
             # Keep MySQL/Redis and their named volumes untouched; update only app/worker/web.
@@ -161,7 +161,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $root = 'G:\Projects\TagoreERP'
+          $root = 'C:\server\gegok12-main-new'
           Push-Location $root
           try {
             docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps
