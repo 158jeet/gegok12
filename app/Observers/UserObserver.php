@@ -16,11 +16,7 @@ class UserObserver
      */
     public function created(User $user)
     {
-        //
-        Cache::forget('parent_list'.$user->school_id);
-        Cache::forget('standardLink'.$user->school_id);
-        Cache::forget('class_students_'.$user->studentAcademicLatest->standardLink_id);
-        Cache::forget('class_student_count'.$user->studentAcademicLatest->standardLink_id);
+        $this->forgetUserCaches($user);
     }
 
     /**
@@ -31,11 +27,30 @@ class UserObserver
      */
     public function updated(User $user)
     {
-        //
+        $this->forgetUserCaches($user);
+    }
+
+    /**
+     * Clear school caches for every user, and class caches only for students
+     * that actually have a latest academic assignment.
+     */
+    private function forgetUserCaches(User $user): void
+    {
         Cache::forget('parent_list'.$user->school_id);
-        Cache::forget('standardLink'.$user->school_id); 
-        Cache::forget('class_students_'.$user->studentAcademicLatest->standardLink_id); 
-        Cache::forget('class_student_count'.$user->studentAcademicLatest->standardLink_id); 
+        Cache::forget('standardLink'.$user->school_id);
+
+        if ((int) $user->usergroup_id !== User::STUDENT_USERGROUP_ID) {
+            return;
+        }
+
+        $standardLinkId = $user->studentAcademicLatest?->standardLink_id;
+
+        if (!$standardLinkId) {
+            return;
+        }
+
+        Cache::forget('class_students_'.$standardLinkId);
+        Cache::forget('class_student_count'.$standardLinkId);
     }
 
     /**
