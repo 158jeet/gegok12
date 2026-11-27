@@ -27,7 +27,7 @@ class TagorePrototypeSeeder extends Seeder
                 'PARENT'=>['dashboard.view','student.view','attendance.view','fee.view','payment.view','result.view','feedback.view','feedback.submit'],
                 'STUDENT'=>['dashboard.view','attendance.view','result.view','feedback.view'],
                 'ACCOUNTS'=>['dashboard.view','student.view','fee.view','fee.manage','payment.view','payment.reconcile','report.view','report.export','task.view','task.manage'],
-                'CASHIER'=>['dashboard.view','student.view','fee.view','payment.view'],
+                'CASHIER'=>['dashboard.view','student.view','parent.view','fee.view','fee.collect','payment.view','admission.view','admission.manage'],
                 'FEE_EDITOR'=>['dashboard.view','student.view','fee.view','fee.edit','report.view'],
                 default=>[]
             };

@@ -113,6 +113,23 @@ class FeeController extends Controller
             ? (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count()
             : 0;
 
+        // Institution- and class-scoped students with outstanding balances for the collection workspace.
+        $collectibleStudentsQuery = DB::table('tagore_fee_obligations as o')
+            ->join('users as u', 'u.id', '=', 'o.student_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'o.institution_id')
+            ->whereIn('o.institution_id', $ids)
+            ->where('o.outstanding_amount', '>', 0)
+            ->whereNull('u.deleted_at');
+        if ($scopedStudentIds !== null) {
+            $collectibleStudentsQuery->whereIn('o.student_id', $scopedStudentIds);
+        }
+        $collectibleStudents = $collectibleStudentsQuery
+            ->groupBy('u.id', 'u.name', 'i.id', 'i.display_name')
+            ->selectRaw('u.id as student_id, u.name as student_name, i.id as institution_id, i.display_name as institution, SUM(o.outstanding_amount) as outstanding')
+            ->orderByDesc('outstanding')
+            ->orderBy('u.name')
+            ->limit(500)
+            ->get();
         // Consolidate only the students the current finance/academic role may inspect.
         $familyQuery = DB::table('tagore_parent_students as ps')
             ->join('users as parent', 'parent.id', '=', 'ps.parent_user_id')
@@ -134,7 +151,7 @@ class FeeController extends Controller
             ->limit(500)
             ->get();
 
-        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances'));
+        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances', 'collectibleStudents'));
     }
 
     public function recordOfflinePayment(Request $request, int $studentId, FeeService $feeService)

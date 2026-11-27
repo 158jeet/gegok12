@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 class AdmissionsController extends Controller
 {
-    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR'];
+    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR','CASHIER'];
 
     public function index(Request $request): View
     {
@@ -40,7 +40,7 @@ class AdmissionsController extends Controller
 
         $leads=$query->paginate(25)->withQueryString();
         $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
         $ownerPerformance=(clone $base)->whereNotNull('assigned_to')->select('assigned_to',DB::raw('count(*) as total'),DB::raw("sum(case when status='admitted' then 1 else 0 end) as admitted"),DB::raw("sum(case when status='lost' then 1 else 0 end) as lost"))->groupBy('assigned_to')->orderByDesc('admitted')->limit(10)->get();
@@ -118,7 +118,7 @@ class AdmissionsController extends Controller
         $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->first();
         $classOptions=DB::table('standards_link as sl')->join('standards as st','st.id','=','sl.standard_id')->join('sections as sec','sec.id','=','sl.section_id')->join('academic_years as ay','ay.id','=','sl.academic_year_id')->where('sl.school_id',$institution->school_id)->where('sl.status',1)->whereNull('sl.deleted_at')->orderByDesc('ay.start_date')->orderBy('st.name')->orderBy('sec.name')->select('sl.id','sl.academic_year_id','ay.name as academic_year_name','st.name as standard_name','sec.name as section_name')->get();
         $conversion=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion'));
     }
 
@@ -302,7 +302,7 @@ class AdmissionsController extends Controller
 
     private function staffBelongsToInstitution(int $userId,int $institutionId): bool
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.institution_id',$institutionId)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->exists();
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.institution_id',$institutionId)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->exists();
     }
 
     private function roles(int $userId)
