@@ -29,18 +29,18 @@ class ParentOlympiadController extends Controller
 
         $registrations = $events->isEmpty() ? collect() : DB::table('tagore_olympiad_registrations')
             ->where('student_user_id', $studentId)->whereIn('olympiad_id', $events->pluck('id'))->get()->keyBy('olympiad_id');
-        $now = now();
+        $now = now()->utc();
         $events = $events->map(function ($event) use ($registrations, $now) {
             $registration = $registrations->get($event->id);
             $event->registration = $registration;
             $event->is_submitted = $registration && in_array($registration->status, ['submitted', 'submitted_late'], true);
             $event->can_register = !$registration
-                && (!$event->registration_opens_at || $now->gte(Carbon::parse($event->registration_opens_at)))
-                && (!$event->registration_closes_at || $now->lte(Carbon::parse($event->registration_closes_at)))
-                && (!$event->exam_starts_at || $now->lt(Carbon::parse($event->exam_starts_at)));
+                && (!$event->registration_opens_at || $now->gte(Carbon::parse($event->registration_opens_at, 'UTC')))
+                && (!$event->registration_closes_at || $now->lte(Carbon::parse($event->registration_closes_at, 'UTC')))
+                && (!$event->exam_starts_at || $now->lt(Carbon::parse($event->exam_starts_at, 'UTC')));
             $event->can_launch = $registration && in_array($registration->status, ['registered', 'in_progress'], true)
                 && $event->exam_starts_at && $event->exam_ends_at
-                && $now->gte(Carbon::parse($event->exam_starts_at)) && $now->lte(Carbon::parse($event->exam_ends_at));
+                && $now->gte(Carbon::parse($event->exam_starts_at, 'UTC')) && $now->lte(Carbon::parse($event->exam_ends_at, 'UTC'));
             return $event;
         });
 
@@ -51,14 +51,14 @@ class ParentOlympiadController extends Controller
     {
         $child = $this->assertParentChild($request, $studentId);
         $event = $this->eventForChild($child, $studentId, $olympiadId);
-        $now = now();
-        if ($event->registration_opens_at && $now->lt(Carbon::parse($event->registration_opens_at))) {
+        $now = now()->utc();
+        if ($event->registration_opens_at && $now->lt(Carbon::parse($event->registration_opens_at, 'UTC'))) {
             throw ValidationException::withMessages(['registration' => 'Registration has not opened yet.']);
         }
-        if ($event->registration_closes_at && $now->gt(Carbon::parse($event->registration_closes_at))) {
+        if ($event->registration_closes_at && $now->gt(Carbon::parse($event->registration_closes_at, 'UTC'))) {
             throw ValidationException::withMessages(['registration' => 'The registration deadline has passed.']);
         }
-        if ($event->exam_starts_at && $now->gte(Carbon::parse($event->exam_starts_at))) {
+        if ($event->exam_starts_at && $now->gte(Carbon::parse($event->exam_starts_at, 'UTC'))) {
             throw ValidationException::withMessages(['registration' => 'Registration is closed because the exam has started.']);
         }
 
@@ -89,11 +89,11 @@ class ParentOlympiadController extends Controller
         if (!$event->exam_starts_at || !$event->exam_ends_at) {
             throw ValidationException::withMessages(['exam' => 'The exam schedule has not been configured.']);
         }
-        $now = now();
-        if ($now->lt(Carbon::parse($event->exam_starts_at))) {
+        $now = now()->utc();
+        if ($now->lt(Carbon::parse($event->exam_starts_at, 'UTC'))) {
             return redirect()->route('tagore.parent.olympiad.index', ['studentId' => $studentId])->with('status', 'The exam has not started yet.');
         }
-        if ($now->gt(Carbon::parse($event->exam_ends_at))) {
+        if ($now->gt(Carbon::parse($event->exam_ends_at, 'UTC'))) {
             return redirect()->route('tagore.parent.olympiad.index', ['studentId' => $studentId])->with('status', 'The exam window has closed. Contact the school if assistance is needed.');
         }
         abort_unless(in_array($registration->status, ['registered', 'in_progress'], true), 409);
@@ -121,11 +121,11 @@ class ParentOlympiadController extends Controller
         if (!$event->exam_starts_at || !$event->exam_ends_at) {
             throw ValidationException::withMessages(['exam' => 'The exam schedule has not been configured.']);
         }
-        $now = now();
-        if ($now->lt(Carbon::parse($event->exam_starts_at))) {
+        $now = now()->utc();
+        if ($now->lt(Carbon::parse($event->exam_starts_at, 'UTC'))) {
             return redirect()->route('tagore.parent.olympiad.index', ['studentId' => $studentId])->with('status', 'The exam has not started yet.');
         }
-        if ($now->gt(Carbon::parse($event->exam_ends_at))) {
+        if ($now->gt(Carbon::parse($event->exam_ends_at, 'UTC'))) {
             return redirect()->route('tagore.parent.olympiad.index', ['studentId' => $studentId])->with('status', 'The exam window has closed. Contact the school if assistance is needed.');
         }
         if ($registration->status === 'registered') {

@@ -244,10 +244,10 @@ class OlympiadController extends Controller
         $grade = $this->studentGradeForInstitution($userId, (int) $event->institution_id);
         $classes = array_map('strval', json_decode($event->target_classes, true) ?: []);
         abort_unless($grade !== null && in_array($grade, $classes, true), 403);
-        $now = now();
-        if ($event->registration_opens_at && $now->lt($event->registration_opens_at)) throw ValidationException::withMessages(['registration' => 'Registration has not opened yet.']);
-        if ($event->registration_closes_at && $now->gt($event->registration_closes_at)) throw ValidationException::withMessages(['registration' => 'The registration deadline has passed.']);
-        if ($event->exam_starts_at && $now->gte($event->exam_starts_at)) throw ValidationException::withMessages(['registration' => 'Registration is closed because the exam has started.']);
+        $now = now()->utc();
+        if ($event->registration_opens_at && $now->lt(Carbon::parse($event->registration_opens_at, 'UTC'))) throw ValidationException::withMessages(['registration' => 'Registration has not opened yet.']);
+        if ($event->registration_closes_at && $now->gt(Carbon::parse($event->registration_closes_at, 'UTC'))) throw ValidationException::withMessages(['registration' => 'The registration deadline has passed.']);
+        if ($event->exam_starts_at && $now->gte(Carbon::parse($event->exam_starts_at, 'UTC'))) throw ValidationException::withMessages(['registration' => 'Registration is closed because the exam has started.']);
         $existing = DB::table('tagore_olympiad_registrations')->where('olympiad_id', $event->id)->where('student_user_id', $userId)->first();
         if ($existing) return redirect()->route('tagore.olympiad.index')->with('status', 'You are already registered for '.$event->title.'.');
         DB::table('tagore_olympiad_registrations')->insert([
@@ -269,9 +269,9 @@ class OlympiadController extends Controller
         abort_unless($registration, 403);
         if (in_array($registration->status, ['submitted', 'submitted_late'], true)) return redirect()->route('tagore.olympiad.result', $event->id);
         if (!$event->exam_starts_at || !$event->exam_ends_at) throw ValidationException::withMessages(['exam' => 'The exam schedule has not been configured.']);
-        $now = now();
-        if ($now->lt($event->exam_starts_at)) return redirect()->route('tagore.olympiad.index')->with('status', 'The exam has not started yet.');
-        if ($now->gt($event->exam_ends_at)) return redirect()->route('tagore.olympiad.index')->with('status', 'The exam window has closed. Contact the school if you need assistance.');
+        $now = now()->utc();
+        if ($now->lt(Carbon::parse($event->exam_starts_at, 'UTC'))) return redirect()->route('tagore.olympiad.index')->with('status', 'The exam has not started yet.');
+        if ($now->gt(Carbon::parse($event->exam_ends_at, 'UTC'))) return redirect()->route('tagore.olympiad.index')->with('status', 'The exam window has closed. Contact the school if you need assistance.');
         if ($registration->status === 'registered') {
             DB::table('tagore_olympiad_registrations')->where('id', $registration->id)->where('status', 'registered')->update(['status' => 'in_progress', 'started_at' => now(), 'updated_at' => now()]);
             $registration = DB::table('tagore_olympiad_registrations')->where('id', $registration->id)->first();
