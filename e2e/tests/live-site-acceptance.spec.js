@@ -52,8 +52,18 @@ test.describe('Tagore live-site acceptance', () => {
     test(role + ': sign in, dashboard and render visible navigation pages', async ({ browser }, testInfo) => {
       test.setTimeout(150000);
       const accounts = getAccounts();
-      test.skip(!accounts[role] || !accounts[role].email || !accounts[role].password,
-        'Dedicated live acceptance account is not configured for role: ' + role);
+      if (!accounts[role] || !accounts[role].email || !accounts[role].password) {
+        if (role === 'cashier') {
+          console.log(JSON.stringify({
+            environment: process.env.TAGORE_LIVE_ENVIRONMENT || 'unspecified',
+            role,
+            status: 'not-provisioned',
+            note: 'No production cashier account is created until a staff member is assigned; isolated automated acceptance covers this role.',
+          }));
+          return;
+        }
+        throw new Error('Dedicated live acceptance account is not configured for required role: ' + role);
+      }
 
       const context = await browser.newContext({
         baseURL: process.env.E2E_BASE_URL,
