@@ -36,6 +36,7 @@ jobs:
       TAGORE_E2E_ENABLED: 'true'
       TAGORE_OLYMPIAD_INTAKE_ENABLED: 'true'
       TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
+      TIMEZONE: Asia/Kolkata
       CI: 'true'
     steps:
       - name: Checkout exact candidate
