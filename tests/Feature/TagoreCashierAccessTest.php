@@ -88,7 +88,7 @@ class TagoreCashierAccessTest extends TestCase
         ])->assertRedirect(route('tagore.dashboard'));
         $this->assertAuthenticatedAs($cashier);
 
-        $this->get(route('tagore.dashboard'))->assertOk();
+        $this->get(route('tagore.dashboard'))->assertOk()->assertSee('tagore-logout')->assertSee('Logout');
         $this->actingAs($cashier)->get(route('tagore.admin'))->assertForbidden();
         $this->actingAs($cashier)->get(route('tagore.tasks.index'))->assertForbidden();
         $this->actingAs($cashier)->get(route('tagore.operations.index'))->assertForbidden();

@@ -340,7 +340,7 @@ class TagorePrototypeE2ETest extends TestCase
             ->first();
 
         $response = $this->actingAs($parent)->get(route('tagore.parent.dashboard'))->assertOk()
-            ->assertSee('Family fee overview')->assertSee('All children, one total');
+            ->assertSee('Family fee overview')->assertSee('All children, one total')->assertSee('tagore-logout')->assertSee('Logout');
 
         foreach (['payable', 'paid', 'outstanding'] as $field) {
             $formatted = number_format((float) $expected->{$field}, 2);
