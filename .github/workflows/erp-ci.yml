@@ -3,7 +3,7 @@ name: ERP CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'work/**']
+    branches: [main, 'work/**', 'dev/server-workspace-2026-10-09']
   pull_request:
     branches: [main]
 
