@@ -78,13 +78,14 @@ if (app()->environment('testing') && filter_var(env('TAGORE_E2E_ENABLED', false)
             'student' => 'student@tagore-demo.local',
             'accounts' => 'accounts@tagore-demo.local',
             'fee-editor' => 'fees@tagore-demo.local',
+            'cashier' => 'cashier@tagore-demo.local',
         ];
         abort_unless(array_key_exists($role, $accounts), 404);
         $user = \App\Models\User::query()->where('email', $accounts[$role])->whereNull('deleted_at')->firstOrFail();
         \Illuminate\Support\Facades\Auth::login($user);
         $request->session()->regenerate();
         return redirect()->route('tagore.dashboard');
-    })->where('role', 'owner|principal|coordinator|teacher|parent|student|accounts|fee-editor');
+    })->where('role', 'owner|principal|coordinator|teacher|parent|student|accounts|fee-editor|cashier');
 
     \Illuminate\Support\Facades\Route::get('/__e2e/routes', function () {
         return response()->json(

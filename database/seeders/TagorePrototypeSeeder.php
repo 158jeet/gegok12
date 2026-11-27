@@ -13,9 +13,9 @@ class TagorePrototypeSeeder extends Seeder
     {
         $now = now();
         $groupId = DB::table('tagore_groups')->where('code', 'TAGORE')->value('id') ?: DB::table('tagore_groups')->insertGetId(['name'=>'Tagore Group','code'=>'TAGORE','status'=>'active','created_at'=>$now,'updated_at'=>$now]);
-        $roles = [['Owner','OWNER'],['Principal','PRINCIPAL'],['Coordinator','COORDINATOR'],['Teacher','TEACHER'],['Parent','PARENT'],['Student','STUDENT'],['Accounts','ACCOUNTS'],['Fee Editor','FEE_EDITOR']];
+        $roles = [['Owner','OWNER'],['Principal','PRINCIPAL'],['Coordinator','COORDINATOR'],['Teacher','TEACHER'],['Parent','PARENT'],['Student','STUDENT'],['Accounts','ACCOUNTS'],['Fee Editor','FEE_EDITOR'],['Cashier','CASHIER']];
         foreach ($roles as [$name,$code]) DB::table('tagore_roles')->updateOrInsert(['code'=>$code],['name'=>$name,'is_system'=>true,'status'=>'active','updated_at'=>$now,'created_at'=>$now]);
-        $permissions = [['dashboard','view'],['student','view'],['parent','view'],['attendance','view'],['attendance','manage'],['fee','view'],['fee','manage'],['payment','view'],['payment','refund'],['payment','reconcile'],['result','view'],['result','manage'],['result','publish'],['feedback','view'],['feedback','submit'],['feedback','respond'],['feedback','moderate'],['report','view'],['report','export'],['user','manage'],['scope','manage'],['task','view'],['task','manage'],['fee','edit']];
+        $permissions = [['dashboard','view'],['student','view'],['parent','view'],['attendance','view'],['attendance','manage'],['fee','view'],['fee','manage'],['payment','view'],['payment','refund'],['payment','reconcile'],['result','view'],['result','manage'],['result','publish'],['feedback','view'],['feedback','submit'],['feedback','respond'],['feedback','moderate'],['report','view'],['report','export'],['user','manage'],['scope','manage'],['task','view'],['task','manage'],['fee','edit'],['fee','collect'],['admission','view'],['admission','manage'],['student','promote']];
         foreach ($permissions as [$module,$action]) DB::table('tagore_permissions')->updateOrInsert(['module'=>$module,'action'=>$action],['code'=>$module.'.'.$action,'description'=>ucfirst($action).' '.$module,'created_at'=>$now,'updated_at'=>$now]);
         foreach ($roles as [$name,$code]) {
             $roleId=DB::table('tagore_roles')->where('code',$code)->value('id');
@@ -28,6 +28,7 @@ class TagorePrototypeSeeder extends Seeder
                 'STUDENT'=>['dashboard.view','attendance.view','result.view','feedback.view'],
                 'ACCOUNTS'=>['dashboard.view','student.view','fee.view','fee.manage','payment.view','payment.reconcile','report.view','report.export','task.view','task.manage'],
                 'FEE_EDITOR'=>['dashboard.view','student.view','fee.view','fee.edit','report.view'],
+                'CASHIER'=>['dashboard.view','student.view','parent.view','fee.view','fee.collect','payment.view','admission.view','admission.manage'],
                 default=>[]
             };
             foreach($codes as $permissionCode){$permissionId=DB::table('tagore_permissions')->where('code',$permissionCode)->value('id');if($permissionId)DB::table('tagore_role_permissions')->updateOrInsert(['role_id'=>$roleId,'permission_id'=>$permissionId],[]);}

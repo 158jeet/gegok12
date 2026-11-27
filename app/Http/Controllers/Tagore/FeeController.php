@@ -98,6 +98,19 @@ class FeeController extends Controller
 
         $pendingReconciliation = (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count();
 
+        $collectibleStudents = DB::table('tagore_fee_obligations as o')
+            ->join('users as u', 'u.id', '=', 'o.student_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'o.institution_id')
+            ->whereIn('o.institution_id', $ids)
+            ->where('o.outstanding_amount', '>', 0)
+            ->whereNull('u.deleted_at')
+            ->groupBy('u.id', 'u.name', 'i.id', 'i.display_name')
+            ->selectRaw('u.id as student_id, u.name as student_name, i.id as institution_id, i.display_name as institution, SUM(o.outstanding_amount) as outstanding')
+            ->orderByDesc('outstanding')
+            ->orderBy('u.name')
+            ->limit(500)
+            ->get();
+
         // Consolidate each active parent account's children into one fee balance.
         // The institution scope matches the accounts role's permitted institutions.
         $familyBalances = DB::table('tagore_parent_students as ps')
@@ -118,7 +131,7 @@ class FeeController extends Controller
             ->limit(500)
             ->get();
 
-        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances'));
+        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances', 'collectibleStudents'));
     }
 
     public function recordOfflinePayment(Request $request, int $studentId, FeeService $feeService)
@@ -216,13 +229,13 @@ class FeeController extends Controller
 
     private function authorizeAccounts($roles): void
     {
-        // Coordinators may view the Accounts workspace but cannot record financial transactions.
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+        // Coordinators may view the Accounts workspace; Cashiers may collect fees within their assigned institution.
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function authorizePaymentRecording($roles): void
     {
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void
@@ -254,7 +267,7 @@ class FeeController extends Controller
             abort_unless($studentId === $userId, 403);
             return;
         }
-        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
+        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
     }

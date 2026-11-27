@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const enabled = process.env.TAGORE_LIVE_ACCEPTANCE_ENABLED === 'true';
-const requiredRoles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor'];
+const requiredRoles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor', 'cashier'];
 
 function getAccounts() {
   if (!enabled) return {};

@@ -45,6 +45,7 @@ class TagoreDemoAccountsSeeder extends Seeder
             ['coordinator@tagore-demo.local','Tagore Demo Coordinator',13,'COORDINATOR'],
             ['teacher@tagore-demo.local','Tagore Demo Teacher',5,'TEACHER'],
             ['accounts@tagore-demo.local','Tagore Demo Accounts',11,'ACCOUNTS'],
+            ['cashier@tagore-demo.local','Tagore Demo Cashier',13,'CASHIER'],
             ['fees@tagore-demo.local','Tagore Demo Fee Editor',13,'FEE_EDITOR'],
             ['parent@tagore-demo.local','Tagore Demo Parent',7,'PARENT'],
             ['student@tagore-demo.local','Tagore Demo Student',6,'STUDENT'],

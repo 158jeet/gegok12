@@ -126,6 +126,13 @@ class AppServiceProvider extends ServiceProvider {
         }
         //
 
+        // Test requests must not depend on the legacy settings table during application boot.
+        // Keep this guard scoped to the isolated testing environment only.
+        if ( app()->environment('testing') ) {
+            Paginator::useBootstrap();
+            return;
+        }
+
         // Skip database operations if app is not installed yet
         if ( !file_exists( storage_path( 'installed' ) ) || !file_exists( base_path( '.env' ) ) ) {
             return;

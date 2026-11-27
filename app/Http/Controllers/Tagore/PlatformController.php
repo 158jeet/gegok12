@@ -99,7 +99,7 @@ class PlatformController extends Controller
         $this->guard($roles,['PRINCIPAL','COORDINATOR']);
         $d=$request->validate([
             'module'=>'required|in:tasks,olympiad,admissions,fees,social,learning',
-            'role'=>'required|in:owner,principal,coordinator,teacher,parent,student,accounts,fee-editor',
+            'role'=>'required|in:owner,principal,coordinator,teacher,parent,student,accounts,fee-editor,cashier',
             'test_type'=>'required|in:functional,workflow,accessibility,responsive,security',
             'scenario'=>'required|string|max:3000',
         ]);

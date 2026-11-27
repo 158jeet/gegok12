@@ -20,7 +20,7 @@ class FeeWalletController extends Controller
         } elseif($roles->contains('STUDENT')) {
             $wallets=DB::table('tagore_fee_wallets')->where('student_id',$request->user()->id)->get();
         } else {
-            abort_unless($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
+            abort_unless($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS','CASHIER'])->isNotEmpty(),403);
             $institutionIds=$roles->contains('OWNER')
                 ? DB::table('tagore_institutions')->where('status','active')->pluck('id')
                 : DB::table('tagore_user_roles')->where('user_id',$request->user()->id)->where('status','active')->whereNotNull('institution_id')->pluck('institution_id');
@@ -49,7 +49,12 @@ class FeeWalletController extends Controller
         abort_unless((int)DB::table('tagore_institutions')->where('id',$d['institution_id'])->where('status','active')->value('school_id')===(int)$student->school_id,403);
         if($roles->contains('PARENT')) abort_unless(DB::table('tagore_parent_students')->where('parent_user_id',$request->user()->id)->where('student_id',$d['student_id'])->where('status','active')->exists(),403);
         elseif($roles->contains('STUDENT')) abort_unless((int)$request->user()->id===(int)$d['student_id'],403);
-        else abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
+        else {
+            abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS','CASHIER'])->isNotEmpty(),403);
+            if (!$roles->contains('OWNER')) {
+                abort_unless(DB::table('tagore_user_roles')->where('user_id',$request->user()->id)->where('institution_id',$d['institution_id'])->where('status','active')->exists(),403);
+            }
+        }
         $paymentId=$wallets->payFee((int)$d['student_id'],(int)$d['institution_id'],(float)$d['amount'],(int)$request->user()->id,$fees);
         return back()->with('success','Wallet payment recorded (#'.$paymentId.').');
     }

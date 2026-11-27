@@ -45,6 +45,10 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'has' => ['dashboard.view', 'fee.view', 'fee.edit', 'report.view'],
                 'lacks' => ['fee.manage', 'payment.reconcile', 'user.manage'],
             ],
+            'CASHIER' => [
+                'has' => ['dashboard.view', 'fee.view', 'fee.collect', 'payment.view', 'admission.manage'],
+                'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
+            ],
         ];
 
         foreach ($expected as $roleCode => $checks) {
@@ -83,6 +87,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
             'coordinator@tagore-demo.local',
             'teacher@tagore-demo.local',
             'accounts@tagore-demo.local',
+            'cashier@tagore-demo.local',
             'fees@tagore-demo.local',
             'parent@tagore-demo.local',
             'student@tagore-demo.local',
@@ -109,6 +114,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
             'coordinator@tagore-demo.local' => 403,
             'teacher@tagore-demo.local' => 403,
             'accounts@tagore-demo.local' => 200,
+            'cashier@tagore-demo.local' => 403,
             'fees@tagore-demo.local' => 403,
             'parent@tagore-demo.local' => 403,
             'student@tagore-demo.local' => 403,

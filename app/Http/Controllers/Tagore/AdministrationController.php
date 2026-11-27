@@ -74,6 +74,7 @@ class AdministrationController extends Controller
             'PARENT' => 7,
             'STUDENT' => 6,
             'ACCOUNTS' => 11,
+            'CASHIER' => 13,
             default => 13,
         };
         $password = 'Tg!' . \Illuminate\Support\Str::random(5) . '-' . \Illuminate\Support\Str::random(8);
