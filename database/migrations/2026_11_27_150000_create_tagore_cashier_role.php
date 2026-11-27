@@ -11,6 +11,7 @@ return new class extends Migration {
 
             $role = DB::table('tagore_roles')->where('code', 'CASHIER')->first(['id']);
             $roleValues = [
+                'code' => 'CASHIER',
                 'name' => 'Cashier',
                 'description' => 'Institution-scoped fee account visibility and collection operations.',
                 'is_system' => true,
