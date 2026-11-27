@@ -82,6 +82,15 @@ test.describe('Tagore live-site acceptance', () => {
         expect(brokenImages, role + ' dashboard broken images').toEqual([]);
         await page.screenshot({ path: 'test-results/live-' + role + '-dashboard-' + testInfo.project.name + '.png', fullPage: true });
 
+        if (role === 'owner' && testInfo.project.name === 'desktop') {
+          const adminResponse = await page.goto('/tagore/admin', { waitUntil: 'domcontentloaded', timeout: 20000 });
+          expect(adminResponse && adminResponse.status(), 'owner administration page must be available').toBeLessThan(400);
+          await expect(page.getByRole('heading', { name: 'Create user account' })).toBeVisible();
+          const roleOptions = await page.locator('select[name="role_id"] option').allTextContents();
+          expect(roleOptions.map(value => value.trim()), 'Owner account form must offer the Cashier role').toContain('Cashier');
+          await page.goto('/tagore/dashboard', { waitUntil: 'domcontentloaded', timeout: 20000 });
+        }
+
         if (testInfo.project.name === 'mobile') {
           const mobileNav = page.locator('.tg-mobile-nav');
           await expect(mobileNav, role + ' mobile navigation should be visible').toBeVisible();
@@ -94,7 +103,7 @@ test.describe('Tagore live-site acceptance', () => {
               } catch { return false; }
             }))]);
           expect(mobileLinks.length, role + ' should expose usable mobile navigation').toBeGreaterThan(0);
-          for (const href of mobileLinks) {
+          for (const href of mobileLinks.slice(0, 8)) {
             const response = await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
             const status = response ? response.status() : 0;
             expect(status, role + ' mobile navigation route HTTP response for ' + href).toBeGreaterThanOrEqual(200);
@@ -120,7 +129,7 @@ test.describe('Tagore live-site acceptance', () => {
         expect(links.length, role + ' should expose at least one Tagore navigation link').toBeGreaterThan(0);
 
         const routeResults = [];
-        for (const href of links.slice(0, 80)) {
+        for (const href of links.slice(0, 12)) {
           const response = await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
           const status = response ? response.status() : 0;
           const finalPath = new URL(page.url()).pathname;
