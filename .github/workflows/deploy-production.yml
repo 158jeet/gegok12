@@ -186,15 +186,47 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          login_html="$(curl --insecure --location --silent --show-error --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "https://59.90.66.12/login")"
+          if ! grep -q "Sign in to Tagore ERP" <<<"$login_html" || grep -qi "Parent ERP Login" <<<"$login_html"; then
+            echo "::error title=Login branding mismatch::Expected generic Tagore ERP login wording."
+            exit 1
+          fi
+          echo "Generic Tagore ERP login branding verified."
           urls=(
-            "https://59.90.66.12/login"
             "https://59.90.66.12/tps/"
             "https://59.90.66.12/tps/about"
+            "https://59.90.66.12/tps/admissions"
+            "https://59.90.66.12/tps/admissions/faq"
+            "https://59.90.66.12/tps/admissions/funnel"
+            "https://59.90.66.12/tps/admissions/parent-checklist"
+            "https://59.90.66.12/tps/admissions/pathways"
+            "https://59.90.66.12/tps/hostel/guide"
+            "https://59.90.66.12/tps/parent-guide"
+            "https://59.90.66.12/tps/start"
+            "https://59.90.66.12/tps/visit"
+            "https://59.90.66.12/tps/visit/guide"
+            "https://59.90.66.12/tps/admissions/pathways/early-years"
+            "https://59.90.66.12/tps/admissions/pathways/primary"
+            "https://59.90.66.12/tps/admissions/pathways/middle"
+            "https://59.90.66.12/tps/admissions/pathways/secondary"
+            "https://59.90.66.12/tps/admissions/pathways/senior-secondary"
             "https://59.90.66.12/tier/"
             "https://59.90.66.12/tier/about"
+            "https://59.90.66.12/tier/choose"
+            "https://59.90.66.12/tier/connect"
+            "https://59.90.66.12/tier/contact"
+            "https://59.90.66.12/tier/help"
+            "https://59.90.66.12/tier/institutions"
+            "https://59.90.66.12/tier/partnerships"
+            "https://59.90.66.12/tier/start"
+            "https://59.90.66.12/tier/institutions/tagore-bal-niketan"
+            "https://59.90.66.12/tier/institutions/tagore-smart-school"
+            "https://59.90.66.12/tier/institutions/tagore-vedant-academy"
+            "https://59.90.66.12/tier/institutions/tagore-pg-college"
+            "https://59.90.66.12/tier/institutions/tagore-hostel"
           )
           for url in "${urls[@]}"; do
-            status="$(curl --insecure --silent --show-error --output /dev/null --write-out "%{http_code}" --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "$url")"
+            status="$(curl --insecure --location --silent --show-error --output /dev/null --write-out "%{http_code}" --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "$url")"
             if [[ "$status" != "200" ]]; then
               echo "::error title=Public smoke test failed::$url returned HTTP $status"
               exit 1
