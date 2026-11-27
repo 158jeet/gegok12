@@ -108,12 +108,12 @@ test.describe('New ERP acceptance slices', () => {
 
   test('eligible student can register, sit the scheduled exam, and receive a server-scored result', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === 'mobile', 'The timed exam lifecycle is exercised once on desktop; mobile layout/role checks run separately.');
-    // Owner-side setup spans several pages; keep a generous registration window before the timed exam starts.
-    test.setTimeout(720000);
+    // Owner-side setup spans several pages; keep registration open while the student session is prepared.
+    test.setTimeout(20 * 60 * 1000);
     const title = 'Student Exam QA ' + Date.now();
     const code = 'ST-' + String(Date.now()).slice(-9);
-    const examStart = new Date(Date.now() + 8 * 60000);
-    const examEnd = new Date(Date.now() + 30 * 60000);
+    const examStart = new Date(Date.now() + 15 * 60000);
+    const examEnd = new Date(Date.now() + 45 * 60000);
     await signInAs(page, 'owner');
     await page.goto('/tagore/olympiad', { waitUntil: 'domcontentloaded' });
     // The demo student is enrolled in this configured institution; do not rely on display order.
