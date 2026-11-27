@@ -120,6 +120,7 @@ jobs:
           git -c "safe.directory=$root" -C $root reset --hard $env:GITHUB_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Could not update production checkout to the tested commit.' }
           git -c "safe.directory=$root" -C $root clean -fd
+          New-Item -ItemType Directory -Force -Path (Join-Path $root 'deploy\windows\acme-challenge') | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'Could not remove archived untracked source files from the production checkout.' }
           git -c "safe.directory=$root" -C $root submodule update --init --recursive --force
           if ($LASTEXITCODE -ne 0) { throw 'Could not synchronize production submodules.' }
@@ -166,7 +167,30 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Laravel health check failed.' }
             $status = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://127.0.0.1/login
             if ($LASTEXITCODE -ne 0 -or $status -ne '200') { throw "Local HTTPS login smoke test failed: HTTP $status" }
-            $publicStatus = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://59.90.66.12/login
-            if ($LASTEXITCODE -ne 0 -or $publicStatus -ne '200') { throw "Public HTTPS login smoke test failed: HTTP $publicStatus" }
             Write-Host 'Production deployment smoke tests passed.'
           } finally { Pop-Location }
+  public-smoke:
+    name: Verify public ERP and school websites from the internet
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check public endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          urls=(
+            "https://59.90.66.12/login"
+            "https://59.90.66.12/tps/"
+            "https://59.90.66.12/tps/about"
+            "https://59.90.66.12/tier/"
+            "https://59.90.66.12/tier/about"
+          )
+          for url in "${urls[@]}"; do
+            status="$(curl --insecure --silent --show-error --output /dev/null --write-out "%{http_code}" --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "$url")"
+            if [[ "$status" != "200" ]]; then
+              echo "::error title=Public smoke test failed::$url returned HTTP $status"
+              exit 1
+            fi
+            echo "$url -> HTTP $status"
+          done
