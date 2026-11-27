@@ -106,7 +106,10 @@ test.describe('New ERP acceptance slices', () => {
     const examEnd = new Date(Date.now() + 15 * 60000);
     await signInAs(page, 'owner');
     await page.goto('/tagore/olympiad', { waitUntil: 'domcontentloaded' });
-    await page.locator('#institution_id').selectOption({ index: 0 });
+    // The demo student is enrolled in this configured institution; do not rely on display order.
+    const institutionId = process.env.TAGORE_OLYMPIAD_INSTITUTION_ID || '1';
+    await expect(page.locator(`#institution_id option[value="${institutionId}"]`)).toHaveCount(1);
+    await page.locator('#institution_id').selectOption(institutionId);
     await page.locator('#title').fill(title);
     await page.locator('#code').fill(code);
     await page.locator('#max_marks').fill('1');
