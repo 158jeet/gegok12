@@ -141,7 +141,7 @@ class ParentOlympiadController extends Controller
             $question->options = json_decode($question->options, true) ?: [];
             return $question;
         });
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         $remainingSeconds = max(0, $deadline - time());
         $parentExamToken = $token;
         $savedAnswers = json_decode($registration->answers ?? '{}', true) ?: [];
@@ -152,7 +152,7 @@ class ParentOlympiadController extends Controller
     {
         [, $event, $registration] = $this->resolveLaunch($request, $studentId, $olympiadId, $token);
         abort_unless($registration->status === 'in_progress' && $registration->started_at, 409);
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         abort_unless(time() <= $deadline, 409);
 
         $data = $request->validate(['answers' => ['nullable', 'array', 'max:200']]);
@@ -194,7 +194,7 @@ class ParentOlympiadController extends Controller
                 if ($chosen === strtoupper($question->correct_option)) $score += (float) $question->marks;
             }
         }
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         $status = time() > $deadline ? 'submitted_late' : 'submitted';
         DB::transaction(function () use ($registration, $cleanAnswers, $score, $totalMarks, $status) {
             $locked = DB::table('tagore_olympiad_registrations')->where('id', $registration->id)->lockForUpdate()->first();

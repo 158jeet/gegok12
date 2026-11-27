@@ -279,7 +279,7 @@ class OlympiadController extends Controller
         $questions = DB::table('tagore_olympiad_questions')->where('olympiad_id', $event->id)->whereNotNull('approved_at')->orderBy('sort_order')->orderBy('id')->get(['id', 'question_text', 'options', 'marks']);
         abort_unless($questions->isNotEmpty(), 409);
         $questions = $questions->map(function ($q) { $q->options = json_decode($q->options, true) ?: []; return $q; });
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         $remainingSeconds = max(0, $deadline - time());
         $savedAnswers = json_decode($registration->answers ?? '{}', true) ?: [];
         return view('tagore.olympiad.student-exam', compact('event', 'questions', 'registration', 'remainingSeconds', 'savedAnswers'));
@@ -293,7 +293,7 @@ class OlympiadController extends Controller
         abort_unless($event, 404);
         $registration = DB::table('tagore_olympiad_registrations')->where('olympiad_id', $event->id)->where('student_user_id', $userId)->first();
         abort_unless($registration && $registration->status === 'in_progress' && $registration->started_at, 409);
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         abort_unless(time() <= $deadline, 409);
 
         $data = $request->validate(['answers' => ['nullable', 'array', 'max:200']]);
@@ -335,7 +335,7 @@ class OlympiadController extends Controller
                 if ($chosen === strtoupper($question->correct_option)) $score += (float) $question->marks;
             }
         }
-        $deadline = min(strtotime($event->exam_ends_at), strtotime($registration->started_at) + ((int) $event->duration_minutes * 60));
+        $deadline = min(Carbon::parse($event->exam_ends_at, 'UTC')->timestamp, Carbon::parse($registration->started_at)->timestamp + ((int) $event->duration_minutes * 60));
         $status = time() > $deadline ? 'submitted_late' : 'submitted';
         DB::transaction(function () use ($registration, $cleanAnswers, $score, $totalMarks, $status) {
             $locked = DB::table('tagore_olympiad_registrations')->where('id', $registration->id)->lockForUpdate()->first();

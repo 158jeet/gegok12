@@ -112,8 +112,8 @@ test.describe('New ERP acceptance slices', () => {
     test.setTimeout(20 * 60 * 1000);
     const title = 'Student Exam QA ' + Date.now();
     const code = 'ST-' + String(Date.now()).slice(-9);
-    const examStart = new Date(Date.now() + 15 * 60000);
-    const examEnd = new Date(Date.now() + 45 * 60000);
+    const examStart = new Date(Date.now() + 3 * 60000);
+    const examEnd = new Date(Date.now() + 15 * 60000);
     await signInAs(page, 'owner');
     await page.goto('/tagore/olympiad', { waitUntil: 'domcontentloaded' });
     // The demo student is enrolled in this configured institution; do not rely on display order.
