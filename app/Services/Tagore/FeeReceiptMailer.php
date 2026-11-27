@@ -45,9 +45,8 @@ class FeeReceiptMailer
         $allocations=DB::table('tagore_payment_allocations as a')->leftJoin('tagore_fee_obligations as o','o.id','=','a.fee_obligation_id')
             ->where('a.payment_id',$paymentId)->get(['a.amount','o.due_date']);
 
-        $pdf=Pdf::loadView('tagore.fees.receipt',compact('payment','allocations'))->output();
-
         try {
+            $pdf = Pdf::loadView('tagore.fees.receipt', compact('payment', 'allocations'))->output();
             $mailer = $mailConfig ? Mail::build($mailConfig) : Mail::mailer(config('mail.default'));
             $mailer->send('tagore.fees.receipt-email',['payment'=>$payment],function($message) use($email,$payment,$pdf,$mailConfig){
                 if (!empty($mailConfig['from']['address'])) $message->from($mailConfig['from']['address'], $mailConfig['from']['name'] ?? config('mail.from.name'));
@@ -59,6 +58,11 @@ class FeeReceiptMailer
             ]);
             return true;
         } catch (\Throwable $e) {
+            Log::warning('Fee receipt PDF generation or email delivery failed.', [
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
             DB::table('tagore_fee_receipt_deliveries')->updateOrInsert(['payment_id'=>$paymentId,'channel'=>'email'],[
                 'recipient_user_id'=>$parentId,'recipient_email'=>$email,'status'=>'failed','error'=>substr($e->getMessage(),0,2000),'updated_at'=>now(),'created_at'=>now(),
             ]);
