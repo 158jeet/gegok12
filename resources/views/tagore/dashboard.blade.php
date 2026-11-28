@@ -103,6 +103,9 @@
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty() || $roles->contains('PARENT'))
         <a class="tg-btn" href="{{ route('tagore.diary.index') }}">Daily diary</a>
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
+        <a class="tg-btn" href="{{ route('tagore.fieldwork.studio') }}">Admissions fieldwork</a>
+      @endif
       @endif
     </div>
   </section>
