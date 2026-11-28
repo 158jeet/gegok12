@@ -13,8 +13,7 @@ class PayrollController extends Controller
 {
     public function index(Request $request): View
     {
-        [$roles,$institutionIds] = $this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS','HR'])->isNotEmpty(),403);
+        [$roles,$institutionIds] = $this->scopedContext($request, ['PRINCIPAL','ACCOUNTS','HR']);
 
         $runs=DB::table('tagore_payroll_runs')->whereIn('institution_id',$institutionIds)->orderByDesc('month')->orderByDesc('id')->limit(100)->get();
         $institutions=DB::table('tagore_institutions')->whereIn('id',$institutionIds)->where('status','active')->orderBy('display_name')->get(['id','display_name']);
@@ -25,8 +24,7 @@ class PayrollController extends Controller
 
     public function generate(Request $request, PayrollService $service)
     {
-        [$roles,$institutionIds] = $this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS','HR'])->isNotEmpty(),403);
+        [$roles,$institutionIds] = $this->scopedContext($request, ['PRINCIPAL','ACCOUNTS','HR']);
         $data=$request->validate([
             'institution_id'=>['required','integer'],
             'month'=>['required','date_format:Y-m'],
@@ -41,8 +39,7 @@ class PayrollController extends Controller
 
     public function approve(Request $request,int $runId,PayrollService $service)
     {
-        [$roles,$institutionIds]=$this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS'])->isNotEmpty(),403);
+        [$roles,$institutionIds]=$this->scopedContext($request, ['PRINCIPAL','ACCOUNTS']);
         $run=DB::table('tagore_payroll_runs')->where('id',$runId)->first();
         abort_unless($run && in_array((int)$run->institution_id,$institutionIds,true),404);
         $service->approve($runId,(int)$request->user()->id);
@@ -51,8 +48,7 @@ class PayrollController extends Controller
 
     public function markPaid(Request $request,int $runId,PayrollService $service)
     {
-        [$roles,$institutionIds]=$this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['ACCOUNTS'])->isNotEmpty(),403);
+        [$roles,$institutionIds]=$this->scopedContext($request, ['ACCOUNTS']);
         $run=DB::table('tagore_payroll_runs')->where('id',$runId)->first();
         abort_unless($run && in_array((int)$run->institution_id,$institutionIds,true),404);
         $service->markPaid($runId);
@@ -61,12 +57,33 @@ class PayrollController extends Controller
 
     public function payslip(Request $request,int $itemId)
     {
-        [$roles,$institutionIds]=$this->context($request);
-        abort_unless($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','ACCOUNTS','HR'])->isNotEmpty(),403);
+        [$roles,$institutionIds]=$this->scopedContext($request, ['PRINCIPAL','ACCOUNTS','HR']);
         $item=DB::table('tagore_payroll_items as pi')->join('tagore_payroll_runs as r','r.id','=','pi.payroll_run_id')->join('users as u','u.id','=','pi.employee_id')
             ->where('pi.id',$itemId)->whereIn('r.institution_id',$institutionIds)->first(['pi.*','r.month','r.status as run_status','u.name as employee_name','u.email']);
         abort_unless($item,404);
         return Pdf::loadView('tagore.payroll.payslip',['item'=>$item])->download(($item->payslip_no ?: 'payslip-'.$itemId).'.pdf');
+    }
+
+    private function scopedContext(Request $request, array $allowedRoles): array
+    {
+        [$roles] = $this->context($request);
+        abort_unless($roles->contains('OWNER') || $roles->intersect($allowedRoles)->isNotEmpty(), 403);
+
+        if ($roles->contains('OWNER')) {
+            $institutionIds = DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
+            return [$roles, $institutionIds];
+        }
+
+        $institutionIds = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', (int) $request->user()->id)
+            ->where('ur.status', 'active')
+            ->whereIn('r.code', $allowedRoles)
+            ->whereNotNull('ur.institution_id')
+            ->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        return [$roles, $institutionIds];
     }
 
     private function context(Request $request): array
