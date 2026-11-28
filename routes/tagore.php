@@ -3,6 +3,8 @@
 use App\Http\Controllers\Tagore\AcademicStructureController;
 use App\Http\Controllers\Tagore\AdministrationController;
 use App\Http\Controllers\Tagore\AdmissionsController;
+use App\Http\Controllers\Tagore\CrmTelephonyController;
+use App\Http\Controllers\Tagore\CrmGrowthController;
 use App\Http\Controllers\Tagore\DailyDiaryController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\Tagore\FeeManagementController;
 use App\Http\Controllers\Tagore\LegacyStudentMappingController;
 use App\Http\Controllers\Tagore\LegacyFeeReconciliationController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
+use App\Http\Controllers\Tagore\FamilyOnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use App\Http\Controllers\Tagore\StudentLifecycleController;
@@ -29,11 +32,13 @@ use App\Http\Controllers\Tagore\ExaminationController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
+use App\Http\Controllers\Tagore\FieldworkFormController;
+use App\Http\Controllers\Tagore\CashierController;
 use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
+Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->middleware('throttle:30,1')->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'edit'])->name('tagore.profile.edit');
@@ -45,6 +50,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::post('/payments/family/initiate', [FamilyOnlinePaymentController::class, 'initiate'])->name('tagore.payments.family.initiate');
+    Route::post('/payments/family/confirm', [FamilyOnlinePaymentController::class, 'confirm'])->name('tagore.payments.family.confirm');
+
     Route::get('/parent/olympiad/{studentId}', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'index'])->whereNumber('studentId')->name('tagore.parent.olympiad.index');
     Route::post('/parent/olympiad/{studentId}/{olympiadId}/register', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'register'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.register');
     Route::post('/parent/olympiad/{studentId}/{olympiadId}/launch', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'launch'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.launch');
@@ -70,6 +78,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/users', [AdministrationController::class, 'storeUser'])->name('tagore.admin.users.store');
     Route::post('/admin/users/{userId}/password', [AdministrationController::class, 'resetUserPassword'])->whereNumber('userId')->name('tagore.admin.users.password');
     Route::patch('/admin/users/{userId}/status', [AdministrationController::class, 'updateUserStatus'])->whereNumber('userId')->name('tagore.admin.users.status');
+    Route::get('/hr/biometric-devices', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'index'])->name('tagore.biometric.index');
+    Route::post('/hr/biometric-devices', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'store'])->name('tagore.biometric.store');
+    Route::post('/hr/biometric-devices/{deviceId}/employee-mappings', [\App\Http\Controllers\Tagore\BiometricDeviceController::class, 'mapEmployee'])->whereNumber('deviceId')->name('tagore.biometric.mapping.store');
     Route::get('/staff/me', [\App\Http\Controllers\Tagore\StaffController::class, 'self'])->name('tagore.staff.self');
     Route::post('/staff/me/leave', [\App\Http\Controllers\Tagore\StaffController::class, 'applyLeave'])->name('tagore.staff.self.leave');
     Route::patch('/staff/me/leave/{leaveId}/cancel', [\App\Http\Controllers\Tagore\StaffController::class, 'cancelOwnLeave'])->whereNumber('leaveId')->name('tagore.staff.self.leave.cancel');
@@ -85,6 +96,16 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/academic-structure/section', [AcademicStructureController::class, 'storeSection'])->name('tagore.academic.section');
     Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
     Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
+    Route::get('/fieldwork/studio', [FieldworkFormController::class, 'studio'])->name('tagore.fieldwork.studio');
+    Route::get('/fieldwork/my-campaigns', [FieldworkFormController::class, 'myCampaigns'])->name('tagore.fieldwork.campaigns.mine');
+    Route::get('/fieldwork/forms', [FieldworkFormController::class, 'index'])->name('tagore.fieldwork.forms.index');
+    Route::post('/fieldwork/forms', [FieldworkFormController::class, 'storeTemplate'])->name('tagore.fieldwork.forms.store');
+    Route::put('/fieldwork/forms/{templateId}', [FieldworkFormController::class, 'updateTemplate'])->whereNumber('templateId')->name('tagore.fieldwork.forms.update');
+    Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');
+    Route::post('/fieldwork/campaigns', [FieldworkFormController::class, 'createCampaign'])->name('tagore.fieldwork.campaigns.store');
+    Route::post('/fieldwork/campaigns/{campaignId}/submissions', [FieldworkFormController::class, 'submit'])->whereNumber('campaignId')->name('tagore.fieldwork.submissions.store');
+    Route::get('/fieldwork/submissions/review', [FieldworkFormController::class, 'reviewQueue'])->name('tagore.fieldwork.submissions.review');
+    Route::patch('/fieldwork/submissions/{submissionId}/review', [FieldworkFormController::class, 'reviewSubmission'])->whereNumber('submissionId')->name('tagore.fieldwork.submissions.decide');
 
     Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
     Route::get('/admissions/create', [AdmissionsController::class, 'create'])->name('tagore.admissions.create');
@@ -94,6 +115,24 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/convert', [AdmissionsController::class, 'convert'])->whereNumber('leadId')->name('tagore.admissions.convert');
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
+    Route::post('/admissions/{leadId}/link-student', [AdmissionsController::class, 'linkExistingStudent'])->whereNumber('leadId')->name('tagore.admissions.link-student');
+    Route::get('/crm', [CrmGrowthController::class, 'index'])->name('tagore.crm.index');
+    Route::post('/crm/accounts', [CrmGrowthController::class, 'storeAccount'])->name('tagore.crm.accounts.store');
+    Route::patch('/crm/accounts/{accountId}', [CrmGrowthController::class, 'updateAccount'])->whereNumber('accountId')->name('tagore.crm.accounts.update');
+    Route::post('/crm/contacts', [CrmGrowthController::class, 'storeContact'])->name('tagore.crm.contacts.store');
+    Route::patch('/crm/contacts/{contactId}', [CrmGrowthController::class, 'updateContact'])->whereNumber('contactId')->name('tagore.crm.contacts.update');
+    Route::post('/crm/opportunities', [CrmGrowthController::class, 'storeOpportunity'])->name('tagore.crm.opportunities.store');
+    Route::patch('/crm/opportunities/{opportunityId}', [CrmGrowthController::class, 'updateOpportunity'])->whereNumber('opportunityId')->name('tagore.crm.opportunities.update');
+    Route::post('/crm/campaigns', [CrmGrowthController::class, 'storeCampaign'])->name('tagore.crm.campaigns.store');
+    Route::post('/crm/tasks', [CrmGrowthController::class, 'storeTask'])->name('tagore.crm.tasks.store');
+    Route::patch('/crm/tasks/{taskId}', [CrmGrowthController::class, 'updateTask'])->whereNumber('taskId')->name('tagore.crm.tasks.update');
+    Route::post('/crm/cases', [CrmGrowthController::class, 'storeCase'])->name('tagore.crm.cases.store');
+    Route::patch('/crm/cases/{caseId}', [CrmGrowthController::class, 'updateCase'])->whereNumber('caseId')->name('tagore.crm.cases.update');
+    Route::get('/crm/telephony', [CrmTelephonyController::class, 'index'])->name('tagore.crm.telephony.index');
+    Route::post('/crm/telephony', [CrmTelephonyController::class, 'saveAccount'])->name('tagore.crm.telephony.save');
+    Route::post('/crm/telephony/agents', [CrmTelephonyController::class, 'saveAgent'])->name('tagore.crm.telephony.agents.save');
+    Route::post('/admissions/{leadId}/call', [CrmTelephonyController::class, 'clickToCall'])->whereNumber('leadId')->middleware('throttle:10,1')->name('tagore.crm.telephony.call');
+    Route::post('/crm/calls/{callId}/disposition', [CrmTelephonyController::class, 'disposition'])->whereNumber('callId')->name('tagore.crm.telephony.disposition');
 
     Route::get('/performance', [TaskController::class, 'performance'])->name('tagore.performance.index');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
@@ -110,9 +149,17 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
     Route::post('/child/{studentId}/fees/pay', [OnlinePaymentController::class, 'initiate'])->whereNumber('studentId')->name('tagore.payments.initiate');
     Route::post('/payments/confirm', [OnlinePaymentController::class, 'confirm'])->name('tagore.payments.confirm');
+    Route::get('/cashier', [CashierController::class, 'index'])->name('tagore.cashier.index');
+    Route::get('/cashier/export', [CashierController::class, 'export'])->name('tagore.cashier.export');
+    Route::post('/cashier/students/{studentId}/reminder', [CashierController::class, 'sendReminder'])->whereNumber('studentId')->middleware('throttle:5,1')->name('tagore.cashier.reminder');
+    Route::get('/cashier/fees', [FeeManagementController::class, 'cashierAssignments'])->name('tagore.cashier.fees');
+    Route::post('/cashier/fees/assignments', [FeeManagementController::class, 'storeAssignment'])->name('tagore.cashier.fees.assign');
+    Route::post('/cashier/fees/assignments/{assignmentId}/preview', [FeeManagementController::class, 'cashierBulkPreview'])->whereNumber('assignmentId')->name('tagore.cashier.fees.preview');
+    Route::post('/cashier/fees/assignments/{assignmentId}/generate', [FeeManagementController::class, 'generateCashierBulk'])->whereNumber('assignmentId')->name('tagore.cashier.fees.generate');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
     Route::post('/accounts/fees/payment/{paymentId}/reconcile', [FeeController::class, 'reconcile'])->whereNumber('paymentId')->name('tagore.fees.reconcile');
+    Route::post('/accounts/fees/payment/{paymentId}/refund', [FeeController::class, 'recordVerifiedRefund'])->whereNumber('paymentId')->name('tagore.fees.refund');
     Route::get('/accounts/fees/payment/{paymentId}/receipt', [FeeController::class, 'receipt'])->whereNumber('paymentId')->name('tagore.fees.receipt');
     Route::get('/accounts/fees/manage', [FeeManagementController::class, 'index'])->name('tagore.fees.manage');
     Route::get('/accounts/fees/editor', [FeeEditorController::class, 'index'])->name('tagore.fees.editor');
@@ -202,7 +249,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/learning/store/order', [LearningController::class, 'order'])->name('tagore.learning.store.order');
     Route::post('/learning/store/product', [LearningController::class, 'createProduct'])->name('tagore.learning.product');
     Route::post('/security/visitor', [SecurityController::class, 'visitor'])->name('tagore.security.visitor');
-    Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->name('tagore.security.visitor.checkin');
+    Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->middleware('throttle:10,1')->name('tagore.security.visitor.checkin');
     Route::post('/security/visitor/{id}/checkout', [SecurityController::class, 'checkOut'])->whereNumber('id')->name('tagore.security.visitor.checkout');
     Route::post('/security/gatepass', [SecurityController::class, 'gatepass'])->name('tagore.security.gatepass');
     Route::patch('/security/gatepass/{id}/decide', [SecurityController::class, 'decidePass'])->whereNumber('id')->name('tagore.security.gatepass.decide');

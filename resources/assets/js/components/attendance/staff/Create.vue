@@ -2,7 +2,8 @@
   <div class="bg-white shadow px-4 py-3">
     <div>
 	    <div v-if="this.success!=null" class="alert alert-success" id="success-alert">{{this.success}}</div>
-      
+      <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+
 
       <div class="my-5">
         <div class="tw-form-group w-full lg:w-3/5">
@@ -26,21 +27,21 @@
             </div>
             <div class="mb-2 w-full lg:w-3/4  md:w-2/3 ">
             <div class="flex">
-              <div class="w-1/2 flex items-center tw-form-control mr-1 lg:mr-4 md:mr-4"> 
+              <div class="w-1/2 flex items-center tw-form-control mr-1 lg:mr-4 md:mr-4">
                 <input type="radio" v-model="session" name="session" id="forenoon" value="forenoon">
                 <span class="text-sm mx-1">Forenoon</span>
               </div>
-              <div class="w-1/2 flex items-center tw-form-control"> 
+              <div class="w-1/2 flex items-center tw-form-control">
                 <input type="radio" v-model="session" name="session" id="afternoon" value="afternoon">
                 <span class="text-sm mx-1">Afternoon</span>
               </div>
               </div>
                <span v-if="errors.session" class="text-red-500 text-xs font-semibold">{{errors.session[0]}}</span>
             </div>
-           
-          </div> 
+
+          </div>
         </div>
-      </div> 
+      </div>
 
       <div class="my-6" id="select_student_btn">
         <a href="#" class="btn btn-submit blue-bg text-white rounded px-3 py-1 mr-3 text-sm font-medium" @click="selectStudent()">Select Staffs</a>
@@ -60,7 +61,7 @@
                   :checked="true"
                   @change="absentStudent($event,present,index)">
                 </div>
-                <div class="mx-2"> 
+                <div class="mx-2">
                   <p class="tw-form-label">{{ present.user_name }}</p>
                 </div>
               </div>
@@ -80,7 +81,7 @@
                     checked
                     @change="presentStudent($event,absent,index)">
                 </div>
-                <div class="mx-2"> 
+                <div class="mx-2">
                   <p class="tw-form-label">{{ absent.user_name }}</p>
                 </div>
               </div>
@@ -108,7 +109,7 @@
 
     	<div class="my-6 hidden" id="btn_div">
         <a href="#" id="submit-btn" class="btn btn-submit blue-bg text-white rounded px-3 py-1 mr-3 text-sm font-medium" @click="submitForm()">Submit</a>
-    		<a href="#" class="btn btn-reset bg-gray-100 text-gray-700 border rounded px-3 py-1 mr-3 text-sm font-medium" @click="resetForm()">Reset</a>	
+    		<a href="#" class="btn btn-reset bg-gray-100 text-gray-700 border rounded px-3 py-1 mr-3 text-sm font-medium" @click="resetForm()">Reset</a>
     	</div>
 	  </div>
   </div>
@@ -128,19 +129,20 @@
         status:'',
         reason_id:[],
         remarks:'',
-        presents:[{ 
+        presents:[{
           present_id : '',
         }],
-        absents:[{ 
+        absents:[{
           user_id : '',
           reason_id:'',
           remarks:'',
         }],
         errors:[],
         success:null,
+        errorMessage:null,
       }
     },
-        
+
     methods:
     {
       resetForm()
@@ -154,9 +156,9 @@
         var count = Object.keys(array).length;
         var list = Object.keys(array);
         for(var i = 0 , array , list , key ; i < count ; i++)
-        { 
+        {
           if(list[i] == key)
-          { 
+          {
             return array[key];
           }
         }
@@ -221,13 +223,14 @@
       submitForm()
       {
         this.errors=[];
-        this.success=null; 
+        this.success=null;
+        this.errorMessage=null;
 
         let formData=new FormData();
-   
-        formData.append('date',this.date);                 
-        formData.append('session',this.session); 
-        
+
+        formData.append('date',this.date);
+        formData.append('session',this.session);
+
         formData.append('absentCount',this.absents.length);
         for(let i=0; i<this.absents.length;i++)
         {
@@ -257,7 +260,7 @@
           {
             formData.append('remarks'+i,'');
           }
-        } 
+        }
 
         formData.append('presentCount',this.presents.length);
         for(let i=0; i<this.presents.length;i++)
@@ -271,12 +274,16 @@
             formData.append('present_id'+i,'');
           }
         }
-      
-        axios.post('/'+this.mode+'/attendance/staff/add',formData,{headers: {'Content-Type': 'multipart/form-data'}}).then(response => {     
+
+        axios.post('/'+this.mode+'/attendance/staff/add',formData,{headers: {'Content-Type': 'multipart/form-data'}}).then(response => {
           this.success = response.data.success;
           //this.resetForm();
         }).catch(error => {
-          this.errors = error.response.data.errors;
+          const response = error.response;
+          this.errors = response && response.data && response.data.errors ? response.data.errors : {};
+          this.errorMessage = response && response.data && response.data.message
+            ? response.data.message
+            : 'Unable to save staff attendance. Please try again.';
         });
       },
 
@@ -285,7 +292,7 @@
         axios.get('/'+this.mode+'/attendance/staff/list').then(response => {
           this.list = response.data;
           this.setData();
-          console.log(this.list)
+
         });
       },
       setData()

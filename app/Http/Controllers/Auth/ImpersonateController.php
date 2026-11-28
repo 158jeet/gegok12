@@ -5,164 +5,166 @@
  */
 namespace App\Http\Controllers\Auth;
 
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Traits\Common;
 use App\Models\User;
-use Exception;
-use Log;
+use App\Traits\Common;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
 
 class ImpersonateController extends Controller
 {
     use Common;
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+
     public function impersonate($id)
     {
-        try
-        {
-            $user = User::find($id);
+        $user = $this->resolveImpersonationTarget($id);
 
-            $is_admin = $this->is_admin($user->id);
-            if($is_admin == false)
-            {
-                Auth::user()->setImpersonating($user->id);
-            }
-            else
-            {
-                \Session::put('Impersonate disabled for this user.');
-            }
+        abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
+        $this->beginImpersonation($user);
 
-            return redirect('/teacher/dashboard');
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
+        return redirect('/teacher/dashboard');
     }
 
     public function librarianimpersonate($id)
     {
-        try
-        {
-            $user = User::find($id);
+        $user = $this->resolveImpersonationTarget($id);
 
-            $is_admin = $this->is_admin($user->id);
-            if($is_admin == false)
-            {
-                Auth::user()->setImpersonating($user->id);
-            }
-            else
-            {
-                \Session::put('Impersonate disabled for this user.');
-            }
+        abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
+        $this->beginImpersonation($user);
 
-            return redirect('/library/dashboard');
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
+        return redirect('/library/dashboard');
     }
 
     public function studentimpersonate($id)
     {
-        try
-        {
-            $user = User::find($id);
+        $user = $this->resolveImpersonationTarget($id);
 
-            $is_admin = $this->is_admin($user->id);
-            if($is_admin == false)
-            {
-                Auth::user()->setImpersonating($user->id);
-            }
-            else
-            {
-                \Session::put('Impersonate disabled for this user.');
-            }
+        abort_if((int) $user->usergroup_id === 3, 403, 'Administrative accounts cannot be impersonated.');
+        $this->beginImpersonation($user);
 
-            return redirect('/student/dashboard');
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
+        return redirect('/student/dashboard');
     }
 
     public function schoolAdminimpersonate($id)
     {
-        try
-        {
-            $user = User::find($id);
+        $user = $this->resolveImpersonationTarget($id);
 
-            $is_admin = $this->is_admin($user->id);
-            if($is_admin == true)
-            { //dd('if');
-                Auth::user()->setImpersonating($user->id);
-            }
-            else
-            {//dd('false');
-                \Session::put('Impersonate disabled for this user.');
-            }
+        abort_unless((int) $user->usergroup_id === 3, 403, 'Only a school administration account may be selected here.');
+        $actorIsOwner = $this->isTagoreOwner(Auth::user());
+        abort_unless($actorIsOwner || (int) Auth::user()->school_id === (int) $user->school_id, 403);
+        abort_if($this->isTagoreOwner($user), 403, 'The Owner account cannot be impersonated.');
 
-            return redirect('/admin/dashboard');
-        }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
-        }
+        $this->beginImpersonation($user);
+
+        return redirect('/admin/dashboard');
     }
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function stopImpersonate()
     {
         if (!Auth::check()) {
             return redirect()->guest(route('login'));
         }
-        try
-        {
-            $user = User::where('id', Auth::user()->id)->first();
-            Auth::user()->stopImpersonating();
-           // dd($user->usergroup_id);
-            if ($user->usergroup_id == 5)
-            {
-                return redirect('/teacher/dashboard');
-            }
-            elseif ($user->usergroup_id == 3)
-            {
-                return redirect('/superadmin/dashboard');
 
-                //return redirect('/admin/dashboard');
-            }
-            elseif ($user->usergroup_id == 6)
-            {
-                return redirect('/student/dashboard');
-            }
-            elseif ($user->usergroup_id == 8)
-            {
-                return redirect('/library/dashboard');
-            }
-            /*elseif ($user->usergroup_id == 1)
-            {
-                return redirect('/superadmin/dashboard');
-            } */
+        $target = Auth::user();
+        $wasImpersonating = Session::has('impersonate_original_user_id') || ($target && $target->isImpersonating());
+        // The package middleware uses onceUsingId() to impersonate for this
+        // request only. stopImpersonating() clears its target flag but does not
+        // restore the original guard user, so explicitly restore the persisted
+        // login identity before choosing the destination.
+        $originalActorId = Session::pull('impersonate_original_user_id')
+            ?: Session::get(Auth::getName());
+
+        Auth::user()->stopImpersonating();
+
+        if (!$originalActorId || !Auth::loginUsingId($originalActorId)) {
+            Auth::logout();
+            return redirect()->guest(route('login'));
         }
-        catch(Exception $e)
-        {
-            Log::info($e->getMessage());
-            //dd($e->getMessage());
+
+        $actor = Auth::user();
+        if (!$actor) {
+            return redirect()->guest(route('login'));
         }
+
+        if ($wasImpersonating && $target) {
+            $this->auditImpersonation('stopped', $target);
+        }
+        if (in_array((int) $actor->usergroup_id, [1, 2, 3], true)) {
+            return redirect('/superadmin/dashboard');
+        } elseif ((int) $actor->usergroup_id === 5) {
+            return redirect('/teacher/dashboard');
+        } elseif ((int) $actor->usergroup_id === 6) {
+            return redirect('/student/dashboard');
+        } elseif ((int) $actor->usergroup_id === 8) {
+            return redirect('/library/dashboard');
+        }
+
+        return redirect()->route('tagore.dashboard');
+    }
+
+    private function beginImpersonation(User $target): void
+    {
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+
+        // Preserve the original login only once, including when a legacy
+        // impersonation session is already active.
+        if (!$actor->isImpersonating() && !Session::has('impersonate_original_user_id')) {
+            Session::put('impersonate_original_user_id', Session::get(Auth::getName()) ?: $actor->getKey());
+        }
+
+        $actor->setImpersonating($target->id);
+        $this->auditImpersonation('started', $target);
+    }
+
+    /**
+     * Resolve the target and enforce tenant boundaries before any session mutation.
+     * Only the Tagore Owner may cross school boundaries; the Owner itself is never
+     * a valid impersonation target.
+     */
+    private function resolveImpersonationTarget($id): User
+    {
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+
+        $target = User::query()->where('status', 'active')->findOrFail($id);
+        abort_if($this->isTagoreOwner($target), 403, 'The Owner account cannot be impersonated.');
+
+        $sameSchool = $actor->school_id !== null
+            && (int) $actor->school_id === (int) $target->school_id;
+
+        abort_unless($sameSchool || $this->isTagoreOwner($actor), 403);
+
+        return $target;
+    }
+
+    private function isTagoreOwner(User $user): bool
+    {
+        if (!Schema::hasTable('tagore_user_roles') || !Schema::hasTable('tagore_roles')) {
+            return false;
+        }
+
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $user->id)
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->exists();
+    }
+
+    private function auditImpersonation(string $event, User $target): void
+    {
+        Log::notice('Legacy user impersonation '.$event.'.', [
+            'actor_user_id' => Auth::id(),
+            'target_user_id' => $target->id,
+            'actor_school_id' => Auth::user()->school_id,
+            'target_school_id' => $target->school_id,
+            'ip' => request()->ip(),
+        ]);
     }
 }

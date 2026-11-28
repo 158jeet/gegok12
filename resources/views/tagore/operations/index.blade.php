@@ -181,9 +181,10 @@
  
 <script>
 (() => {
+  let boundSearch = null;
+  let boundStatus = null;
+
   const apply = () => {
-    // Resolve the current DOM on every run: creating a record can replace table rows
-    // or controls after this script has initially executed.
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
     const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
@@ -209,22 +210,33 @@
     if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
-  window.tagoreOperationsFilter = apply;
-  const onSearch = event => {
-    if (event.target?.id === 'tg-operations-search') apply();
-  };
-  const onStatus = event => {
-    if (event.target?.id === 'tg-operations-status') apply();
+  const bindCurrentControls = () => {
+    const search = document.getElementById('tg-operations-search');
+    const status = document.getElementById('tg-operations-status');
+
+    if (search && search !== boundSearch) {
+      boundSearch = search;
+      ['input', 'search', 'keyup', 'change'].forEach(type => {
+        search.addEventListener(type, apply);
+      });
+    }
+
+    if (status && status !== boundStatus) {
+      boundStatus = status;
+      ['input', 'change'].forEach(type => {
+        status.addEventListener(type, apply);
+      });
+    }
+    apply();
   };
 
-  // Delegation survives table/control replacement after create/update actions.
-  document.addEventListener('input', onSearch, true);
-  document.addEventListener('search', onSearch, true);
-  document.addEventListener('keyup', onSearch, true);
-  document.addEventListener('change', event => {
-    onSearch(event);
-    onStatus(event);
-  }, true);
+  window.tagoreOperationsFilter = apply;
+  bindCurrentControls();
+
+  // Rebind if a create/update interaction replaces the controls or table.
+  const observer = new MutationObserver(() => bindCurrentControls());
+  observer.observe(document.body, { childList: true, subtree: true });
+
   document.addEventListener('keydown', event => {
     const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
@@ -236,8 +248,6 @@
       apply();
     }
   }, true);
-
-  apply();
 })();
 </script>
 @endsection

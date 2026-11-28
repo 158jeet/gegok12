@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use App\Models\TagoreAdmissionActivity;
 use App\Models\TagoreAdmissionLead;
+use App\Models\TagoreCrmTelephonyAgent;
+use App\Services\Tagore\CrmLeadScoringService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -13,22 +15,22 @@ use Illuminate\Support\Str;
 
 class AdmissionsController extends Controller
 {
-    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR','CASHIER'];
+    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'];
 
-    public function index(Request $request): View
+    public function index(Request $request, CrmLeadScoringService $scoring): View
     {
         $userId=(int)$request->user()->id; $roles=$this->roles($userId);
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
 
-        $query=TagoreAdmissionLead::query()->whereIn('institution_id',$ids)
+        $query=TagoreAdmissionLead::query()->withCount(['activities','calls'])->whereIn('institution_id',$ids)
             ->orderByRaw("case when status='new' then 0 when status='follow_up' then 1 else 2 end")
             ->orderBy('next_follow_up_at')->orderByDesc('id');
 
         if($request->filled('status')) $query->where('status',$request->string('status')->toString());
         if($request->filled('assigned_to')) $query->where('assigned_to',(int)$request->input('assigned_to'));
-        if($request->input('follow_up')==='due') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<=',now());
-        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now());
+        if($request->input('follow_up')==='due') $query->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->whereNotIn('status',['admitted','lost']);
+        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost']);
         if($request->input('source')) $query->where('source',$request->string('source')->toString());
         if($request->input('campaign')) $query->where('campaign',$request->string('campaign')->toString());
 
@@ -39,8 +41,17 @@ class AdmissionsController extends Controller
         }
 
         $leads=$query->paginate(25)->withQueryString();
+        $leads->getCollection()->transform(function ($lead) use ($scoring) {
+            $lead->engagement_score = $scoring->score($lead);
+            return $lead;
+        });
         $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
         $ownerPerformance=(clone $base)->whereNotNull('assigned_to')->select('assigned_to',DB::raw('count(*) as total'),DB::raw("sum(case when status='admitted' then 1 else 0 end) as admitted"),DB::raw("sum(case when status='lost' then 1 else 0 end) as lost"))->groupBy('assigned_to')->orderByDesc('admitted')->limit(10)->get();
@@ -66,7 +77,13 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
         $institutions=DB::table('tagore_institutions')->whereIn('id',$ids)->where('status','active')->orderBy('display_name')->get(['id','display_name']);
-        return view('tagore.admissions.create',compact('institutions'));
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        return view('tagore.admissions.create',compact('institutions','staff'));
     }
 
     public function store(Request $request)
@@ -84,6 +101,31 @@ class AdmissionsController extends Controller
         abort_unless(in_array((int)$data['institution_id'],$this->institutionIds($userId,$roles),true),403);
         if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$data['institution_id']),422);
 
+        // Same guardian mobile is common across siblings; only flag a duplicate
+        // when the student name and at least one contact identifier also match.
+        $normalisePhone = static function ($value): string {
+            $digits = preg_replace('/\\D+/', '', (string) $value);
+            return strlen($digits) > 10 ? substr($digits, -10) : $digits;
+        };
+        $mobileKey = $normalisePhone($data['mobile'] ?? '');
+        $emailKey = mb_strtolower(trim((string) ($data['email'] ?? '')));
+        if ($mobileKey !== '' || $emailKey !== '') {
+            $nameKey = mb_strtolower(trim($data['student_name']));
+            $possibleDuplicates = TagoreAdmissionLead::query()
+                ->where('institution_id', (int) $data['institution_id'])
+                ->whereNotIn('status', ['lost'])
+                ->whereRaw('lower(trim(student_name)) = ?', [$nameKey])
+                ->get(['id', 'lead_no', 'student_name', 'mobile', 'email']);
+            $duplicate = $possibleDuplicates->first(function ($candidate) use ($normalisePhone, $mobileKey, $emailKey) {
+                $sameMobile = $mobileKey !== '' && $normalisePhone($candidate->mobile) === $mobileKey;
+                $sameEmail = $emailKey !== '' && mb_strtolower(trim((string) $candidate->email)) === $emailKey;
+                return $sameMobile || $sameEmail;
+            });
+            if ($duplicate) {
+                return redirect()->route('tagore.admissions.show', $duplicate->id)
+                    ->with('warning', 'Possible duplicate enquiry detected. Review existing lead ' . $duplicate->lead_no . ' instead of creating another record.');
+            }
+        }
         $lead=DB::transaction(function() use($data,$userId){
             $institutionId=(int)$data['institution_id'];
             // Use the database-generated ID for the human-readable lead number.
@@ -104,6 +146,7 @@ class AdmissionsController extends Controller
         abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
         $data=$request->validate(['assigned_to'=>['nullable','integer']]);
         if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$lead->institution_id),422);
+
         $lead->update(['assigned_to'=>$data['assigned_to'] ?? null]);
         TagoreAdmissionActivity::create(['lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'note','outcome'=>'assignment','notes'=>$lead->assigned_to ? 'Lead assigned to user #'.$lead->assigned_to : 'Lead unassigned','completed_at'=>now()]);
         return back()->with('success','Lead assignment updated.');
@@ -118,8 +161,79 @@ class AdmissionsController extends Controller
         $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->first();
         $classOptions=DB::table('standards_link as sl')->join('standards as st','st.id','=','sl.standard_id')->join('sections as sec','sec.id','=','sl.section_id')->join('academic_years as ay','ay.id','=','sl.academic_year_id')->where('sl.school_id',$institution->school_id)->where('sl.status',1)->whereNull('sl.deleted_at')->orderByDesc('ay.start_date')->orderBy('st.name')->orderBy('sec.name')->select('sl.id','sl.academic_year_id','ay.name as academic_year_name','st.name as standard_name','sec.name as section_name')->get();
         $conversion=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
-        return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion'));
+        $calls=\App\Models\TagoreCrmCall::where('lead_id',$lead->id)->latest()->limit(30)->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $hasAgent=TagoreCrmTelephonyAgent::where('institution_id',$lead->institution_id)->where('user_id',$userId)->where('is_active',true)->whereHas('account',fn($query)=>$query->where('is_active',true))->exists();
+        return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion','calls','hasAgent'));
+    }
+
+    public function linkExistingStudent(Request $request, int $leadId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(), 403);
+
+        $lead = TagoreAdmissionLead::findOrFail($leadId);
+        abort_unless(in_array((int) $lead->institution_id, $this->institutionIds($userId, $roles), true), 403);
+
+        $data = $request->validate(['student_id' => ['required', 'integer']]);
+        $institution = DB::table('tagore_institutions')->where('id', $lead->institution_id)->first();
+        abort_unless($institution, 422, 'Institution not found.');
+
+        $student = DB::table('users')->where('id', (int) $data['student_id'])
+            ->where('usergroup_id', 6)->where('school_id', $institution->school_id)
+            ->whereNull('deleted_at')->first();
+        abort_unless($student, 422, 'Select an active student account belonging to this institution.');
+
+        DB::transaction(function () use ($lead, $student, $userId, $institution) {
+            $lockedLead = TagoreAdmissionLead::whereKey($lead->id)->lockForUpdate()->firstOrFail();
+            if ($lockedLead->converted_student_id && (int) $lockedLead->converted_student_id !== (int) $student->id) {
+                abort(422, 'This enquiry is already linked to a different student account.');
+            }
+
+            $alreadyLinked = (int) $lockedLead->converted_student_id === (int) $student->id;
+            $lockedLead->update([
+                'converted_student_id' => $student->id,
+                'status' => 'admitted',
+                'converted_at' => $lockedLead->converted_at ?: now(),
+                'lost_reason' => null,
+            ]);
+
+            if (!$alreadyLinked) {
+                TagoreAdmissionActivity::create([
+                    'lead_id' => $lockedLead->id,
+                    'user_id' => $userId,
+                    'type' => 'note',
+                    'outcome' => 'enrolment_linked',
+                    'notes' => 'CRM enquiry linked to enrolled student account #' . $student->id,
+                    'completed_at' => now(),
+                ]);
+
+                if (DB::getSchemaBuilder()->hasTable('tagore_audit_events')) {
+                    DB::table('tagore_audit_events')->insert([
+                        'user_id' => $userId,
+                        'action' => 'admissions.convert',
+                        'entity_type' => 'Student',
+                        'entity_id' => $student->id,
+                        'old_values_json' => null,
+                        'new_values_json' => json_encode([
+                            'lead_id' => $lockedLead->id,
+                            'student_id' => $student->id,
+                            'institution_id' => $institution->id,
+                        ]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Enquiry linked to the enrolled student account.');
     }
 
     public function linkFamily(Request $request, int $leadId)
@@ -198,7 +312,7 @@ class AdmissionsController extends Controller
             abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
             $existing=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
             if($existing) return ['conversion' => $existing, 'created' => false];
-            abort_unless($lead->status==='admitted',422,'Mark the lead as admitted before creating the student account.');
+            abort_unless(in_array($lead->status,['qualified','admitted'],true),422,'Qualify the lead before creating the student account.');
 
             $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->where('status','active')->first();
             abort_unless($institution,422,'The admission institution is not active.');
@@ -243,7 +357,7 @@ class AdmissionsController extends Controller
                 'academic_year_id'=>$link->academic_year_id,'standard_link_id'=>$link->id,
                 'converted_by'=>$userId,'created_at'=>$now,'updated_at'=>$now,
             ]);
-            $lead->update(['academic_year_id'=>$link->academic_year_id,'converted_at'=>$now,'status'=>'admitted']);
+            $lead->update(['academic_year_id'=>$link->academic_year_id,'converted_student_id'=>$studentId,'converted_at'=>$now,'status'=>'admitted']);
             TagoreAdmissionActivity::create([
                 'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'note','outcome'=>'student_created',
                 'notes'=>'Lead converted to student account #'.$studentId.' and enrolled in academic year #'.$link->academic_year_id.'. Parent account was not auto-linked; verified family linking is a separate step.',
@@ -282,6 +396,9 @@ class AdmissionsController extends Controller
             'status'=>['nullable','in:new,contacted,follow_up,qualified,admitted,lost'],'next_follow_up_at'=>['nullable','date'],
             'lost_reason'=>['nullable','string','max:120'],
         ]);
+        if (($data['status'] ?? null) === 'admitted' && !$lead->converted_student_id) {
+            abort(422, 'Link the enrolled student account before marking this enquiry admitted.');
+        }
         DB::transaction(function() use($lead,$data,$userId){
             TagoreAdmissionActivity::create([
                 'lead_id'=>$lead->id,'user_id'=>$userId,'type'=>$data['type'],'outcome'=>$data['outcome']??null,
@@ -302,19 +419,34 @@ class AdmissionsController extends Controller
 
     private function staffBelongsToInstitution(int $userId,int $institutionId): bool
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.institution_id',$institutionId)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->exists();
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')
+            ->where('ur.user_id',$userId)
+            ->where(function($query) use ($institutionId) {
+                $query->where('ur.institution_id',$institutionId)
+                    ->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER'));
+            })
+            ->where('ur.status','active')
+            ->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            // Teachers are assignable owners of follow-ups, but do not receive CRM/admissions page access.
+            ->whereIn('r.code', array_merge(self::STAFF_ROLES, ['TEACHER']))->exists();
     }
 
     private function roles(int $userId)
     {
         return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')
-            ->where('ur.user_id',$userId)->where('ur.status','active')->pluck('r.code')->unique()->values();
+            ->where('ur.user_id',$userId)->where('ur.status','active')
+            ->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->pluck('r.code')->unique()->values();
     }
 
     private function institutionIds(int $userId,$roles): array
     {
-        if($roles->contains('OWNER')) return DB::table('tagore_institutions')->where('status','active')->pluck('id')->map(fn($id)=>(int)$id)->all();
+        if($roles->contains('OWNER')) return DB::table('tagore_institutions')->where('status','active')->whereNull('deleted_at')->pluck('id')->map(fn($id)=>(int)$id)->all();
         return DB::table('tagore_user_roles')->where('user_id',$userId)->where('status','active')->whereNotNull('institution_id')
+            ->where(fn($query)=>$query->whereNull('start_date')->orWhereDate('start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('end_date')->orWhereDate('end_date','>=',today()))
             ->pluck('institution_id')->map(fn($id)=>(int)$id)->unique()->values()->all();
     }
 }
