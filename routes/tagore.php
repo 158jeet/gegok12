@@ -95,6 +95,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/convert', [AdmissionsController::class, 'convert'])->whereNumber('leadId')->name('tagore.admissions.convert');
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
+    Route::post('/admissions/{leadId}/link-student', [AdmissionsController::class, 'linkExistingStudent'])->whereNumber('leadId')->name('tagore.admissions.link-student');
 
     Route::get('/performance', [TaskController::class, 'performance'])->name('tagore.performance.index');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tagore.tasks.index');
