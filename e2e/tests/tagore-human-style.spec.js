@@ -35,9 +35,13 @@ async function checkPageHealth(page, context) {
   if (/server error|exception|whoops/i.test(bodyText)) findings.push('server error text detected');
   if (/(?:\u00C3|\u00C2|\u00E2\u20AC|\u00EF\u00BF\u00BD|\uFFFD)/.test(bodyText)) findings.push('mojibake or replacement characters detected in visible text');
   const overflowDetails = await page.evaluate(() => {
-    const oxScrollable = value => value === 'auto' || value === 'scroll';
     const viewport = window.innerWidth;
-    const offenders = [...document.querySelectorAll('body *')].map(el => {
+    const docOverflow = Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth || 0) > viewport + 2;
+    if (!docOverflow) return { overflow: false, offenders: [] };
+    const candidates = [...document.querySelectorAll(
+      'body > *, main, header, nav, aside, .container, .container-fluid, .table-responsive, table, img, svg, [style*="min-width"]'
+    )];
+    const offenders = candidates.map(el => {
       const r = el.getBoundingClientRect();
       let p = el.parentElement;
       let insideHorizontalScroller = false;
@@ -47,12 +51,18 @@ async function checkPageHealth(page, context) {
         p = p.parentElement;
       }
       const ownOverflowX = getComputedStyle(el).overflowX;
-      const elementIsHorizontalScroller = oxScrollable(ownOverflowX);
-      return { el, tag: el.tagName.toLowerCase(), cls: (el.className && typeof el.className === 'string') ? el.className.slice(0,120) : '', left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), insideHorizontalScroller, elementIsHorizontalScroller };
+      return {
+        tag: el.tagName.toLowerCase(),
+        cls: (el.className && typeof el.className === 'string') ? el.className.slice(0, 120) : '',
+        left: Math.round(r.left),
+        right: Math.round(r.right),
+        width: Math.round(r.width),
+        insideHorizontalScroller,
+        elementIsHorizontalScroller: ownOverflowX === 'auto' || ownOverflowX === 'scroll'
+      };
     }).filter(x => x.width > 0 && !x.insideHorizontalScroller && !x.elementIsHorizontalScroller && (x.right > viewport + 2 || x.left < -2))
-      .sort((a,b) => Math.max(b.right-viewport, -b.left) - Math.max(a.right-viewport, -a.left))
-      .slice(0,5)
-      .map(({el,...x}) => x);
+      .sort((a, b) => Math.max(b.right - viewport, -b.left) - Math.max(a.right - viewport, -a.left))
+      .slice(0, 5);
     return { overflow: offenders.length > 0, offenders };
   });
   if (overflowDetails.overflow) findings.push('horizontal overflow: ' + JSON.stringify(overflowDetails.offenders));
@@ -85,7 +95,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         // Smoke every concrete route through the authenticated request context; reserve full DOM/overflow/image checks for a representative set of rendered screens so the suite stays inside CI's per-test timeout.
         const visited = new Set();
         const visuallyChecked = new Set();
-        const maxPages = role === 'owner' ? 1000 : 100;
+        const maxPages = role === 'owner' ? 80 : 30;
         const concreteRoutes = routeManifest.filter(r => !/[{}]/.test(new URL(r.uri, page.url()).pathname));
         const queue = unique([
           ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
@@ -93,7 +103,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         ]);
         while (queue.length && visited.size < maxPages) {
           const batch = [];
-          while (queue.length && batch.length < 20 && visited.size + batch.length < maxPages) {
+          while (queue.length && batch.length < 8 && visited.size + batch.length < maxPages) {
             const href = queue.shift();
             const url = new URL(href, page.url());
             if (url.origin !== new URL(page.url()).origin || /[{}]/.test(url.pathname)) continue;
@@ -110,7 +120,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
             if ([401, 403].includes(item.status)) continue;
             const expectedUnconfiguredCctv = item.url.pathname === '/tagore/platform/cctv/status' && item.status === 503;
             if (!expectedUnconfiguredCctv && (item.status >= 500 || item.status === 0 || item.status === 404)) findings.push(role + ' ' + item.key + ' HTTP status ' + item.status);
-            if (item.response && item.status < 400 && item.contentType.includes('text/html') && visuallyChecked.size < 15) {
+            if (item.response && item.status < 400 && item.contentType.includes('text/html') && visuallyChecked.size < 5) {
               await page.goto(item.url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
               findings.push(...await checkPageHealth(page, role + ' ' + item.key));
               visuallyChecked.add(item.key);

@@ -201,3 +201,14 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Rebuilt CBT on that post-Diary integration head in PR #152. The prior PR #148 was closed as superseded; do not merge it.
 - Expanded regression in run `45110109787` exposed real defect: `persistAttemptRandomization` grouped by `section_code` without selecting it in the query. Added `eq.section_code` to projection and strengthened the regression with two A questions and one B question.
 - PR #152 exact-head ERP CI run `45113041748` queued at record time. Merge remains blocked until all CI and full integration acceptance are green.
+
+
+## Post-CBT integration acceptance — Operations desktop regression — 2026-11-23
+
+- CBT PR #152 merged as `85c808678cfc380ed244176b1658164195935d1d`; exact-head ERP CI and its release-blocking gate passed.
+- Post-merge full acceptance run `45114388345` failed only in the focused Operations live-search check: desktop expected `1 of` after entering the newly created unique inventory item but displayed `2 of 2`; mobile passed. Backend, route bootstrap, scheduler, backend tests, production frontend build, mutating administrator workflows and the other completed checks passed.
+- Failure is not waived. New branch `fix/operations-search-direct-control-binding` binds listeners directly to the current search/status controls and rebinds after DOM replacement via MutationObserver; each filter pass re-reads current rows and controls. The desktop/mobile assertion remains unchanged.
+- Commit `7c5daae687135e4068ecefcc9dfda02e99aebb3a`. Exact-head CI and fresh full integration acceptance are required. No production records changed; no production deployment/migration.
+
+
+- Follow-up review on 2026-11-23 caught an over-escaped whitespace regex in the new Operations filter (`/\\s+/g` in the branch source). Corrected it to `/\s+/g` in commit `d0316e33f720e530a36ebea9982e14fab3e50e24`. Treat the earlier CI result as superseded; require fresh exact-head CI and full integration acceptance.

@@ -226,3 +226,10 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - CBT rebuilt on that integration head as PR #152; old PR #148 closed as superseded.
 - Section-preserving randomization regression exposed omitted `section_code` projection. Fixed query and expanded test: two A questions, one B question; verify section order and stable reload snapshots.
 - Exact-head CI run `45113041748` queued; no live exams/candidates.
+
+
+## 2026-11-23 — Operations search control-binding regression after CBT merge
+
+- Latest integration commit `85c808678cfc380ed244176b1658164195935d1d` includes CBT PR #152. Its post-merge acceptance `45114388345` failed in desktop live search only; mobile passed. The failure is reproducible in the fail-closed gate and is not being ignored.
+- New correction branch `fix/operations-search-direct-control-binding`, commit `7c5daae687135e4068ecefcc9dfda02e99aebb3a`: bind input/search/keyup/change listeners directly to the current search input and input/change to status select; use MutationObserver to rebind if controls are replaced; continue resolving current table rows/count on every apply.
+- Keep #149/#150/#141/#142 unmerged until the corrected branch passes exact-head CI and full acceptance on the resulting integration head. Free tooling only; no production activity.
