@@ -10,6 +10,7 @@ use App\Traits\ResetPasswordProcess;
 use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EmailVerification;
 use Illuminate\Http\Request;
@@ -30,20 +31,23 @@ class UserController extends Controller
 
     public function updateStatus(Request $request,$name)
     {
+      // Resolve and authorize the target before performing any token or status mutation.
+      // The legacy route is protected by the SchoolAdmin middleware, but that middleware
+      // only checks the actor's role; it does not scope the target record to the same school.
+      $user = User::where('name',$name)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
+
+      $userprofile = Userprofile::where('user_id',$user->id)->firstOrFail();
+
       try
       {
-        $user = User::where('name',$name)->first();
-
         $this->reset_token($user);
 
         $user->status = $request->status;
-        
         $user->save();
-        
-        $userprofile = Userprofile::where('user_id',$user->id)->first();
 
         $userprofile->status = $request->status;
-        
         $userprofile->save();
 
         $message=trans('messages.update_status_success_msg',['module' => 'Student']);
@@ -67,11 +71,12 @@ class UserController extends Controller
 
     public function resetPassword($id)
     {
+      $user = User::where('id', $id)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
+
       try
       {
-        $user = User::where('id', $id)->first();
-        if(Gate::allows('member',$user))
-        {
           $this->resetPasswordToUser($user);
 
           $message= trans('messages.password_reset_success_msg');
@@ -84,12 +89,7 @@ class UserController extends Controller
             LOGNAME_RESET_PASSWORD,
             $message
           );
-          return redirect()->back(); 
-        }
-        else
-        {
-          abort(403);
-        } 
+          return redirect()->back();
       }
       catch(Exception $e)
       {
@@ -100,11 +100,12 @@ class UserController extends Controller
 
     public function emailVerification($id)
     {
+      $user = User::where('id', $id)->firstOrFail();
+      abort_unless(Gate::allows('member',$user),403);
+      $this->protectOwnerAccount($user);
+
       try
       {
-        $user = User::where('id', $id)->first();
-        if(Gate::allows('member',$user))
-        {
           if(env('MAIL_STATUS') == 'on')
           {
             event(new VerificationMailEvent($user));
@@ -124,16 +125,34 @@ class UserController extends Controller
 
           \Session::put('failmessage',trans('messages.verification_failure_msg')); 
           return redirect()->back();
-        }
-        else
-        {
-          abort(403);
-        } 
       }
       catch(Exception $e)
       {
         //dd($e->getMessage());
       }
+    }
+
+    private function protectOwnerAccount(User $target): void
+    {
+      $targetIsOwner = DB::table('tagore_user_roles as ur')
+        ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+        ->where('ur.user_id', $target->id)
+        ->where('ur.status', 'active')
+        ->where('r.code', 'OWNER')
+        ->exists();
+
+      if (!$targetIsOwner) {
+        return;
+      }
+
+      $actorIsOwner = DB::table('tagore_user_roles as ur')
+        ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+        ->where('ur.user_id', Auth::id())
+        ->where('ur.status', 'active')
+        ->where('r.code', 'OWNER')
+        ->exists();
+
+      abort_unless($actorIsOwner, 403);
     }
 
     public function reset_token(User $user)

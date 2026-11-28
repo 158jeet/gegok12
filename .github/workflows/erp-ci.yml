@@ -1,11 +1,15 @@
 name: ERP CI
 
+concurrency:
+  group: erp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'work/**']
+    branches: [main, 'integration/erp-7day', 'release/**', 'dev/server-workspace-2026-10-09']
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/erp-7day']
 
 permissions:
   contents: read
@@ -26,6 +30,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Inventory authentication and OTP call sites
+        run: |
+          set -o pipefail
+          grep -R -n -E --include='*.php' -e 'createAuthentication' -e 'checkAuthentication' -e 'Authentication::' -e 'new Authentication' -e 'authentications' -e 'logoutDevices' -e 'tokens\\(\\)->delete' app routes tests | tee /tmp/tagore-auth-call-sites.txt
+          grep -R -n -F --include='*.php' -- '->tokens()->delete' app routes tests | tee -a /tmp/tagore-auth-call-sites.txt || true
+          test -s /tmp/tagore-auth-call-sites.txt
+          {
+            echo "## Authentication and OTP call-site inventory"
+            echo
+            echo 'The following matches were collected from the exact CI checkout:'
+            echo
+            echo '~~~text'
+            cat /tmp/tagore-auth-call-sites.txt
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve authentication call-site inventory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: authentication-call-sites-${{ github.sha }}
+          path: /tmp/tagore-auth-call-sites.txt
+          if-no-files-found: error
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -72,6 +97,7 @@ jobs:
       MAIL_MAILER: array
       APP_URL: http://127.0.0.1:8000
       APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      TIMEZONE: Asia/Kolkata
       TAGORE_E2E_ENABLED: true
       TAGORE_OLYMPIAD_INTAKE_ENABLED: true
       TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
@@ -160,6 +186,14 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:8000
         run: npm run test:ci
+
+      - name: Run new ERP acceptance slices on desktop
+        working-directory: e2e
+        timeout-minutes: 25
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npx playwright test tests/new-erp-acceptance.spec.js --project=desktop --workers=1 --retries=0
+
       - name: Upload browser report
         if: always()
         uses: actions/upload-artifact@v4

@@ -3,6 +3,8 @@
 /public/storage
 /storage/*.key
 /vendor
+/database/ci.sqlite
+/.phpunit.cache/
 /.idea
 /.vscode
 /.vagrant

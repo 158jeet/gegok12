@@ -14,11 +14,14 @@ use App\Http\Controllers\Tagore\LegacyFeeReconciliationController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
+use App\Http\Controllers\Tagore\StudentLifecycleController;
 use App\Http\Controllers\Tagore\TaskController;
 use App\Http\Controllers\Tagore\PayrollController;
 use App\Http\Controllers\Tagore\InventoryController;
 use App\Http\Controllers\Tagore\TransportController;
 use App\Http\Controllers\Tagore\CommunicationController;
+use App\Http\Controllers\Tagore\CbtAttemptController;
+use App\Http\Controllers\Tagore\CbtManagementController;
 use App\Http\Controllers\Tagore\ReportController;
 use App\Http\Controllers\Tagore\SecurityController;
 use App\Http\Controllers\Tagore\LearningController;
@@ -33,7 +36,12 @@ Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::clas
 Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
+    Route::get('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'edit'])->name('tagore.profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'update'])->name('tagore.profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\Tagore\ProfileController::class, 'updatePassword'])->name('tagore.profile.password');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
+    Route::get('/admin/student-promotion', [StudentLifecycleController::class, 'index'])->name('tagore.students.promotion.index');
+    Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
@@ -83,6 +91,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions', [AdmissionsController::class, 'store'])->name('tagore.admissions.store');
     Route::patch('/admissions/{leadId}/assign', [AdmissionsController::class, 'assign'])->whereNumber('leadId')->name('tagore.admissions.assign');
     Route::get('/admissions/{leadId}', [AdmissionsController::class, 'show'])->whereNumber('leadId')->name('tagore.admissions.show');
+    Route::post('/admissions/{leadId}/convert', [AdmissionsController::class, 'convert'])->whereNumber('leadId')->name('tagore.admissions.convert');
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
 
@@ -130,6 +139,26 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/communication', [CommunicationController::class, 'index'])->name('tagore.communication.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('tagore.reports.index');
     Route::get('/security', [SecurityController::class, 'index'])->name('tagore.security.index');
+    Route::get('/cbt', [CbtAttemptController::class, 'index'])->name('tagore.cbt.index');
+    Route::get('/cbt/manage', [CbtManagementController::class, 'index'])->name('tagore.cbt.manage');
+    Route::post('/cbt/banks', [CbtManagementController::class, 'storeBank'])->name('tagore.cbt.banks.store');
+    Route::post('/cbt/banks/{bankId}/questions', [CbtManagementController::class, 'storeQuestion'])->whereNumber('bankId')->name('tagore.cbt.questions.store');
+    Route::post('/cbt/banks/{bankId}/questions/import', [CbtManagementController::class, 'importQuestions'])->whereNumber('bankId')->name('tagore.cbt.questions.import');
+    Route::patch('/cbt/questions/{questionId}', [CbtManagementController::class, 'updateQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.update');
+    Route::delete('/cbt/questions/{questionId}', [CbtManagementController::class, 'deleteQuestion'])->whereNumber('questionId')->name('tagore.cbt.questions.delete');
+    Route::post('/cbt/exams', [CbtManagementController::class, 'storeExam'])->name('tagore.cbt.exams.store');
+    Route::post('/cbt/exams/{examId}/questions', [CbtManagementController::class, 'attachQuestions'])->whereNumber('examId')->name('tagore.cbt.exams.questions.attach');
+    Route::patch('/cbt/exams/{examId}/publish', [CbtManagementController::class, 'publishExam'])->whereNumber('examId')->name('tagore.cbt.exams.publish');
+    Route::patch('/cbt/exams/{examId}/schedule', [CbtManagementController::class, 'scheduleExam'])->whereNumber('examId')->name('tagore.cbt.exams.schedule');
+    Route::get('/cbt/exams/{examId}/analytics', [CbtManagementController::class, 'analytics'])->whereNumber('examId')->name('tagore.cbt.exams.analytics');
+    Route::get('/cbt/exams/{examId}/analytics/export', [CbtManagementController::class, 'exportAnalytics'])->whereNumber('examId')->name('tagore.cbt.exams.analytics.export');
+    Route::get('/cbt/students/{studentId}/progress', [CbtManagementController::class, 'studentProgress'])->whereNumber('studentId')->name('tagore.cbt.students.progress');
+    Route::get('/cbt/exams/available', [CbtAttemptController::class, 'available'])->name('tagore.cbt.exams.available');
+    Route::post('/cbt/exams/{examId}/start', [CbtAttemptController::class, 'start'])->whereNumber('examId')->name('tagore.cbt.attempts.start');
+    Route::get('/cbt/attempts/{attemptId}', [CbtAttemptController::class, 'player'])->whereNumber('attemptId')->name('tagore.cbt.attempts.player');
+    Route::put('/cbt/attempts/{attemptId}/response', [CbtAttemptController::class, 'saveResponse'])->whereNumber('attemptId')->name('tagore.cbt.attempts.response');
+    Route::post('/cbt/attempts/{attemptId}/submit', [CbtAttemptController::class, 'submit'])->whereNumber('attemptId')->name('tagore.cbt.attempts.submit');
+    Route::get('/cbt/attempts/{attemptId}/result', [CbtAttemptController::class, 'result'])->whereNumber('attemptId')->name('tagore.cbt.attempts.result');
     Route::get('/examinations', [ExaminationController::class, 'index'])->name('tagore.examinations.index');
     Route::get('/results/student/{studentId}', [ExaminationController::class, 'studentResults'])->whereNumber('studentId')->name('tagore.results.student');
     Route::post('/examinations', [ExaminationController::class, 'store'])->name('tagore.examinations.store');

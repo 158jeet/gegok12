@@ -10,7 +10,7 @@ class TagoreManagerDashboardTest extends TestCase
 {
     public function test_manager_dashboard_shows_action_items_and_department_health(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
         $departmentId = (int) DB::table('tagore_departments')->where('institution_id', $institutionId)->where('code', 'ACADEMIC')->value('id');
 
@@ -43,7 +43,7 @@ class TagoreManagerDashboardTest extends TestCase
 
     public function test_manager_can_open_department_performance_profile(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
         $departmentId = (int) DB::table('tagore_departments')->where('institution_id', $institutionId)->where('code', 'ACADEMIC')->value('id');
 
@@ -70,7 +70,7 @@ class TagoreManagerDashboardTest extends TestCase
 
     public function test_manager_can_view_department_analytics_for_multiple_periods(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $departmentId = DB::table('tagore_departments')->where('code', 'ACADEMIC')->value('id');
         $this->assertNotNull($departmentId);
 
@@ -90,7 +90,7 @@ class TagoreManagerDashboardTest extends TestCase
 
     public function test_owner_can_create_department_and_assign_staff(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $teacher = User::query()->where('usergroup_id', 5)->where('school_id', $owner->school_id)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
         $institutionId = (int) DB::table('tagore_institutions')->where('school_id', $owner->school_id)->value('id');
         $code = 'QA' . now()->format('His');
@@ -122,7 +122,7 @@ class TagoreManagerDashboardTest extends TestCase
 
     public function test_manager_can_review_staff_leave_application(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
         $schoolId = $owner->school_id;
         $academicYearId = (int) DB::table('academic_years')->where('school_id', $schoolId)->orderByDesc('id')->value('id');
         $leaveTypeId = DB::table('leave_types')->where('school_id', $schoolId)->whereNull('deleted_at')->value('id');
@@ -226,14 +226,14 @@ class TagoreManagerDashboardTest extends TestCase
 
     public function test_manager_dashboard_exposes_group_erp_snapshot(): void
     {
-        $owner = User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email','owner@tagore-demo.local')->firstOrFail();
         $response = $this->actingAs($owner)->get(route('tagore.dashboard'));
         $response->assertOk()->assertSee('Go to work')->assertSee('Fee outstanding')->assertSee('Admissions pipeline');
     }
 
     public function test_mobile_dashboard_api_returns_scoped_erp_payload(): void
     {
-        $owner = User::query()->where('email','demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email','owner@tagore-demo.local')->firstOrFail();
         $response = $this->actingAs($owner)->get(route('tagore.dashboard.api'));
         $response->assertOk()->assertJsonPath('success', true)->assertJsonStructure([
             'data' => ['user_id','roles','children','institutions','tasks','leave','manager'],

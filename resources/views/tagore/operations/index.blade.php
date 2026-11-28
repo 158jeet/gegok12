@@ -108,8 +108,8 @@
     <section class="tg-card">
       <div class="tg-section-head"><div><h2>Records</h2><p>Latest {{ $rows->count() }} records for your permitted institutions.</p></div><span class="tg-status success">{{ $moduleTitle }}</span></div>
       <div class="tg-operations-tools">
-        <input id="tg-operations-search" type="search" oninput="window.tagoreOperationsFilter(this.value, null)" placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
-        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" onchange="window.tagoreOperationsFilter(null, this.value)"><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
+        <input id="tg-operations-search" type="search"  placeholder="Search records in this view…" aria-label="Search operation records" autocomplete="off">
+        @if(in_array('status',$columns,true))<select id="tg-operations-status" aria-label="Filter by status" ><option value="">All statuses</option>@foreach($statusOptions as $statusOption)<option value="{{ $statusOption }}">{{ ucwords(str_replace('_',' ',$statusOption)) }}</option>@endforeach</select>@endif
         <span id="tg-operations-count" class="tg-operations-meta" role="status" aria-live="polite">{{ $rows->count() }} of {{ $rows->count() }} records</span>
       </div>
       <div class="tg-table-wrap">
@@ -181,7 +181,9 @@
  
 <script>
 (() => {
-  const apply = (queryValue, statusValue) => {
+  const apply = () => {
+    // Resolve the current DOM on every run: creating a record can replace table rows
+    // or controls after this script has initially executed.
     const search = document.getElementById('tg-operations-search');
     const status = document.getElementById('tg-operations-status');
     const rows = Array.from(document.querySelectorAll('tr.tg-operations-record'));
@@ -189,63 +191,49 @@
     const empty = document.getElementById('tg-operations-empty');
     if (!count) return;
 
-    const query = String(queryValue ?? search?.value ?? '').normalize('NFKC').trim().toLocaleLowerCase();
-    const wantedStatus = String(statusValue ?? status?.value ?? '');
+    const query = String(search?.value || '').normalize('NFKC').trim().toLocaleLowerCase();
+    const wantedStatus = String(status?.value || '');
     let visible = 0;
+
     rows.forEach(row => {
-      // Search rendered record cells only, excluding hidden edit forms and actions.
-      const rowText = Array.from(row.cells || [])
-        .slice(0, -1)
-        .map(cell => String(cell.textContent || cell.innerText || ''))
-        .join(' ')
-        .normalize('NFKC')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLocaleLowerCase();
+      const cells = Array.from(row.cells || []).slice(0, -1);
+      const rowText = cells.map(cell => cell.textContent || '')
+        .join(' ').normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
       const show = (!query || rowText.includes(query)) &&
         (!wantedStatus || row.dataset.status === wantedStatus);
       row.hidden = !show;
       if (show) visible += 1;
     });
+
     count.textContent = visible + ' of ' + rows.length + ' records';
     if (empty) empty.style.display = rows.length > 0 && visible === 0 ? 'block' : 'none';
   };
 
-  // Always read the live controls at the time of filtering. This avoids stale
-  // event values across mobile keyboards and native type=search clear events.
-  window.tagoreOperationsFilter = (queryValue, statusValue) => apply(queryValue, statusValue);
+  window.tagoreOperationsFilter = apply;
+  const onSearch = event => {
+    if (event.target?.id === 'tg-operations-search') apply();
+  };
+  const onStatus = event => {
+    if (event.target?.id === 'tg-operations-status') apply();
+  };
 
-  const refreshFromControls = () => apply();
-  const search = document.getElementById('tg-operations-search');
-  const status = document.getElementById('tg-operations-status');
-
-  // Delegate from the document so filtering survives mobile browsers or
-  // responsive components replacing the input node after initial rendering.
-  // Read the live control values at event time; do not depend on inline handlers.
-  document.addEventListener('input', event => {
-    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
-  }, true);
-  document.addEventListener('search', event => {
-    if (event.target?.id === 'tg-operations-search') apply(event.target.value, undefined);
-  }, true);
+  // Delegation survives table/control replacement after create/update actions.
+  document.addEventListener('input', onSearch, true);
+  document.addEventListener('search', onSearch, true);
+  document.addEventListener('keyup', onSearch, true);
   document.addEventListener('change', event => {
-    if (event.target?.id === 'tg-operations-status') apply(undefined, event.target.value);
+    onSearch(event);
+    onStatus(event);
   }, true);
-  if (search) {
-    search.addEventListener('input', refreshFromControls);
-    search.addEventListener('search', refreshFromControls);
-    search.addEventListener('keyup', refreshFromControls);
-  }
-  if (status) status.addEventListener('change', refreshFromControls);
-
   document.addEventListener('keydown', event => {
+    const search = document.getElementById('tg-operations-search');
     if ((event.ctrlKey || event.metaKey) && event.key === '/') {
       event.preventDefault();
-      document.getElementById('tg-operations-search')?.focus();
+      search?.focus();
     }
     if (event.key === 'Escape' && event.target?.id === 'tg-operations-search') {
       event.target.value = '';
-      apply('', undefined);
+      apply();
     }
   }, true);
 

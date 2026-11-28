@@ -1,10 +1,11 @@
 name: TagoreK12 Prototype
 
+concurrency:
+  group: tagore-prototype-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
-  push:
-    branches: [main, 'tagore/**']
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:

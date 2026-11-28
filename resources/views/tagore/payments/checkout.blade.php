@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pay School Fees</title></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pay School Fees</title><link rel="stylesheet" href="{{ asset('tagore-erp.css') }}?v={{ filemtime(public_path('tagore-erp.css')) }}></head>
 <body style="font-family:system-ui,sans-serif;background:#f6f7f9;margin:0"><div style="max-width:560px;margin:50px auto;padding:24px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;text-align:center"><h1>Pay School Fees</h1><p>{{ $order['student_name'] }}</p><h2>₹{{ number_format($order['amount'],2) }}</h2><button id="pay" style="padding:14px 28px;border:0;border-radius:8px;cursor:pointer;font-size:16px">Proceed to Payment</button><p id="status"></p></div>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>

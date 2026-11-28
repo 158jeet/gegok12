@@ -81,7 +81,7 @@ class AuthServiceProvider extends ServiceProvider
         return $user->school_id == $post->school_id;
       });
 
-      Gate::define('post_reply', function ($user, $post) {
+      Gate::define('post_reply', function ($user, $post_reply) {
         return $user->school_id == $post_reply->post->school_id;
       });
 

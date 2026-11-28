@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const roles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor'];
+const roles = ['owner', 'principal', 'coordinator', 'teacher', 'parent', 'student', 'accounts', 'fee-editor', 'cashier'];
 const baseDir = 'test-results/interaction-audit';
 
 async function signInFixture(page, role) {

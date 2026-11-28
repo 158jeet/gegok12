@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tagore;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -65,7 +66,7 @@ class AdministrationController extends Controller
             'institution_id' => ['required', 'integer', 'exists:tagore_institutions,id'],
         ]);
         $role = DB::table('tagore_roles')->where('id', $data['role_id'])->where('status', 'active')->first(['id', 'code']);
-        abort_unless($role && $role->code !== 'OWNER', 422, 'Additional owner accounts require separate approval.');
+        abort_unless($role && $role->code !== 'OWNER', 422, 'The Owner role is reserved for the existing Owner account and cannot be assigned here.');
         $institution = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->first(['id', 'school_id']);
         abort_unless($institution, 422);
         $group = match ($role->code) {
@@ -74,6 +75,7 @@ class AdministrationController extends Controller
             'PARENT' => 7,
             'STUDENT' => 6,
             'ACCOUNTS' => 11,
+            'CASHIER' => 13,
             default => 13,
         };
         $password = 'Tg!' . \Illuminate\Support\Str::random(5) . '-' . \Illuminate\Support\Str::random(8);
@@ -122,6 +124,8 @@ class AdministrationController extends Controller
         abort_unless($user, 404);
         $password = 'Tg!' . \Illuminate\Support\Str::random(5) . '-' . \Illuminate\Support\Str::random(8);
         DB::transaction(function () use ($request, $userId, $password) {
+            $target = User::query()->whereKey($userId)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
+            $target->tokens()->delete();
             DB::table('users')->where('id', $userId)->update([
                 'password' => Hash::make($password),
                 'remember_token' => null,
@@ -150,7 +154,11 @@ class AdministrationController extends Controller
         abort_if((int)$userId===(int)$request->user()->id,422,'You cannot disable your own account.');
         abort_unless(DB::table('users')->where('id',$userId)->whereNull('deleted_at')->exists(),404);
         DB::transaction(function () use ($request, $userId, $data) {
-            DB::table('users')->where('id',$userId)->update(['status'=>$data['status'],'remember_token'=>null,'updated_at'=>now()]);
+            $target = User::query()->whereKey($userId)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
+            if ($data['status'] === 'disabled') {
+                $target->tokens()->delete();
+            }
+            DB::table('users')->where('id',$userId)->update(['status'=>$data['status']==='disabled'?'inactive':'active','remember_token'=>null,'updated_at'=>now()]);
             DB::table('tagore_user_admin_audits')->insert(['actor_id'=>$request->user()->id,'target_user_id'=>$userId,'action'=>$data['status']==='active'?'enabled':'disabled','metadata'=>null,'created_at'=>now()]);
         });
         return back()->with('success','User account status updated.');
@@ -261,19 +269,39 @@ class AdministrationController extends Controller
         ]);
         $role = DB::table('tagore_roles')->where('id', $data['role_id'])->where('status', 'active')->first(['id', 'code']);
         abort_unless($role, 422, 'Select an active role.');
-        if ($role->code === 'OWNER') $data['institution_id'] = null;
-        if ($role->code !== 'OWNER') {
-            abort_unless(!empty($data['institution_id']), 422, 'An institution is required for this role.');
-        }
+        abort_unless($role->code !== 'OWNER', 422, 'The Owner role is reserved for the existing Owner account and cannot be assigned here.');
+
+        $targetIsOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $data['user_id'])
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->exists();
+        abort_unless(!$targetIsOwner, 422, 'The existing Owner account role assignment is protected.');
+
+        abort_unless(!empty($data['institution_id']), 422, 'An institution is required for this role.');
         if ($data['institution_id']) {
             $schoolId = DB::table('tagore_institutions')->where('id', $data['institution_id'])->where('status', 'active')->value('school_id');
             abort_unless($schoolId, 422, 'Select an active institution.');
             abort_unless(DB::table('users')->where('id', $data['user_id'])->where('school_id', $schoolId)->exists(), 422, 'User must belong to the selected institution school.');
         }
-        DB::table('tagore_user_roles')->updateOrInsert(
-            ['user_id' => $data['user_id'], 'role_id' => $data['role_id'], 'institution_id' => $data['institution_id']],
-            ['status' => 'active', 'updated_at' => now(), 'created_at' => now()]
-        );
+        DB::transaction(function () use ($request, $data, $role) {
+            DB::table('tagore_user_roles')->updateOrInsert(
+                ['user_id' => $data['user_id'], 'role_id' => $data['role_id'], 'institution_id' => $data['institution_id']],
+                ['status' => 'active', 'updated_at' => now(), 'created_at' => now()]
+            );
+
+            DB::table('tagore_user_admin_audits')->insert([
+                'actor_id' => $request->user()->id,
+                'target_user_id' => $data['user_id'],
+                'action' => 'role_assigned',
+                'metadata' => json_encode([
+                    'role_code' => $role->code,
+                    'institution_id' => $data['institution_id'],
+                ]),
+                'created_at' => now(),
+            ]);
+        });
         return back()->with('success', 'Role assignment saved.');
     }
 

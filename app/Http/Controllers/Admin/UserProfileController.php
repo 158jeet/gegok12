@@ -9,6 +9,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\ChangeAvatarRequest;
 use App\Http\Requests\CredentialsUpdateRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Userprofile;
@@ -196,11 +197,38 @@ class UserProfileController extends Controller
     } 
 
 
+    private function protectOwnerAccount(User $target): void
+    {
+        $targetIsOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $target->id)
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->exists();
+
+        if (!$targetIsOwner) {
+            return;
+        }
+
+        $actorIsOwner = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', Auth::id())
+            ->where('ur.status', 'active')
+            ->where('r.code', 'OWNER')
+            ->exists();
+
+        abort_unless($actorIsOwner, 403);
+    }
+
     public function getCredentials($name)
     {
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+        $user = User::where([['name',$name],['school_id',$actor->school_id]])->firstOrFail();
+        $this->protectOwnerAccount($user);
+
       try
-        {  
-        $user = User::where([['name',$name],['school_id',Auth::user()->school_id]])->first();
+        {
         $array=[];
 
         if(Auth::user())
@@ -221,10 +249,13 @@ class UserProfileController extends Controller
 
     public function updateCredentials(CredentialsUpdateRequest $request,$name)
     {
-        //dd($name);
+        $actor = Auth::user();
+        abort_unless($actor, 401);
+        $user = User::where([['name',$name],['usergroup_id',$request->user_group],['school_id',$actor->school_id]])->firstOrFail();
+        $this->protectOwnerAccount($user);
+
         try
         {
-        $user = User::where([['name',$name],['usergroup_id',$request->user_group],['school_id',Auth::user()->school_id]])->first();
          $user->tokens()->delete();
         //dd($user);
         $user->email=$request->email;
@@ -249,8 +280,8 @@ class UserProfileController extends Controller
          }
         catch(Exception $e)
         {
-            Log::info($e->getMessage());
-            dd($e->getMessage());
+            report($e);
+            throw $e;
         }
     }  
 }

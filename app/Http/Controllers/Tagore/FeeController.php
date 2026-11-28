@@ -20,7 +20,7 @@ class FeeController extends Controller
         $student = DB::table('users as u')
             ->leftJoin('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')
             ->where('u.id', $studentId)
-            ->first(['u.id', 'u.name', 'i.id as institution_id', 'i.display_name as institution']);
+            ->first(['u.id', 'u.name', 'u.school_id', 'i.id as institution_id', 'i.display_name as institution']);
         abort_unless($student, 404);
         $this->authorizeStudent($userId, $studentId, $student->institution_id, $roles);
 
@@ -37,36 +37,40 @@ class FeeController extends Controller
             'outstanding' => round((float) $fees->sum('outstanding_amount'), 2),
         ];
 
-        // Show family-wide balances alongside an individual statement. Parents see only
-        // their own linked family; authorised school finance/admin users can see each linked guardian.
-        $familyQuery = DB::table('tagore_parent_students as focus')
-            ->join('users as parent', 'parent.id', '=', 'focus.parent_user_id')
-            ->join('tagore_parent_students as sibling_link', function ($join) {
-                $join->on('sibling_link.parent_user_id', '=', 'focus.parent_user_id')
-                    ->where('sibling_link.status', '=', 'active');
-            })
-            ->join('users as sibling', 'sibling.id', '=', 'sibling_link.student_id')
-            ->leftJoin('tagore_institutions as sibling_institution', 'sibling_institution.school_id', '=', 'sibling.school_id')
-            ->leftJoin('tagore_fee_obligations as sibling_fee', function ($join) {
-                $join->on('sibling_fee.student_id', '=', 'sibling.id')
-                    ->on('sibling_fee.institution_id', '=', 'sibling_institution.id');
-            })
-            ->where('focus.student_id', $studentId)
-            ->where('focus.status', 'active')
-            ->where('sibling_link.status', 'active')
-            ->whereNull('parent.deleted_at')
-            ->whereNull('sibling.deleted_at');
-        if ($roles->contains('PARENT')) {
-            $familyQuery->where('focus.parent_user_id', $userId);
+        // Teachers/coordinators must not learn about siblings outside their assigned class/grade.
+        if ($roles->intersect(['TEACHER', 'COORDINATOR'])->isNotEmpty()
+            && $roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isEmpty()) {
+            $familyBalances = collect();
         } else {
-            // Finance/admin family summaries stay within the institution already authorised above.
-            $familyQuery->where('sibling_institution.id', $student->institution_id);
+            // Parents see only their own linked family; finance/admin users stay within the authorised institution.
+            $familyQuery = DB::table('tagore_parent_students as focus')
+                ->join('users as parent', 'parent.id', '=', 'focus.parent_user_id')
+                ->join('tagore_parent_students as sibling_link', function ($join) {
+                    $join->on('sibling_link.parent_user_id', '=', 'focus.parent_user_id')
+                        ->where('sibling_link.status', '=', 'active');
+                })
+                ->join('users as sibling', 'sibling.id', '=', 'sibling_link.student_id')
+                ->leftJoin('tagore_institutions as sibling_institution', 'sibling_institution.school_id', '=', 'sibling.school_id')
+                ->leftJoin('tagore_fee_obligations as sibling_fee', function ($join) {
+                    $join->on('sibling_fee.student_id', '=', 'sibling.id')
+                        ->on('sibling_fee.institution_id', '=', 'sibling_institution.id');
+                })
+                ->where('focus.student_id', $studentId)
+                ->where('focus.status', 'active')
+                ->where('sibling_link.status', 'active')
+                ->whereNull('parent.deleted_at')
+                ->whereNull('sibling.deleted_at');
+            if ($roles->contains('PARENT')) {
+                $familyQuery->where('focus.parent_user_id', $userId);
+            } else {
+                $familyQuery->where('sibling_institution.id', $student->institution_id);
+            }
+            $familyBalances = $familyQuery
+                ->groupBy('focus.parent_user_id', 'parent.name')
+                ->selectRaw('focus.parent_user_id, parent.name as parent_name, COUNT(DISTINCT sibling_link.student_id) as children_count, COALESCE(SUM(sibling_fee.net_amount),0) as payable, COALESCE(SUM(sibling_fee.paid_amount),0) as paid, COALESCE(SUM(sibling_fee.outstanding_amount),0) as outstanding')
+                ->orderBy('parent.name')
+                ->get();
         }
-        $familyBalances = $familyQuery
-            ->groupBy('focus.parent_user_id', 'parent.name')
-            ->selectRaw('focus.parent_user_id, parent.name as parent_name, COUNT(DISTINCT sibling_link.student_id) as children_count, COALESCE(SUM(sibling_fee.net_amount),0) as payable, COALESCE(SUM(sibling_fee.paid_amount),0) as paid, COALESCE(SUM(sibling_fee.outstanding_amount),0) as outstanding')
-            ->orderBy('parent.name')
-            ->get();
 
         return view('tagore.fees.student', compact('student', 'fees', 'items', 'payments', 'concessions', 'summary', 'roles', 'familyBalances'));
     }
@@ -83,24 +87,51 @@ class FeeController extends Controller
         $this->scopeInstitutions($institutions, $userId, $roles);
         $institutions = $institutions->orderBy('i.display_name')->get(['i.id', 'i.display_name']);
         $ids = $institutions->pluck('id');
+        $scopedStudentIds = null;
+        if ($roles->intersect(['TEACHER', 'COORDINATOR'])->isNotEmpty()
+            && $roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isEmpty()) {
+            $scopedStudentIds = $this->schoolScopedStudentIds($userId, $roles, $ids->map(fn ($id) => (int) $id)->all());
+        }
 
-        $summary = DB::table('tagore_fee_obligations')->whereIn('institution_id', $ids)
+        $summaryQuery = DB::table('tagore_fee_obligations')->whereIn('institution_id', $ids);
+        if ($scopedStudentIds !== null) $summaryQuery->whereIn('student_id', $scopedStudentIds);
+        $summary = $summaryQuery
             ->selectRaw('COALESCE(SUM(gross_amount),0) gross, COALESCE(SUM(discount_amount),0) discount, COALESCE(SUM(concession_amount),0) concession, COALESCE(SUM(net_amount),0) payable, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(outstanding_amount),0) outstanding')->first();
 
-        $recent = DB::table('tagore_payments as p')
+        $recentQuery = DB::table('tagore_payments as p')
             ->join('users as u', 'u.id', '=', 'p.student_id')
             ->join('tagore_institutions as i', 'i.id', '=', 'p.institution_id')
             ->leftJoin('tagore_payment_reconciliations as r', 'r.payment_id', '=', 'p.id')
             ->whereIn('p.institution_id', $ids)
-            ->where('p.status', 'success')
+            ->where('p.status', 'success');
+        if ($scopedStudentIds !== null) $recentQuery->whereIn('p.student_id', $scopedStudentIds);
+        $recent = $recentQuery
             ->orderByDesc('p.paid_at')->orderByDesc('p.id')->limit(100)
             ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.payment_mode', 'p.gateway', 'p.gateway_order_id', 'p.gateway_payment_id', 'p.reference_number', 'p.paid_at', 'u.name as student', 'i.display_name as institution', 'r.status as reconciliation_status', 'r.settlement_id', 'r.settlement_amount', 'r.settlement_date']);
 
-        $pendingReconciliation = (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count();
+        $pendingReconciliation = $scopedStudentIds === null
+            ? (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count()
+            : 0;
 
-        // Consolidate each active parent account's children into one fee balance.
-        // The institution scope matches the accounts role's permitted institutions.
-        $familyBalances = DB::table('tagore_parent_students as ps')
+        // Institution- and class-scoped students with outstanding balances for the collection workspace.
+        $collectibleStudentsQuery = DB::table('tagore_fee_obligations as o')
+            ->join('users as u', 'u.id', '=', 'o.student_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'o.institution_id')
+            ->whereIn('o.institution_id', $ids)
+            ->where('o.outstanding_amount', '>', 0)
+            ->whereNull('u.deleted_at');
+        if ($scopedStudentIds !== null) {
+            $collectibleStudentsQuery->whereIn('o.student_id', $scopedStudentIds);
+        }
+        $collectibleStudents = $collectibleStudentsQuery
+            ->groupBy('u.id', 'u.name', 'i.id', 'i.display_name')
+            ->selectRaw('u.id as student_id, u.name as student_name, i.id as institution_id, i.display_name as institution, SUM(o.outstanding_amount) as outstanding')
+            ->orderByDesc('outstanding')
+            ->orderBy('u.name')
+            ->limit(500)
+            ->get();
+        // Consolidate only the students the current finance/academic role may inspect.
+        $familyQuery = DB::table('tagore_parent_students as ps')
             ->join('users as parent', 'parent.id', '=', 'ps.parent_user_id')
             ->join('users as child', 'child.id', '=', 'ps.student_id')
             ->join('tagore_institutions as child_institution', 'child_institution.school_id', '=', 'child.school_id')
@@ -110,7 +141,9 @@ class FeeController extends Controller
             ->where('ps.status', 'active')
             ->whereIn('child_institution.id', $ids)
             ->whereNull('parent.deleted_at')
-            ->whereNull('child.deleted_at')
+            ->whereNull('child.deleted_at');
+        if ($scopedStudentIds !== null) $familyQuery->whereIn('ps.student_id', $scopedStudentIds);
+        $familyBalances = $familyQuery
             ->groupBy('ps.parent_user_id', 'parent.name', 'parent.mobile_no')
             ->selectRaw('ps.parent_user_id, parent.name as parent_name, parent.mobile_no, COUNT(DISTINCT ps.student_id) as children_count, COALESCE(SUM(o.net_amount),0) as payable, COALESCE(SUM(o.paid_amount),0) as paid, COALESCE(SUM(o.outstanding_amount),0) as outstanding')
             ->orderByDesc('outstanding')
@@ -118,7 +151,7 @@ class FeeController extends Controller
             ->limit(500)
             ->get();
 
-        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances'));
+        return view('tagore.fees.accounts', compact('institutions', 'summary', 'recent', 'pendingReconciliation', 'roles', 'familyBalances', 'collectibleStudents'));
     }
 
     public function recordOfflinePayment(Request $request, int $studentId, FeeService $feeService)
@@ -217,31 +250,40 @@ class FeeController extends Controller
     private function authorizeAccounts($roles): void
     {
         // Coordinators may view the Accounts workspace but cannot record financial transactions.
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function authorizePaymentRecording($roles): void
     {
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty(), 403);
     }
 
     private function scopeInstitutions($query, int $userId, $roles): void
     {
         if (!$roles->contains('OWNER')) {
-            $query->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')->pluck('institution_id'));
+            $query->whereIn('i.id', DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
+                ->pluck('institution_id'));
         }
     }
 
     private function authorizeInstitution(int $userId, int $institutionId, $roles): void
     {
         if (!$roles->contains('OWNER')) {
-            abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')->exists(), 403);
+            abort_unless(DB::table('tagore_user_roles')->where('user_id', $userId)->where('institution_id', $institutionId)->where('status', 'active')
+                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
+                ->exists(), 403);
         }
     }
 
     private function roles(int $userId)
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->where('ur.user_id', $userId)->where('ur.status', 'active')->pluck('r.code')->unique()->values();
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->pluck('r.code')->unique()->values();
     }
 
     private function authorizeStudent(int $userId, int $studentId, ?int $institutionId, $roles): void
@@ -254,8 +296,88 @@ class FeeController extends Controller
             abort_unless($studentId === $userId, 403);
             return;
         }
-        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS'])->isNotEmpty();
+        $staff = $roles->intersect(['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'ACCOUNTS', 'CASHIER'])->isNotEmpty();
         abort_unless($staff, 403);
         $this->authorizeInstitution($userId, (int) $institutionId, $roles);
+
+        if ($roles->intersect(['OWNER', 'PRINCIPAL', 'ACCOUNTS', 'CASHIER'])->isNotEmpty()) return;
+        abort_unless($this->schoolUserCanAccessStudent($userId, $studentId, $roles), 403);
+    }
+
+    private function schoolUserCanAccessStudent(int $userId, int $studentId, $roles): bool
+    {
+        $student = DB::table('users')->where('id', $studentId)->whereNull('deleted_at')->first(['school_id']);
+        if (!$student) return false;
+
+        $academic = DB::table('student_academics as sa')
+            ->where('sa.user_id', $studentId)->where('sa.school_id', $student->school_id)
+            ->whereNull('sa.deleted_at')->orderByDesc('sa.id')->first(['sa.standardLink_id', 'sa.academic_year_id']);
+        if (!$academic) return false;
+
+        if ($roles->contains('TEACHER') && DB::table('class_teacher_links')
+            ->where('teacher_id', $userId)->where('school_id', $student->school_id)
+            ->where('standardLink_id', $academic->standardLink_id)
+            ->where('academic_year_id', $academic->academic_year_id)
+            ->where('status', 1)->whereNull('deleted_at')->exists()) {
+            return true;
+        }
+
+        if ($roles->contains('COORDINATOR')) {
+            $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+            if (!$feeViewId) return false;
+            return DB::table('tagore_user_scopes')
+                ->where('user_id', $userId)->where('scope_type', 'standard_link')
+                ->where('scope_id', $academic->standardLink_id)->where('permission_id', $feeViewId)->exists();
+        }
+
+        return false;
+    }
+
+    private function schoolScopedStudentIds(int $userId, $roles, array $institutionIds): array
+    {
+        if ($institutionIds === []) return [];
+
+        $feeViewId = DB::table('tagore_permissions')->where('code', 'fee.view')->value('id');
+        $query = DB::table('users as student')
+            ->join('tagore_institutions as i', 'i.school_id', '=', 'student.school_id')
+            ->whereIn('i.id', $institutionIds)
+            ->where('student.usergroup_id', 6)
+            ->whereNull('student.deleted_at')
+            ->whereExists(function ($academic) use ($userId, $roles, $feeViewId) {
+                $academic->selectRaw('1')->from('student_academics as sa')
+                    ->whereColumn('sa.user_id', 'student.id')
+                    ->whereColumn('sa.school_id', 'student.school_id')
+                    ->whereNull('sa.deleted_at')
+                    ->whereRaw('sa.id = (select max(sa_latest.id) from student_academics as sa_latest where sa_latest.user_id = student.id and sa_latest.school_id = student.school_id and sa_latest.deleted_at is null)')
+                    ->where(function ($scope) use ($userId, $roles, $feeViewId) {
+                        if ($roles->contains('TEACHER')) {
+                            $scope->whereExists(function ($assignment) use ($userId) {
+                                $assignment->selectRaw('1')->from('class_teacher_links as ctl')
+                                    ->whereColumn('ctl.standardLink_id', 'sa.standardLink_id')
+                                    ->whereColumn('ctl.academic_year_id', 'sa.academic_year_id')
+                                    ->whereColumn('ctl.school_id', 'student.school_id')
+                                    ->where('ctl.teacher_id', $userId)->where('ctl.status', 1)
+                                    ->whereNull('ctl.deleted_at');
+                            });
+                        }
+                        if ($roles->contains('COORDINATOR')) {
+                            if ($feeViewId) {
+                                $coordinatorScope = fn ($sub) => $sub->selectRaw('1')->from('tagore_user_scopes as us')
+                                    ->whereColumn('us.scope_id', 'sa.standardLink_id')
+                                    ->where('us.user_id', $userId)->where('us.scope_type', 'standard_link')
+                                    ->where('us.permission_id', $feeViewId);
+                                if ($roles->contains('TEACHER')) {
+                                    $scope->orWhereExists($coordinatorScope);
+                                } else {
+                                    $scope->whereExists($coordinatorScope);
+                                }
+                            } elseif (!$roles->contains('TEACHER')) {
+                                $scope->whereRaw('1 = 0');
+                            }
+                        }
+                    });
+            });
+
+        return $query->pluck('student.id')->map(fn ($id) => (int) $id)->all();
     }
 }

@@ -9,7 +9,7 @@ class TagoreCoreModuleSmokeTest extends TestCase
 {
     public function test_owner_can_open_all_core_erp_module_landing_pages(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
 
         $routes = [
             'tagore.dashboard',
