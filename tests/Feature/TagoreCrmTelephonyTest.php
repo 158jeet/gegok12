@@ -11,9 +11,20 @@ use Tests\TestCase;
 
 class TagoreCrmTelephonyTest extends TestCase
 {
+    private function owner(): User
+    {
+        $ownerId = DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('r.code', 'OWNER')
+            ->where('ur.status', 'active')
+            ->value('ur.user_id');
+
+        return User::query()->findOrFail($ownerId);
+    }
+
     public function test_owner_can_save_exotel_account_with_encrypted_credentials(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = $this->owner();
         $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
 
         $response = $this->actingAs($owner)->post(route('tagore.crm.telephony.save'), [
@@ -38,7 +49,7 @@ class TagoreCrmTelephonyTest extends TestCase
 
     public function test_staff_can_click_to_call_and_webhook_updates_the_lead_timeline(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = $this->owner();
         $institution = DB::table('tagore_institutions')->where('status', 'active')->first();
         $this->assertNotNull($institution);
 
@@ -108,7 +119,7 @@ class TagoreCrmTelephonyTest extends TestCase
 
     public function test_telephony_webhook_rejects_an_invalid_account_token(): void
     {
-        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $owner = $this->owner();
         $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
 
         $account = TagoreCrmTelephonyAccount::create([
@@ -124,7 +135,7 @@ class TagoreCrmTelephonyTest extends TestCase
 
         $this->postJson(route('tagore.crm.telephony.webhook', [
             'accountId' => $account->id,
-            'token' => 'wrong-token',
+            'token' => 'wrongtoken',
         ]), ['CallSid' => 'BAD', 'Status' => 'completed'])->assertForbidden();
     }
 }
