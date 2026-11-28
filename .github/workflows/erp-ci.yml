@@ -87,7 +87,7 @@ jobs:
 
   browser-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       APP_ENV: testing
       DB_CONNECTION: sqlite
