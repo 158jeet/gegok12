@@ -381,7 +381,8 @@ class CrmGrowthController extends Controller
             abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
             if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
             if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
-        }        if (!empty($data['assigned_to'])) {
+        }
+        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], $institutionId), 422, 'Select an active CRM team member from this institution.');
         }
 
@@ -422,7 +423,8 @@ class CrmGrowthController extends Controller
             abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
             if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
             if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
-        }        if (!empty($data['assigned_to'])) {
+        }
+        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], (int) $opportunity->institution_id), 422, 'Select an active CRM team member from this institution.');
         }
         if ($data['stage'] === 'lost') {
@@ -512,7 +514,8 @@ class CrmGrowthController extends Controller
             abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
             if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
             if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
-        }        if (!empty($data['assigned_to'])) {
+        }
+        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], $institutionId), 422, 'Select an active CRM team member from this institution.');
         }
 
@@ -536,11 +539,12 @@ class CrmGrowthController extends Controller
         if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], (int) $task->institution_id), 422, 'Select an active CRM team member from this institution.');
         }
+        $wasCompleted = $task->status === 'completed';
         $before = $task->only(['status', 'priority', 'due_at', 'assigned_to', 'outcome']);
         $data['completed_at'] = $data['status'] === 'completed' ? ($task->completed_at ?: now()) : null;
         $task->update($data);
 
-        if ($data['status'] === 'completed' && $task->lead_id) {
+        if (!$wasCompleted && $data['status'] === 'completed' && $task->lead_id) {
             TagoreAdmissionActivity::create([
                 'lead_id' => $task->lead_id,
                 'user_id' => $userId,
@@ -574,7 +578,7 @@ class CrmGrowthController extends Controller
         ]);
         $institutionId = (int) $data['institution_id'];
         abort_unless(in_array($institutionId, $institutionIds, true), 403);
-        abort_unless(!empty($data['lead_id']) || !empty($data['student_id']) || !empty($data['parent_user_id']), 422, 'Link this case to a lead, student or parent.');
+        abort_unless(!empty($data['lead_id']) || !empty($data['student_id']) || !empty($data['parent_user_id']) || !empty($data['account_id']) || !empty($data['contact_id']), 422, 'Link this case to a lead, student, parent, account or contact.');
 
         if (!empty($data['account_id'])) {
             $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
@@ -585,7 +589,8 @@ class CrmGrowthController extends Controller
             abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
             if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
             if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
-        }        if (!empty($data['lead_id'])) {
+        }
+        if (!empty($data['lead_id'])) {
             $lead = TagoreAdmissionLead::findOrFail((int) $data['lead_id']);
             abort_unless((int) $lead->institution_id === $institutionId, 422, 'The selected lead belongs to another institution.');
         }

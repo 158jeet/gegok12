@@ -253,7 +253,7 @@ class OnlinePaymentService
         });
 
         foreach ($paymentIds as $paymentId) {
-            $payment = DB::table('tagore_payments')->where('id', $paymentId)->where('status', 'success')->first();
+            $payment = DB::table('tagore_payments')->where('id', $paymentId)->where('status','success')->first();
             if ($payment) {
                 app(FeeReceiptMailer::class)->send($paymentId);
             }
