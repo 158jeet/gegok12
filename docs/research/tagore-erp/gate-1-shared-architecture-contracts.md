@@ -111,6 +111,19 @@
 - Forms validate server-side, preserve safe input on recoverable errors and prevent accidental duplicate submission.
 - Responsive layouts must work at desktop, tablet and mobile breakpoints. Colour semantics are consistent and accessible.
 
+## 9A. Institution website CMS contract
+
+- Each institution has an independent public website and content boundary; a group landing site is a separate explicitly configured site.
+- Owner manages the site portfolio, shared design system, domain verification and delegated website roles. Principal/Institute Admin manages only their institution's website. A scoped Website Editor may draft/edit content without domain, script, integration or security privileges.
+- CMS pages, revisions, navigation, media, events, forms, SEO metadata, preview tokens and publish events all carry verified site/institution ownership. Every read/write/download/preview/public route must enforce that boundary.
+- Drafts are private; previews use short-lived signed site/page/revision tokens. Publishing creates immutable revisions and audited events; rollback creates a new revision rather than deleting history.
+- Public rendering reads only approved published CMS snapshots and explicitly public institution fields, never private ERP records. Unknown hosts/slugs fail closed.
+- Structured allowlisted page blocks and sanitised rich text are the default. Arbitrary HTML/JS/CSS injection is prohibited; uploads are validated and served outside executable paths.
+- Public enquiries are rate-limited, consent-recorded and create leads only in the matching institution's admissions pipeline.
+- Custom domains require ownership verification and valid TLS before activation. DNS/TLS operations are Owner-controlled.
+- Website content edits must not require code deployment. Public launch requires cross-institution IDOR, preview privacy, publish/revision, form-spam, content-safety, SEO, accessibility and responsive acceptance.
+- Detailed scope and acceptance scenarios are maintained in `website-cms-product-scope-and-acceptance.md`.
+
 ## 10. Integration and acceptance protocol
 
 1. Each workstream writes tests against these contracts before or alongside implementation.
