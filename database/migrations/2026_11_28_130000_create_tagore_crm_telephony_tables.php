@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->string('account_sid', 120);
             $table->text('credentials');
             $table->string('caller_id', 40);
+            $table->boolean('record_calls')->default(false);
             $table->string('webhook_token_hash', 64);
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('created_by')->nullable();

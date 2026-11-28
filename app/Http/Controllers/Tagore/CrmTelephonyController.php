@@ -64,10 +64,11 @@ class CrmTelephonyController extends Controller
             'api_token' => ['required', 'string', 'max:255'],
             'caller_id' => ['required', 'string', 'max:40'],
             'api_base_url' => ['nullable', 'url', 'max:255'],
+            'record_calls' => ['nullable', 'boolean'],
         ]);
         abort_unless(in_array((int) $data['institution_id'], $institutionIds, true), 403);
 
-        $baseUrl = $data['api_base_url'] ?? 'https://api.exotel.com';
+        $baseUrl = $data['api_base_url'] ?? 'https://api.in.exotel.com';
         $host = strtolower((string) parse_url($baseUrl, PHP_URL_HOST));
         abort_unless(parse_url($baseUrl, PHP_URL_SCHEME) === 'https' && preg_match('/(^|\\.)exotel\\.com$/', $host), 422, 'Use a valid HTTPS Exotel API endpoint.');
 
@@ -83,6 +84,7 @@ class CrmTelephonyController extends Controller
                 'webhook_token' => $token,
             ],
             'caller_id' => $data['caller_id'],
+            'record_calls' => (bool) ($data['record_calls'] ?? false),
             'webhook_token_hash' => hash('sha256', $token),
             'is_active' => true,
             'created_by' => $request->user()->id,

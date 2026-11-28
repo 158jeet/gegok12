@@ -26,14 +26,14 @@ class CrmTelephonyService
             throw new RuntimeException('Telephony credentials are incomplete. Ask the Owner to finish Exotel setup.');
         }
 
-        $baseUrl = (string) ($credentials['api_base_url'] ?? 'https://api.exotel.com');
+        $baseUrl = (string) ($credentials['api_base_url'] ?? 'https://api.in.exotel.com');
         $parts = parse_url($baseUrl);
         $host = strtolower((string) ($parts['host'] ?? ''));
         if (($parts['scheme'] ?? '') !== 'https' || !preg_match('/(^|\\.)exotel\\.com$/', $host)) {
             throw new RuntimeException('Only an HTTPS Exotel API endpoint is permitted.');
         }
 
-        $url = rtrim($baseUrl, '/') . '/v1/Accounts/' . rawurlencode($sid) . '/Calls/connect.json';
+        $url = rtrim($baseUrl, '/') . '/v1/Accounts/' . rawurlencode($sid) . '/Calls/connect';
         $webhookToken = (string) ($credentials['webhook_token'] ?? '');
         if ($webhookToken === '' || !hash_equals($account->webhook_token_hash, hash('sha256', $webhookToken))) {
             throw new RuntimeException('Telephony webhook secret is missing or invalid. Re-save the provider connection.');
@@ -64,11 +64,13 @@ class CrmTelephonyService
                     'From' => $agentNumber,
                     'To' => $lead->mobile,
                     'CallerId' => $account->caller_id,
+                    'Record' => $account->record_calls ? 'true' : 'false',
                     'CallType' => 'trans',
                     'TimeLimit' => 1800,
                     'TimeOut' => 30,
                     'StatusCallback' => $webhookUrl,
-                    'StatusCallbackEvents[0]' => 'terminal',
+                    'StatusCallbackEvents[0]' => 'answered',
+                    'StatusCallbackEvents[1]' => 'terminal',
                 ]);
 
             if (!$response->successful()) {
