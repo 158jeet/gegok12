@@ -29,6 +29,7 @@ use App\Http\Controllers\Tagore\ExaminationController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
+use App\Http\Controllers\Tagore\FieldworkFormController;
 use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
@@ -85,6 +86,17 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admin/academic-structure/section', [AcademicStructureController::class, 'storeSection'])->name('tagore.academic.section');
     Route::get('/admin/student-parent-migration', [StudentParentMigrationController::class, 'index'])->name('tagore.migration.student-parent');
     Route::post('/admin/student-parent-migration/sync', [StudentParentMigrationController::class, 'sync'])->name('tagore.migration.student-parent.sync');
+
+    Route::get('/fieldwork/studio', [FieldworkFormController::class, 'studio'])->name('tagore.fieldwork.studio');
+    Route::get('/fieldwork/my-campaigns', [FieldworkFormController::class, 'myCampaigns'])->name('tagore.fieldwork.campaigns.mine');
+    Route::get('/fieldwork/forms', [FieldworkFormController::class, 'index'])->name('tagore.fieldwork.forms.index');
+    Route::post('/fieldwork/forms', [FieldworkFormController::class, 'storeTemplate'])->name('tagore.fieldwork.forms.store');
+    Route::put('/fieldwork/forms/{templateId}', [FieldworkFormController::class, 'updateTemplate'])->whereNumber('templateId')->name('tagore.fieldwork.forms.update');
+    Route::post('/fieldwork/forms/{templateId}/publish', [FieldworkFormController::class, 'publish'])->whereNumber('templateId')->name('tagore.fieldwork.forms.publish');
+    Route::post('/fieldwork/campaigns', [FieldworkFormController::class, 'createCampaign'])->name('tagore.fieldwork.campaigns.store');
+    Route::post('/fieldwork/campaigns/{campaignId}/submissions', [FieldworkFormController::class, 'submit'])->whereNumber('campaignId')->name('tagore.fieldwork.submissions.store');
+    Route::get('/fieldwork/submissions/review', [FieldworkFormController::class, 'reviewQueue'])->name('tagore.fieldwork.submissions.review');
+    Route::patch('/fieldwork/submissions/{submissionId}/review', [FieldworkFormController::class, 'reviewSubmission'])->whereNumber('submissionId')->name('tagore.fieldwork.submissions.decide');
 
     Route::get('/admissions', [AdmissionsController::class, 'index'])->name('tagore.admissions.index');
     Route::get('/admissions/create', [AdmissionsController::class, 'create'])->name('tagore.admissions.create');
