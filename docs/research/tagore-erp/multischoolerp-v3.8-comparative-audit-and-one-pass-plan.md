@@ -190,12 +190,15 @@ Define and document before parallel coding:
 | F. College and hostel | PG College semester and affiliation workflows, hostel/warden/mess/room/fee operations | College and residential operations |
 | G. HR and campus | Staff lifecycle, attendance, leave, payroll, biometric adapter, visitor/gate, transport, inventory, library, CCTV adapter | Integrated workforce and campus operations |
 | H. Communication and clients | Parent/teacher/student portals, mobile apps, driver app, notifications, diary/chat/helpdesk, offline sync | Unified multi-device experience |
-| I. Reporting, websites and platform operations | MIS, exports, compliance, school websites, backups/restore, undo, AI readiness, performance | Operational command and recovery layer |
+| I. Reporting and platform operations | MIS, exports, compliance, backups/restore, undo, AI readiness, performance, security and observability | Operational command and recovery layer |
+| J. Website CMS and public-site platform | Per-institution websites, owner portfolio, scoped institute editor, page/block builder, themes, navigation, media, bilingual content, admissions forms, SEO, domains/TLS, revisions, previews, publish/schedule/rollback | Independently manageable, tenant-isolated public websites |
 
 Parallel tracks must own separate bounded code surfaces. Shared schemas and service interfaces are agreed at Gate 1; one owner controls any shared hot file (routes, role matrix, migrations, central finance services). Avoid concurrent conflicting edits.
 
 ### Gate 3 — Single integrated candidate
-- Integrate all tracks into a single release-candidate branch with a migration sequence and feature flags for external dependencies.
+- Use one long-lived integrated candidate branch for all implementation tracks. Workstreams may use short-lived task branches only when needed, but every completed slice must be integrated into this candidate continuously; do not create standalone feature release trains or deploy individual modules.
+- Reconcile existing open PR work into the candidate (including the cashier implementation and comparative/CMS contracts) rather than leaving parallel product versions.
+- Integrate all tracks into this single release-candidate branch with a migration sequence and feature flags for external dependencies.
 - Run static analysis, format/lint, Composer/npm builds, migration/seed validation and route inventory.
 - Run unit, feature, API, integration, role/permission and data-isolation suites.
 - Run browser E2E for Owner, Central Accounts, Cashier, Principal, Coordinator, Teacher, Parent, Student, HR, Warden, Reception/Security and relevant college/coaching roles.
@@ -252,13 +255,16 @@ Obtain written answers and a dated manifest:
 - Preserve untracked local diagnostic files and avoid destructive cleanup.
 - No production data, live financial transactions, production deployment or merge was performed as part of this comparative audit.
 
-## 10. Immediate next actions
+## 10. Immediate execution order
 
-1. Finish persona-based live-demo walkthrough and save a route/screen inventory with screenshots for the roles exposed by the vendor.
-2. Ask the vendor the due-diligence questions and obtain exact version/deliverable confirmation.
-3. Update the existing Tagore feature-gap register against current main and open PRs.
-4. Publish the final scope lock and architecture contracts.
-5. Start the coordinated parallel implementation programme only after scope lock; deliver one integrated release candidate and one full acceptance cycle.
+The discovery and architecture-contract work already recorded in this programme is sufficient to begin implementation. Remaining vendor questions and hardware-specific details are tracked as external dependencies; they must not block software work that can proceed safely.
+
+1. Establish one integrated candidate branch from the latest cashier implementation so existing work is preserved.
+2. Fold the comparative audit, shared architecture contracts and Website CMS scope into that candidate; reconcile every relevant open implementation branch against it.
+3. Execute Tracks A–J concurrently where their dependencies permit, with shared contracts and ownership of hot files enforced. No module is treated as a separately shippable product.
+4. Maintain a single integrated defect/acceptance board and continuously run targeted CI while the programme is being built.
+5. When all agreed scope is integrated, run the complete cross-role/cross-institution acceptance programme once against the frozen candidate SHA; fix failures in coordinated batches and rerun the full gate.
+6. Merge and deploy only that accepted candidate. No intermediate feature-by-feature production deployments.
 
 
 ## Website CMS scope addendum
