@@ -36,6 +36,9 @@ Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::clas
 Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
+    Route::get('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'edit'])->name('tagore.profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'update'])->name('tagore.profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\Tagore\ProfileController::class, 'updatePassword'])->name('tagore.profile.password');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('tagore.dashboard');
     Route::get('/admin/student-promotion', [StudentLifecycleController::class, 'index'])->name('tagore.students.promotion.index');
     Route::post('/students/promote', [StudentLifecycleController::class, 'promote'])->name('tagore.students.promote');

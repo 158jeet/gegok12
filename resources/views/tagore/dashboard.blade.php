@@ -19,6 +19,7 @@
   <div class="tg-top-actions">
     <label class="tg-search" for="tg-dashboard-search" style="display:flex;align-items:center;gap:8px">⌕ <input id="tg-dashboard-search" type="search" placeholder="Search dashboard modules and items…" aria-label="Search dashboard modules and visible items" autocomplete="off" style="min-width:0;width:220px;border:0;outline:0;background:transparent;color:inherit;font:inherit"></label>
     <div class="tg-user"><div class="tg-avatar">{{ strtoupper(substr(auth()->user()->name ?? 'T',0,1)) }}</div><span>{{ auth()->user()->name ?? 'User' }}</span></div>
+    <a class="tg-btn" href="{{ route('tagore.profile.edit') }}">My profile</a>
     <form method="POST" action="{{ route('logout') }}" style="margin:0">@csrf<button type="submit" class="tg-btn" dusk="tagore-logout" aria-label="Log out of Tagore ERP">Logout</button></form>
   </div>
 </header>
