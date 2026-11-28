@@ -226,3 +226,8 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - CBT rebuilt on that integration head as PR #152; old PR #148 closed as superseded.
 - Section-preserving randomization regression exposed omitted `section_code` projection. Fixed query and expanded test: two A questions, one B question; verify section order and stable reload snapshots.
 - Exact-head CI run `45113041748` queued; no live exams/candidates.
+
+## 2026-11-28 - One-pass candidate integration
+
+- Backup/restore branch integrated into the candidate as a deployable Windows PowerShell workflow: transactional MySQL dump, persistent storage snapshot, manifest and SHA-256 checks, encrypted rclone-crypt offsite upload, local retention and disposable MySQL restore rehearsal.
+- The backup is not release evidence until offsite copy, hashes, disposable restore and staging recovery are verified. No production restore or production database mutation is part of this feature.
