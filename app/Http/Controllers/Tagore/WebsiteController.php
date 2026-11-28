@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 class WebsiteController extends Controller
 {
-    private const EDIT_ROLES = ['OWNER', 'PRINCIPAL', 'WEBSITE_EDITOR'];
+    private const EDIT_ROLES = ['OWNER', 'PRINCIPAL'];
     private const PUBLISH_ROLES = ['OWNER', 'PRINCIPAL'];
 
     public function index(Request $request): View
@@ -97,6 +97,8 @@ class WebsiteController extends Controller
             $page = DB::table('tagore_cms_pages')->where('id', $data['page_id'])
                 ->where('institution_id', $site->institution_id)->first();
             abort_unless($page, 404);
+            $duplicate = DB::table('tagore_cms_pages')->where('institution_id', $site->institution_id)->where('slug', $data['slug'])->where('id', '!=', $page->id)->exists();
+            abort_if($duplicate, 422, 'This URL slug already exists for the selected institution.');
             if ($page->status === 'published') {
                 $draft = collect($values)->only(['slug', 'title', 'body', 'meta_title', 'meta_description', 'content_json', 'locale'])->all();
                 DB::table('tagore_cms_pages')->where('id', $page->id)->update(['draft_snapshot_json' => json_encode($draft, JSON_UNESCAPED_UNICODE), 'updated_by' => $request->user()->id, 'updated_at' => now()]);
@@ -104,6 +106,8 @@ class WebsiteController extends Controller
                 DB::table('tagore_cms_pages')->where('id', $page->id)->update($values);
             }
         } else {
+            $duplicate = DB::table('tagore_cms_pages')->where('institution_id', $site->institution_id)->where('slug', $data['slug'])->exists();
+            abort_if($duplicate, 422, 'This URL slug already exists for the selected institution.');
             DB::table('tagore_cms_pages')->insert($values + [
                 'institution_id' => $site->institution_id, 'created_by' => $request->user()->id,
                 'created_at' => now(),
@@ -165,6 +169,8 @@ class WebsiteController extends Controller
         $ids = $roles->contains('OWNER')
             ? DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles')->where('user_id', $request->user()->id)->where('status', 'active')
+                ->where(fn ($q) => $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today))
+                ->where(fn ($q) => $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today))
                 ->whereNotNull('institution_id')->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         return [$roles, $ids];
     }

@@ -54,7 +54,7 @@ class TagoreWebsiteCmsTest extends TestCase
         $this->actingAs($owner)->from(route('tagore.website.index'))->post(route('tagore.website.pages.store'), [
             'site_id' => $siteId, 'title' => 'Unsafe block', 'slug' => 'unsafe-block', 'locale' => 'en',
             'blocks_json' => json_encode([['type' => 'raw_html', 'body' => '<script>alert(1)</script>']]),
-        ])->assertSessionHasErrors();
+        ])->assertStatus(422);
 
         $this->assertDatabaseMissing('tagore_cms_pages', ['institution_id' => $institution->id, 'slug' => 'unsafe-block']);
     }
