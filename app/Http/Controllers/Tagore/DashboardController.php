@@ -56,6 +56,133 @@ class DashboardController extends Controller
             $erp['pending_leave'] = DB::table('teacher_leave_applications')->whereIn('school_id',$schoolIds)->where('status','pending')->whereNull('deleted_at')->count();
             $erp['departments'] = DB::table('tagore_departments')->whereIn('institution_id',$institutionIds)->where('status','active')->count();
         }
+        // The Owner receives a true group-wide platform view. Institution staff
+        // continue to see only the institutions assigned to their active role.
+        $ownerConsole = null;
+        if ($roles->contains('OWNER')) {
+            $ownerInstitutionIds = $institutionIds->map(fn ($id) => (int) $id)->all();
+            $studentCounts = DB::table('users as u')
+                ->join('tagore_institutions as i', 'i.school_id', '=', 'u.school_id')
+                ->whereIn('i.id', $ownerInstitutionIds)
+                ->where('u.usergroup_id', 6)
+                ->whereNull('u.deleted_at')
+                ->groupBy('i.id')
+                ->select('i.id')
+                ->selectRaw('COUNT(DISTINCT u.id) as total')
+                ->pluck('total', 'i.id');
+            $staffCounts = DB::table('tagore_user_roles')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->where('status', 'active')
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('COUNT(DISTINCT user_id) as total')
+                ->pluck('total', 'institution_id');
+            $feeTotals = DB::table('tagore_fee_obligations')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('SUM(paid_amount) as collected')
+                ->selectRaw("SUM(CASE WHEN status IN ('pending','partial','overdue') THEN outstanding_amount ELSE 0 END) as outstanding")
+                ->get()
+                ->keyBy('institution_id');
+            $leadCounts = DB::table('tagore_admission_leads')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->whereIn('status', ['new','follow_up','qualified'])
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('COUNT(*) as total')
+                ->pluck('total', 'institution_id');
+            $taskCounts = DB::table('tagore_tasks')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->whereIn('status', ['open','in_progress','blocked'])
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('COUNT(*) as total')
+                ->pluck('total', 'institution_id');
+
+            $auditToday = DB::table('tagore_operational_audit_instances')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->whereDate('scheduled_for', now()->toDateString());
+            $auditSummary = [
+                'scheduled' => (clone $auditToday)->count(),
+                'verified' => (clone $auditToday)->where('status', 'verified')->count(),
+                'failed' => (clone $auditToday)->where('status', 'failed')->count(),
+                'awaiting' => (clone $auditToday)->whereIn('status', ['pending','overdue','submitted','submitted_late'])->count(),
+                'overdue' => (clone $auditToday)->whereIn('status', ['pending','overdue'])->where('due_at', '<', now())->count(),
+            ];
+            $auditByInstitution = DB::table('tagore_operational_audit_instances')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->whereDate('scheduled_for', now()->toDateString())
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('COUNT(*) as scheduled')
+                ->selectRaw("SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified")
+                ->get()
+                ->keyBy('institution_id');
+
+            $openAlertQuery = DB::table('tagore_operational_alerts')
+                ->whereIn('institution_id', $ownerInstitutionIds)
+                ->whereNotIn('status', ['resolved','closed']);
+            $openAlerts = (clone $openAlertQuery)->count();
+            $criticalAlerts = (clone $openAlertQuery)->where('severity', 'critical')->count();
+            $alertsByInstitution = (clone $openAlertQuery)
+                ->groupBy('institution_id')
+                ->select('institution_id')
+                ->selectRaw('COUNT(*) as total')
+                ->get()
+                ->keyBy('institution_id');
+            $priorityAlerts = DB::table('tagore_operational_alerts as a')
+                ->leftJoin('tagore_institutions as i', 'i.id', '=', 'a.institution_id')
+                ->leftJoin('users as u', 'u.id', '=', 'a.assigned_to')
+                ->whereIn('a.institution_id', $ownerInstitutionIds)
+                ->whereIn('a.severity', ['critical','high'])
+                ->whereNotIn('a.status', ['resolved','closed'])
+                ->orderByDesc('a.triggered_at')
+                ->limit(6)
+                ->get(['a.id','a.severity','a.title','a.status','a.triggered_at','i.display_name as institution','u.name as assignee']);
+            $recentActivity = DB::table('tagore_operational_audit_events as e')
+                ->join('tagore_operational_audit_instances as ai', 'ai.id', '=', 'e.instance_id')
+                ->join('tagore_institutions as i', 'i.id', '=', 'ai.institution_id')
+                ->leftJoin('users as u', 'u.id', '=', 'e.actor_user_id')
+                ->whereIn('ai.institution_id', $ownerInstitutionIds)
+                ->orderByDesc('e.occurred_at')
+                ->limit(8)
+                ->get(['e.event_type','e.occurred_at','ai.template_code','i.display_name as institution','u.name as actor']);
+
+            $portfolio = $institutions->map(function ($institution) use ($studentCounts, $staffCounts, $feeTotals, $leadCounts, $taskCounts, $auditByInstitution, $alertsByInstitution) {
+                $fees = $feeTotals->get($institution->id);
+                return (object) [
+                    'id' => (int) $institution->id,
+                    'display_name' => $institution->display_name,
+                    'school_name' => $institution->school_name,
+                    'students' => (int) ($studentCounts[$institution->id] ?? 0),
+                    'staff' => (int) ($staffCounts[$institution->id] ?? 0),
+                    'collected' => round((float) ($fees->collected ?? 0), 2),
+                    'outstanding' => round((float) ($fees->outstanding ?? 0), 2),
+                    'pending_leads' => (int) ($leadCounts[$institution->id] ?? 0),
+                    'active_tasks' => (int) ($taskCounts[$institution->id] ?? 0),
+                    'audits_today' => (int) ($auditByInstitution->get($institution->id)->scheduled ?? 0),
+                    'audits_verified' => (int) ($auditByInstitution->get($institution->id)->verified ?? 0),
+                    'open_alerts' => (int) ($alertsByInstitution->get($institution->id)->total ?? 0),
+                ];
+            });
+
+            $groupBilled = $erp['fee_collected'] + $erp['fee_outstanding'];
+            $ownerConsole = [
+                'institutions' => $portfolio,
+                'audit_summary' => $auditSummary,
+                'open_alerts' => $openAlerts,
+                'critical_alerts' => $criticalAlerts,
+                'priority_alerts' => $priorityAlerts,
+                'recent_activity' => $recentActivity,
+                'collection_rate' => $groupBilled > 0 ? round(($erp['fee_collected'] / $groupBilled) * 100, 1) : 0,
+                'database' => 'Connected',
+                'environment' => app()->environment(),
+                'queue_driver' => (string) config('queue.default'),
+                'cache_store' => (string) config('cache.default'),
+            ];
+        }
+
         $managerCommand = [
             'is_manager' => false,
             'action_items' => collect(),
@@ -232,7 +359,7 @@ class DashboardController extends Controller
             $stats['open_tasks'] = 0;
             $stats['overdue_tasks'] = 0;
         }
-        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'erp', 'institutions', 'managerCommand', 'analyticsDays'));
+        return view('tagore.dashboard', compact('roles', 'children', 'stats', 'erp', 'institutions', 'managerCommand', 'analyticsDays', 'ownerConsole'));
     }
 
 

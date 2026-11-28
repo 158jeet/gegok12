@@ -31,14 +31,24 @@
   <a class="tg-side-link active" href="{{ route('tagore.dashboard') }}"><span class="tg-side-icon">⌂</span>Overview</a>
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.examinations.index') }}"><span class="tg-side-icon">▤</span>Examinations</a>
+    @if($roles->contains('OWNER') || $roles->contains('ACCOUNTS') || $roles->intersect(['PRINCIPAL','HR'])->isNotEmpty())
+      <a class="tg-side-link" href="{{ route('tagore.biometric.index') }}"><span class="tg-side-icon">◉</span>Biometric devices</a>
+    @endif
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.students.promotion.index') }}"><span class="tg-side-icon">⇧</span>Student promotion</a>
+    <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
+    <a class="tg-side-link" href="{{ route('tagore.crm.index') }}"><span class="tg-side-icon">▦</span>CRM & growth</a>
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
     <a class="tg-side-link" href="{{ route('tagore.staff.leave') }}"><span class="tg-side-icon">◷</span>People & leave</a>
   @endif
-  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+  @if($roles->contains('CASHIER'))
+    <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">₹</span>Cashier desk</a>
+    <a class="tg-side-link" href="{{ route('tagore.cashier.fees') }}"><span class="tg-side-icon">▤</span>Fee assignments</a>
+  @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
+    <a class="tg-side-link" href="{{ route('tagore.crm.index') }}"><span class="tg-side-icon">▦</span>CRM & growth</a>
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.fees.manage') }}"><span class="tg-side-icon">₹</span>Fee management</a>
@@ -76,7 +86,10 @@
     <h1>{{ $greeting }}, {{ auth()->user()->name ?? 'there' }}.</h1>
     <p>{{ $roleLabel ?: 'Tagore ERP user' }} · @if($roles->contains('PARENT'))Your family, fees and school updates in one place.@elseif($roles->contains('STUDENT'))Your learning, attendance and school updates in one place.@else Your school operations, people, academics and finance in one workspace.@endif</p>
     <div class="tg-hero-actions">
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+      @if($roles->contains('CASHIER'))
+        <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Open cashier desk</a>
+      @endif
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
@@ -90,6 +103,9 @@
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty() || $roles->contains('PARENT'))
         <a class="tg-btn" href="{{ route('tagore.diary.index') }}">Daily diary</a>
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
+        <a class="tg-btn" href="{{ route('tagore.fieldwork.studio') }}">Admissions fieldwork</a>
+      @endif
       @endif
     </div>
   </section>
@@ -111,6 +127,102 @@
   @else
   <section class="tg-card" style="padding:20px;margin-bottom:18px">
     <div class="tg-section-head"><div><h2>Your student workspace</h2><p>Your account is signed in. Use the student portal for classes, assignments, homework and results.</p></div><a class="tg-btn primary" href="{{ url('/student/dashboard') }}">Open student portal →</a><a class="tg-btn" href="{{ route('tagore.results.student', auth()->id()) }}">My published results</a></div>
+  </section>
+  @endif
+
+  @if($ownerConsole)
+  <section class="tg-section" aria-label="Platform Owner command centre">
+    <div class="tg-section-head">
+      <div><span class="tg-eyebrow">Platform Owner · Group-wide</span><h2>Group control centre</h2><p>One view of every active institution, consolidated collections and platform operations.</p></div>
+      <div class="tg-actions">
+        <a class="tg-btn primary" href="{{ route('tagore.admin') }}">Institutions & access</a>
+        <a class="tg-btn" href="{{ route('tagore.reports.index') }}">Group reports</a>
+      </div>
+    </div>
+    <div class="tg-grid" aria-label="Group finance and portfolio summary">
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Group fee collections</span><span class="tg-kpi-icon">₹</span></div><div class="tg-kpi-value">₹{{ number_format($erp['fee_collected'],0) }}</div><div class="tg-kpi-meta">Recorded payments across active institutions</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Outstanding fees</span><span class="tg-kpi-icon">◷</span></div><div class="tg-kpi-value">₹{{ number_format($erp['fee_outstanding'],0) }}</div><div class="tg-kpi-meta">Pending, partial and overdue balances</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Collection rate</span><span class="tg-kpi-icon">↗</span></div><div class="tg-kpi-value">{{ $ownerConsole['collection_rate'] }}%</div><div class="tg-kpi-meta">Collected ÷ collected plus outstanding</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Active institutions</span><span class="tg-kpi-icon">⌂</span></div><div class="tg-kpi-value">{{ $ownerConsole['institutions']->count() }}</div><div class="tg-kpi-meta">{{ number_format($erp['students']) }} students · {{ number_format($erp['staff']) }} staff</div></div>
+    </div>
+    <div class="tg-two">
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Institution portfolio</h3><p>Live operating signals by school and institution</p></div><span class="tg-status success">Group view</span></div>
+        <div class="tg-module-grid">
+          @forelse($ownerConsole['institutions'] as $unit)
+            <article class="tg-module">
+              <b>{{ $unit->display_name }}</b>
+              <span>{{ $unit->school_name }} · Active</span>
+              <div class="tg-three">
+                <div><div class="tg-kpi-label">Students</div><strong>{{ number_format($unit->students) }}</strong></div>
+                <div><div class="tg-kpi-label">Staff</div><strong>{{ number_format($unit->staff) }}</strong></div>
+                <div><div class="tg-kpi-label">Open leads</div><strong>{{ number_format($unit->pending_leads) }}</strong></div>
+              </div>
+              <div class="tg-list-meta">Collected ₹{{ number_format($unit->collected,0) }} · Due ₹{{ number_format($unit->outstanding,0) }} · {{ $unit->active_tasks }} active tasks<br>Audits today {{ $unit->audits_verified }}/{{ $unit->audits_today }} verified · {{ $unit->open_alerts }} open alerts</div>
+            </article>
+          @empty
+            <div class="tg-empty"><strong>No active institutions</strong><span>Activate an institution from Administration to include it in the group view.</span></div>
+          @endforelse
+        </div>
+      </div>
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Platform runtime</h3><p>Application configuration and live database access</p></div><span class="tg-status success">Connected</span></div>
+        <div class="tg-list">
+          <div class="tg-list-item"><div><div class="tg-list-title">Database</div><div class="tg-list-meta">Application database connection</div></div><span class="tg-status success">{{ $ownerConsole['database'] }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Environment</div><div class="tg-list-meta">Current application environment</div></div><span class="tg-status">{{ ucfirst($ownerConsole['environment']) }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Queue driver</div><div class="tg-list-meta">Background job configuration</div></div><span class="tg-status">{{ $ownerConsole['queue_driver'] }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Cache store</div><div class="tg-list-meta">Application cache configuration</div></div><span class="tg-status">{{ $ownerConsole['cache_store'] }}</span></div>
+        </div>
+        <div class="tg-divider"></div>
+        <div class="tg-module-grid">
+          <a class="tg-module" href="{{ route('tagore.platform.index') }}"><b>Platform services</b><span>CMS, integrations, automation and CCTV connector status</span></a>
+          <a class="tg-module" href="{{ route('tagore.operations.index') }}"><b>Operations hub</b><span>Inventory, transport, hostel, documents and group workflows</span></a>
+          <a class="tg-module" href="{{ route('tagore.performance') }}"><b>Performance monitor</b><span>Inspect application request and runtime performance</span></a>
+          <a class="tg-module" href="{{ route('tagore.biometric.index') }}"><b>Device registry</b><span>Manage institution-scoped biometric device mappings</span></a>
+        </div>
+        <p class="tg-list-meta">Global controls are Owner-only. Principals and institution teams retain their assigned institution scope.</p>
+      </div>
+    </div>
+    <div class="tg-two">
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Operational assurance</h3><p>Today's scheduled checks and independent verification</p></div><span class="tg-status {{ $ownerConsole['audit_summary']['failed'] ? 'danger' : ($ownerConsole['audit_summary']['overdue'] ? 'warning' : '') }}">{{ $ownerConsole['audit_summary']['scheduled'] ? 'Daily controls' : 'Not scheduled' }}</span></div>
+        <div class="tg-grid">
+          <div class="tg-kpi"><div class="tg-kpi-label">Scheduled today</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['scheduled']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Independently verified</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['verified']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Awaiting review / submission</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['awaiting']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Failed / overdue</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['failed'] + $ownerConsole['audit_summary']['overdue']) }}</div></div>
+        </div>
+        @if(!$ownerConsole['audit_summary']['scheduled'])
+          <p class="tg-list-meta">No audit instances are scheduled for today. An empty schedule is not a verified healthy result.</p>
+        @endif
+      </div>
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Priority alerts</h3><p>Open high-severity operational exceptions</p></div><span class="tg-status {{ $ownerConsole['critical_alerts'] ? 'danger' : ($ownerConsole['open_alerts'] ? 'warning' : '') }}">{{ $ownerConsole['critical_alerts'] }} critical · {{ $ownerConsole['open_alerts'] }} open</span></div>
+        <div class="tg-list">
+          @forelse($ownerConsole['priority_alerts'] as $alert)
+            <div class="tg-list-item">
+              <div><div class="tg-list-title">{{ $alert->title }}</div><div class="tg-list-meta">{{ $alert->institution ?: 'Group-wide' }} · {{ $alert->assignee ?: 'Unassigned' }} · {{ $alert->status }}</div></div>
+              <span class="tg-status {{ $alert->severity === 'critical' ? 'danger' : 'warning' }}">{{ ucfirst($alert->severity) }}</span>
+            </div>
+          @empty
+            <div class="tg-empty"><strong>No open high or critical alerts recorded</strong><span>This reflects the alert register only; routine controls and data freshness still require review.</span></div>
+          @endforelse
+        </div>
+      </div>
+    </div>
+    <div class="tg-card" style="padding:18px">
+      <div class="tg-section-head"><div><h3>Recent operational activity</h3><p>Append-only audit events from scheduled assurance workflows</p></div></div>
+      <div class="tg-list">
+        @forelse($ownerConsole['recent_activity'] as $event)
+          <div class="tg-list-item">
+            <div><div class="tg-list-title">{{ ucwords(str_replace('_',' ', $event->event_type)) }}</div><div class="tg-list-meta">{{ $event->institution }} · {{ $event->template_code }} · {{ $event->actor ?: 'System' }}</div></div>
+            <span class="tg-status">{{ \Carbon\Carbon::parse($event->occurred_at)->format('d M, h:i A') }}</span>
+          </div>
+        @empty
+          <div class="tg-empty"><strong>No audit activity recorded yet</strong><span>Activity appears here as scheduled controls are generated, submitted and independently reviewed.</span></div>
+        @endforelse
+      </div>
+    </div>
   </section>
   @endif
 
@@ -183,7 +295,7 @@
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.examinations.index') }}"><div class="tg-module-icon">▤</div><b>Examinations & results</b><span>Schedules, marks entry, moderation and published results</span></a>
       @endif
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Admissions CRM</b><span>{{ $erp['admission_leads'] }} leads · {{ $erp['pending_leads'] }} need follow-up</span></a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
@@ -259,7 +371,7 @@
 <a href="{{ url('/student/dashboard') }}"><b>▦</b>Portal</a>
 @endif
 @if($roles->contains('FEE_EDITOR'))<a href="{{ route('tagore.fees.editor') }}"><b>₹</b>Fee editor</a>@endif
-@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
+@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.reports.index') }}"><b>▥</b>Reports</a>@endif

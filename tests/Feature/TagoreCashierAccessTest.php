@@ -41,6 +41,9 @@ class TagoreCashierAccessTest extends TestCase
             $this->assertContains($permission, $permissions, "Cashier must have {$permission}.");
         }
 
+        $this->assertContains('payment.export', $permissions, 'Cashier may export institution-scoped collection records.');
+        $this->assertContains('fee.assign', $permissions, 'Cashier may assign approved fee structures inside their institution.');
+        $this->assertContains('fee.remind', $permissions, 'Cashier may send due reminders to linked parent accounts.');
         foreach (['user.manage', 'scope.manage', 'fee.manage', 'fee.edit', 'payment.refund', 'payment.reconcile', 'report.export'] as $permission) {
             $this->assertNotContains($permission, $permissions, "Cashier must not have {$permission}.");
         }

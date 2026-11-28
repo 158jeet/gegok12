@@ -45,6 +45,10 @@ class TagoreRoleAccessMatrixTest extends TestCase
                 'has' => ['dashboard.view', 'student.view', 'fee.view', 'payment.view'],
                 'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
             ],
+            'HR' => [
+                'has' => ['dashboard.view', 'attendance.view', 'attendance.manage', 'report.view', 'task.view', 'task.manage'],
+                'lacks' => ['fee.manage', 'fee.edit', 'payment.reconcile', 'payment.refund', 'user.manage', 'scope.manage'],
+            ],
             'FEE_EDITOR' => [
                 'has' => ['dashboard.view', 'fee.view', 'fee.edit', 'report.view'],
                 'lacks' => ['fee.manage', 'payment.reconcile', 'user.manage'],
@@ -83,33 +87,35 @@ class TagoreRoleAccessMatrixTest extends TestCase
         }
     }
 
-    public function test_each_demo_account_has_exactly_one_active_tagore_role(): void
+    public function test_each_demo_account_has_its_expected_active_tagore_role(): void
     {
-        $emails = [
-            'owner@tagore-demo.local',
-            'principal@tagore-demo.local',
-            'coordinator@tagore-demo.local',
-            'teacher@tagore-demo.local',
-            'accounts@tagore-demo.local',
-            'cashier@tagore-demo.local',
-            'fees@tagore-demo.local',
-            'parent@tagore-demo.local',
-            'student@tagore-demo.local',
+        $expected = [
+            'owner@tagore-demo.local' => 'OWNER',
+            'principal@tagore-demo.local' => 'PRINCIPAL',
+            'coordinator@tagore-demo.local' => 'COORDINATOR',
+            'teacher@tagore-demo.local' => 'TEACHER',
+            'accounts@tagore-demo.local' => 'ACCOUNTS',
+            'cashier@tagore-demo.local' => 'CASHIER',
+            'fees@tagore-demo.local' => 'FEE_EDITOR',
+            'parent@tagore-demo.local' => 'PARENT',
+            'student@tagore-demo.local' => 'STUDENT',
         ];
 
-        foreach ($emails as $email) {
+        foreach ($expected as $email => $roleCode) {
             $userId = DB::table('users')->where('email', $email)->whereNull('deleted_at')->value('id');
             $this->assertNotNull($userId, "Missing demo account {$email}.");
 
-            $roles = DB::table('tagore_user_roles')
-                ->where('user_id', $userId)
-                ->where('status', 'active')
-                ->pluck('role_id');
+            $hasExpectedRole = DB::table('tagore_user_roles as ur')
+                ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->where('ur.user_id', $userId)
+                ->where('ur.status', 'active')
+                ->where('r.status', 'active')
+                ->where('r.code', $roleCode)
+                ->exists();
 
-            $this->assertCount(1, $roles, "{$email} must have exactly one active Tagore role.");
+            $this->assertTrue($hasExpectedRole, "{$email} must have an active {$roleCode} role.");
         }
     }
-
 
     public function test_only_the_explicit_owner_fixture_has_the_owner_role(): void
     {

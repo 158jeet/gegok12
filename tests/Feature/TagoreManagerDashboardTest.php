@@ -160,6 +160,10 @@ class TagoreManagerDashboardTest extends TestCase
         $teacher = User::query()->where('usergroup_id', 5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();
 
         $this->actingAs($teacher)->get(route('tagore.staff.leave'))->assertForbidden();
+        $this->actingAs($teacher)->post(route('tagore.staff.leave.decide', 1), [
+            'decision' => 'approved',
+            'comments' => 'Non-manager must not decide leave.',
+        ])->assertForbidden();
     }
 
     public function test_staff_can_use_self_service_center_and_submit_leave(): void
@@ -229,6 +233,28 @@ class TagoreManagerDashboardTest extends TestCase
         $owner = User::query()->where('email','owner@tagore-demo.local')->firstOrFail();
         $response = $this->actingAs($owner)->get(route('tagore.dashboard'));
         $response->assertOk()->assertSee('Go to work')->assertSee('Fee outstanding')->assertSee('Admissions pipeline');
+    }
+
+    public function test_group_control_centre_is_visible_only_to_owner(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($owner)->get(route('tagore.dashboard'))
+            ->assertOk()
+            ->assertSee('Group control centre')
+            ->assertSee('Institution portfolio')
+            ->assertSee('Group fee collections')
+            ->assertSee('Platform runtime')
+            ->assertSee('Queue driver')
+            ->assertSee('Operational assurance')
+            ->assertSee('Priority alerts')
+            ->assertSee('Recent operational activity');
+
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
+        $this->actingAs($principal)->get(route('tagore.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Group control centre')
+            ->assertDontSee('Platform runtime');
     }
 
     public function test_mobile_dashboard_api_returns_scoped_erp_payload(): void

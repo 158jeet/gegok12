@@ -2,10 +2,11 @@ const { defineConfig } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 60000,
+  globalTimeout: process.env.CI ? 25 * 60 * 1000 : 0,
   expect: { timeout: 10000 },
   fullyParallel: false,
-  workers: process.env.CI ? 8 : 1,
-  retries: process.env.CI ? 1 : 0,
+  workers: 1,
+  retries: 0,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : undefined,

@@ -221,7 +221,7 @@
                         <a href="{{url('/admin/student/comparemark/'.$user->name)}}" class="capitalize text-gray-700 rounded px-4 py-1 mr-2 font-medium my-1 lg:my-0 md:my-0">compare marks</a>
                         @endif
 
-                       <a href="{{ url('/student/'.$user->id.'/impersonate') }}" target="_blank" class="capitalize text-gray-700 rounded px-4 py-1 mr-2 font-medium my-1 lg:my-0 md:my-0">Login as Student</a>
+                       <form method="POST" action="{{ url('/student/'.$user->id.'/impersonate') }}" target="_blank" class="inline">@csrf<button type="submit" class="capitalize text-gray-700 rounded px-4 py-1 mr-2 font-medium my-1 lg:my-0 md:my-0">Login as Student</button></form>
                         @if(config('gexam.enabled', false))
                         <a href="{{url('/admin/marks/show?ref_name='.$user->name.'&standard='.$user->studentAcademic[0]['standardLink_id'])}}" class="capitalize text-gray-700 rounded px-4 py-1 font-medium my-1 lg:my-0 md:my-0">View marks</a>
                         @endif

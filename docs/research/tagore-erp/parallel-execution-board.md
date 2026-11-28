@@ -226,3 +226,33 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - CBT rebuilt on that integration head as PR #152; old PR #148 closed as superseded.
 - Section-preserving randomization regression exposed omitted `section_code` projection. Fixed query and expanded test: two A questions, one B question; verify section order and stable reload snapshots.
 - Exact-head CI run `45113041748` queued; no live exams/candidates.
+
+## 2026-11-28 - One-pass candidate integration
+
+- Backup/restore branch integrated into the candidate as a deployable Windows PowerShell workflow: transactional MySQL dump, persistent storage snapshot, manifest and SHA-256 checks, encrypted rclone-crypt offsite upload, local retention and disposable MySQL restore rehearsal.
+- The backup is not release evidence until offsite copy, hashes, disposable restore and staging recovery are verified. No production restore or production database mutation is part of this feature.
+## 2026-11-28 - Partial online fee allocation and checkout concurrency
+
+- Integrated the parent-selectable fee allocation and checkout reservation implementation. A parent can select partial amounts against one or more fee obligations; server validation enforces exact allocation totals and institution/student ownership.
+- Active checkouts reserve their selected balances; expired/failed orders release reservations. Gateway I/O runs outside fee-row transactions. A captured payment that no longer matches the reserved balances is quarantined for reconciliation instead of over-allocating the fee ledger.
+- Acceptance uses synthetic data and a gateway fake. Live Razorpay credentials and webhook secret are not configured by this code change.
+## 2026-11-28 - Biometric registry and HR/Accounts access integration
+
+- Integrated multi-site T304F registration and institution-scoped employee mapping. Raw punch evidence has restrictive relationships and dedupe keys; no biometric templates are copied into ERP.
+- Central Accounts is group-wide for payroll and device visibility; HR/Principal remain institution-scoped and role dates are enforced.
+- Sync remains disabled pending the exact vendor API/SDK, firmware, auth, network and event semantics. No live device or payroll data has been imported.
+## 2026-11-28 - Operational assurance foundation
+
+- Integrated versioned audit templates, idempotent audit instances, role-scoped submission, immutable template control snapshots, evidence-class validation, independent verification and append-only instance events.
+- Historical evidence is protected from cascade deletion. UI, template administration, evidence upload, alert management and hostel workflows remain open implementation tasks.
+## 2026-11-28 - Security, visitor and gate-pass hardening
+
+- Security visitor and gate-pass actions are scoped to active, date-effective institution roles; Teacher scope is limited to gate-pass requests, while Owner remains group-wide.
+- Visitor hosts must be active staff at the selected institution. Visitor OTP check-in is rate-limited and OTPs remain hashed at rest.
+- Approved gate-pass verification is single-use, rate-limited, records anonymous/public scans without a user identity, and returns only the minimum safe fields. Security history is protected from institution/student cascade deletion.
+- Legacy impersonation now rejects inactive targets, requires an active date-effective Owner role for cross-school access, and records both start and stop events.
+- Visitor OTP delivery remains an operator-assisted/manual step; no SMS/WhatsApp provider is assumed.
+## 2026-11-28 - Operations search and direct control binding
+
+- Integrated the Operations module's live search and status filter across all module records, with empty-state feedback and direct DOM bindings that do not depend on the legacy jQuery event layer.
+- Added authenticated browser acceptance that creates an inventory record, searches it, filters it by status, and deletes the synthetic record. The release gate remains blocking.

@@ -9,7 +9,7 @@ on:
   push:
     branches: [main, 'integration/erp-7day', 'release/**', 'dev/server-workspace-2026-10-09']
   pull_request:
-    branches: [main, 'integration/erp-7day']
+    branches: [main, 'integration/erp-7day', 'integration/tagore-erp-one-pass-20261128']
 
 permissions:
   contents: read
@@ -87,6 +87,7 @@ jobs:
 
   browser-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     env:
       APP_ENV: testing
       DB_CONNECTION: sqlite
