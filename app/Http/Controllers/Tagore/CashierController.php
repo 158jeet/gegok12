@@ -34,13 +34,6 @@ class CashierController extends Controller
             'month_count' => (clone $month)->count(),
             'outstanding' => round((float) DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->sum('outstanding_amount'), 2),
             'students_with_dues' => DB::table('tagore_fee_obligations')->whereIn('institution_id', $institutionIds)->where('outstanding_amount', '>', 0)->distinct()->count('student_id'),
-            'online_to_review' => DB::table('tagore_payments as p')
-                ->whereIn('p.institution_id', $institutionIds)->where('p.status', 'success')
-                ->whereIn('p.gateway', ['razorpay', 'online'])
-                ->whereNotExists(function ($query) {
-                    $query->selectRaw('1')->from('tagore_payment_reconciliations as r')
-                        ->whereColumn('r.payment_id', 'p.id')->where('r.status', 'matched');
-                })->count(),
         ];
 
         $modeTotals = (clone $today)->select('p.payment_mode')
