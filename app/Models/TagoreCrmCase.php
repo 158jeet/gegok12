@@ -12,7 +12,7 @@ class TagoreCrmCase extends Model
     protected $table = 'tagore_crm_cases';
 
     protected $fillable = [
-        'institution_id', 'lead_id', 'student_id', 'parent_user_id',
+        'institution_id', 'lead_id', 'account_id', 'contact_id', 'student_id', 'parent_user_id',
         'assigned_to', 'created_by', 'subject', 'category', 'priority',
         'status', 'due_at', 'resolved_at', 'description', 'resolution',
     ];
@@ -25,6 +25,16 @@ class TagoreCrmCase extends Model
     public function lead()
     {
         return $this->belongsTo(TagoreAdmissionLead::class, 'lead_id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(TagoreCrmAccount::class, 'account_id');
+    }
+
+    public function contact()
+    {
+        return $this->belongsTo(TagoreCrmContact::class, 'contact_id');
     }
 
     public function student()

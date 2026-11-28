@@ -113,7 +113,8 @@ class FeeController extends Controller
             ->orderByDesc('p.paid_at')->orderByDesc('p.id')->limit(100)
             ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.status as payment_status', 'p.payment_mode', 'p.gateway', 'p.gateway_order_id', 'p.gateway_payment_id', 'p.reference_number', 'p.paid_at', 'u.name as student', 'i.display_name as institution', 'r.status as reconciliation_status', 'r.settlement_id', 'r.settlement_amount', 'r.settlement_date', 'r.refund_reference', 'r.refund_date']);
 
-        $pendingReconciliation = $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()
+        $pendingReconciliation = $scopedStudentIds === null
+            && $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()
             ? (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online')
                 && (($payment->payment_status ?? '') === 'review_required' || ($payment->reconciliation_status ?? 'pending') === 'pending'))->count()
             : 0;

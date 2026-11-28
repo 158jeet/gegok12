@@ -106,6 +106,10 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
     Route::post('/admissions/{leadId}/link-student', [AdmissionsController::class, 'linkExistingStudent'])->whereNumber('leadId')->name('tagore.admissions.link-student');
     Route::get('/crm', [CrmGrowthController::class, 'index'])->name('tagore.crm.index');
+    Route::post('/crm/accounts', [CrmGrowthController::class, 'storeAccount'])->name('tagore.crm.accounts.store');
+    Route::patch('/crm/accounts/{accountId}', [CrmGrowthController::class, 'updateAccount'])->whereNumber('accountId')->name('tagore.crm.accounts.update');
+    Route::post('/crm/contacts', [CrmGrowthController::class, 'storeContact'])->name('tagore.crm.contacts.store');
+    Route::patch('/crm/contacts/{contactId}', [CrmGrowthController::class, 'updateContact'])->whereNumber('contactId')->name('tagore.crm.contacts.update');
     Route::post('/crm/opportunities', [CrmGrowthController::class, 'storeOpportunity'])->name('tagore.crm.opportunities.store');
     Route::patch('/crm/opportunities/{opportunityId}', [CrmGrowthController::class, 'updateOpportunity'])->whereNumber('opportunityId')->name('tagore.crm.opportunities.update');
     Route::post('/crm/campaigns', [CrmGrowthController::class, 'storeCampaign'])->name('tagore.crm.campaigns.store');

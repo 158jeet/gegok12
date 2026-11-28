@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use App\Models\TagoreAdmissionActivity;
 use App\Models\TagoreAdmissionLead;
+use App\Models\TagoreCrmAccount;
 use App\Models\TagoreCrmCampaign;
+use App\Models\TagoreCrmContact;
 use App\Models\TagoreCrmCase;
 use App\Models\TagoreCrmOpportunity;
 use App\Models\TagoreCrmTask;
@@ -28,6 +30,8 @@ class CrmGrowthController extends Controller
     private const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
     private const CASE_CATEGORIES = ['general', 'fee', 'transport', 'hostel', 'academic', 'admissions', 'examination', 'technology', 'safety', 'other'];
     private const CASE_STATUSES = ['open', 'in_progress', 'waiting_on_parent', 'resolved', 'closed'];
+    private const ACCOUNT_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'CRM_MANAGER', 'ADMISSIONS', 'MARKETING'];
+    private const CONTACT_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'CRM_MANAGER', 'ADMISSIONS', 'TELECALLER', 'MARKETING'];
 
     private function context(Request $request, array $allowedRoles = self::VIEW_ROLES): array
     {
@@ -102,7 +106,7 @@ class CrmGrowthController extends Controller
         ]);
 
         $opportunities = TagoreCrmOpportunity::query()->whereIn('institution_id', $institutionIds)
-            ->with('lead')->latest()->limit(100)->get();
+            ->with(['lead', 'account', 'contact'])->latest()->limit(100)->get();
         $campaigns = TagoreCrmCampaign::query()->whereIn('institution_id', $institutionIds)
             ->latest()->limit(100)->get()->map(function ($campaign) {
                 $leadQuery = TagoreAdmissionLead::query()
@@ -121,19 +125,25 @@ class CrmGrowthController extends Controller
             });
 
         $tasks = TagoreCrmTask::query()->whereIn('institution_id', $institutionIds)
-            ->with(['lead', 'opportunity', 'assignee'])->orderByRaw("CASE WHEN status IN ('completed','cancelled') THEN 1 ELSE 0 END")
+            ->with(['lead', 'opportunity', 'account', 'contact', 'assignee'])->orderByRaw("CASE WHEN status IN ('completed','cancelled') THEN 1 ELSE 0 END")
             ->orderByRaw('CASE WHEN due_at IS NULL THEN 1 ELSE 0 END')->orderBy('due_at')->orderByDesc('created_at')->limit(100)->get();
         $cases = TagoreCrmCase::query()->whereIn('institution_id', $institutionIds)
-            ->with(['lead', 'student', 'parent', 'assignee'])
+            ->with(['lead', 'student', 'parent', 'account', 'contact', 'assignee'])
             ->orderByRaw("CASE WHEN status IN ('resolved','closed') THEN 1 ELSE 0 END")
             ->orderByRaw("CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END")
             ->orderByRaw('CASE WHEN due_at IS NULL THEN 1 ELSE 0 END')->orderBy('due_at')->orderByDesc('created_at')->limit(100)->get();
 
+        $accounts = TagoreCrmAccount::query()->whereIn('institution_id', $institutionIds)
+            ->withCount(['contacts', 'opportunities'])->latest()->limit(100)->get();
+        $contacts = TagoreCrmContact::query()->whereIn('institution_id', $institutionIds)
+            ->with(['account', 'lead'])->latest()->limit(100)->get();
         $ownerIds = collect()
             ->merge($opportunities->pluck('assigned_to'))
             ->merge($leads->pluck('assigned_to'))
             ->merge($tasks->pluck('assigned_to'))
             ->merge($cases->pluck('assigned_to'))
+            ->merge($accounts->pluck('owner_user_id'))
+            ->merge($contacts->pluck('owner_user_id'))
             ->filter()->unique()->values()->all();
         $owners = $ownerIds ? DB::table('users')->whereIn('id', $ownerIds)->pluck('name', 'id') : collect();
 
@@ -144,12 +154,16 @@ class CrmGrowthController extends Controller
             'active_campaigns' => TagoreCrmCampaign::whereIn('institution_id', $institutionIds)->where('status', 'active')->count(),
             'open_tasks' => TagoreCrmTask::whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_progress'])->count(),
             'overdue_tasks' => TagoreCrmTask::whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_progress'])->whereNotNull('due_at')->where('due_at', '<', now())->count(),
+            'accounts' => TagoreCrmAccount::whereIn('institution_id', $institutionIds)->count(),
+            'contacts' => TagoreCrmContact::whereIn('institution_id', $institutionIds)->count(),
             'open_cases' => TagoreCrmCase::whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_progress', 'waiting_on_parent'])->count(),
             'overdue_cases' => TagoreCrmCase::whereIn('institution_id', $institutionIds)->whereIn('status', ['open', 'in_progress', 'waiting_on_parent'])->whereNotNull('due_at')->where('due_at', '<', now())->count(),
         ];
 
         return view('tagore.crm.growth', [
             'institutions' => $institutions,
+            'accounts' => $accounts,
+            'contacts' => $contacts,
             'staff' => $staff,
             'pipeline' => $pipeline,
             'opportunities' => $opportunities,
@@ -162,6 +176,8 @@ class CrmGrowthController extends Controller
             'tasks' => $tasks,
             'cases' => $cases,
             'metrics' => $metrics,
+            'canManageAccounts' => $roles->intersect(self::ACCOUNT_ROLES)->isNotEmpty(),
+            'canManageContacts' => $roles->intersect(self::CONTACT_ROLES)->isNotEmpty(),
             'canManageOpportunities' => $roles->intersect(self::OPPORTUNITY_ROLES)->isNotEmpty(),
             'canManageCampaigns' => $roles->intersect(self::CAMPAIGN_ROLES)->isNotEmpty(),
             'canManageTasks' => $roles->intersect(self::TASK_ROLES)->isNotEmpty(),
@@ -170,12 +186,171 @@ class CrmGrowthController extends Controller
         ]);
     }
 
+    public function storeAccount(Request $request)
+    {
+        [$userId, , $institutionIds] = $this->context($request, self::ACCOUNT_ROLES);
+        $data = $request->validate([
+            'institution_id' => ['required', 'integer'],
+            'parent_account_id' => ['nullable', 'integer'],
+            'account_type' => ['required', Rule::in(['family', 'organization', 'corporate', 'partner', 'vendor', 'school', 'agency'])],
+            'name' => ['required', 'string', 'max:180'],
+            'website' => ['nullable', 'url', 'max:500'],
+            'industry' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:180'],
+            'address_line' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'owner_user_id' => ['nullable', 'integer'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $institutionId = (int) $data['institution_id'];
+        abort_unless(in_array($institutionId, $institutionIds, true), 403);
+        if (!empty($data['parent_account_id'])) {
+            $parent = TagoreCrmAccount::findOrFail((int) $data['parent_account_id']);
+            abort_unless((int) $parent->institution_id === $institutionId, 422, 'Parent account belongs to another institution.');
+        }
+        if (!empty($data['owner_user_id'])) {
+            abort_unless($this->staffBelongsToInstitution((int) $data['owner_user_id'], $institutionId), 422, 'Select an active account owner from this institution.');
+        }
+        $account = TagoreCrmAccount::create($data + ['created_by' => $userId]);
+        $this->audit($request, $userId, $institutionId, 'crm.account.created', 'TagoreCrmAccount', $account->id, null, $account->only(['name', 'account_type', 'phone', 'email', 'owner_user_id']));
+
+        return back()->with('success', 'CRM account created.');
+    }
+
+    public function storeContact(Request $request)
+    {
+        [$userId, , $institutionIds] = $this->context($request, self::CONTACT_ROLES);
+        $data = $request->validate([
+            'institution_id' => ['required', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'lead_id' => ['nullable', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'contact_id' => ['nullable', 'integer'],
+            'linked_user_id' => ['nullable', 'integer'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'title' => ['nullable', 'string', 'max:100'],
+            'department' => ['nullable', 'string', 'max:100'],
+            'contact_type' => ['required', Rule::in(['parent', 'student', 'prospect', 'decision_maker', 'partner', 'vendor', 'other'])],
+            'email' => ['nullable', 'email', 'max:180'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'alternate_phone' => ['nullable', 'string', 'max:40'],
+            'preferred_channel' => ['required', Rule::in(['call', 'email', 'whatsapp'])],
+            'contact_consent' => ['nullable', 'boolean'],
+            'owner_user_id' => ['nullable', 'integer'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $institutionId = (int) $data['institution_id'];
+        abort_unless(in_array($institutionId, $institutionIds, true), 403);
+
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === $institutionId, 422, 'The selected account belongs to another institution.');
+        }
+        if (!empty($data['lead_id'])) {
+            $lead = TagoreAdmissionLead::findOrFail((int) $data['lead_id']);
+            abort_unless((int) $lead->institution_id === $institutionId, 422, 'The selected lead belongs to another institution.');
+            $data['email'] = $data['email'] ?: $lead->email;
+            $data['phone'] = $data['phone'] ?: $lead->mobile;
+        }
+        if (!empty($data['linked_user_id'])) {
+            $schoolId = (int) DB::table('tagore_institutions')->where('id', $institutionId)->value('school_id');
+            abort_unless(DB::table('users')->where('id', $data['linked_user_id'])->where('school_id', $schoolId)
+                ->where('status', 'active')->whereNull('deleted_at')->exists(), 422, 'The linked user is not active in this institution.');
+        }
+        if (!empty($data['owner_user_id'])) {
+            abort_unless($this->staffBelongsToInstitution((int) $data['owner_user_id'], $institutionId), 422, 'Select an active contact owner from this institution.');
+        }
+        $data['full_name'] = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
+        $data['contact_consent'] = (bool) ($data['contact_consent'] ?? false);
+        $contact = TagoreCrmContact::create($data + ['created_by' => $userId]);
+        $this->audit($request, $userId, $institutionId, 'crm.contact.created', 'TagoreCrmContact', $contact->id, null, $contact->only(['full_name', 'contact_type', 'email', 'phone', 'account_id', 'lead_id', 'contact_consent']));
+
+        return back()->with('success', 'CRM contact created and linked to its account or enquiry.');
+    }
+    public function updateAccount(Request $request, int $accountId)
+    {
+        [$userId, , $institutionIds] = $this->context($request, self::ACCOUNT_ROLES);
+        $account = TagoreCrmAccount::findOrFail($accountId);
+        abort_unless(in_array((int) $account->institution_id, $institutionIds, true), 403);
+        $data = $request->validate([
+            'parent_account_id' => ['nullable', 'integer'],
+            'account_type' => ['required', Rule::in(['family', 'organization', 'corporate', 'partner', 'vendor', 'school', 'agency'])],
+            'name' => ['required', 'string', 'max:180'],
+            'website' => ['nullable', 'url', 'max:500'],
+            'industry' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:180'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'owner_user_id' => ['nullable', 'integer'],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+        if (!empty($data['parent_account_id'])) {
+            $parent = TagoreCrmAccount::findOrFail((int) $data['parent_account_id']);
+            abort_unless((int) $parent->institution_id === (int) $account->institution_id && (int) $parent->id !== (int) $account->id, 422);
+        }
+        if (!empty($data['owner_user_id'])) abort_unless($this->staffBelongsToInstitution((int) $data['owner_user_id'], (int) $account->institution_id), 422);
+        $before = $account->only(['name', 'account_type', 'phone', 'email', 'owner_user_id', 'status']);
+        $account->update($data);
+        $this->audit($request, $userId, (int) $account->institution_id, 'crm.account.updated', 'TagoreCrmAccount', $account->id, $before, $account->only(array_keys($before)));
+
+        return back()->with('success', 'CRM account updated.');
+    }
+
+    public function updateContact(Request $request, int $contactId)
+    {
+        [$userId, , $institutionIds] = $this->context($request, self::CONTACT_ROLES);
+        $contact = TagoreCrmContact::findOrFail($contactId);
+        abort_unless(in_array((int) $contact->institution_id, $institutionIds, true), 403);
+        $data = $request->validate([
+            'account_id' => ['nullable', 'integer'],
+            'lead_id' => ['nullable', 'integer'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'title' => ['nullable', 'string', 'max:100'],
+            'department' => ['nullable', 'string', 'max:100'],
+            'contact_type' => ['required', Rule::in(['parent', 'student', 'prospect', 'decision_maker', 'partner', 'vendor', 'other'])],
+            'email' => ['nullable', 'email', 'max:180'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'alternate_phone' => ['nullable', 'string', 'max:40'],
+            'preferred_channel' => ['required', Rule::in(['call', 'email', 'whatsapp'])],
+            'contact_consent' => ['nullable', 'boolean'],
+            'owner_user_id' => ['nullable', 'integer'],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === (int) $contact->institution_id, 422);
+        }
+        if (!empty($data['lead_id'])) {
+            $lead = TagoreAdmissionLead::findOrFail((int) $data['lead_id']);
+            abort_unless((int) $lead->institution_id === (int) $contact->institution_id, 422);
+            $data['email'] = ($data['email'] ?? null) ?: $lead->email;
+            $data['phone'] = ($data['phone'] ?? null) ?: $lead->mobile;
+        }
+        if (!empty($data['owner_user_id'])) abort_unless($this->staffBelongsToInstitution((int) $data['owner_user_id'], (int) $contact->institution_id), 422);
+        $data['full_name'] = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
+        $data['contact_consent'] = (bool) ($data['contact_consent'] ?? false);
+        $before = $contact->only(['full_name', 'contact_type', 'email', 'phone', 'account_id', 'lead_id', 'contact_consent', 'status']);
+        $contact->update($data);
+        $this->audit($request, $userId, (int) $contact->institution_id, 'crm.contact.updated', 'TagoreCrmContact', $contact->id, $before, $contact->only(array_keys($before)));
+
+        return back()->with('success', 'CRM contact updated.');
+    }
     public function storeOpportunity(Request $request)
     {
         [$userId, , $institutionIds] = $this->context($request, self::OPPORTUNITY_ROLES);
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'lead_id' => ['nullable', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'contact_id' => ['nullable', 'integer'],
             'name' => ['required', 'string', 'max:180'],
             'opportunity_type' => ['required', Rule::in(['admission', 'hostel', 'coaching', 'college', 'partnership', 'corporate'])],
             'stage' => ['required', Rule::in(self::STAGES)],
@@ -197,7 +372,16 @@ class CrmGrowthController extends Controller
             $data['source'] = $data['source'] ?: $lead->source;
             $data['campaign'] = $data['campaign'] ?: $lead->campaign;
         }
-        if (!empty($data['assigned_to'])) {
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === $institutionId, 422, 'The selected account belongs to another institution.');
+        }
+        if (!empty($data['contact_id'])) {
+            $contact = TagoreCrmContact::findOrFail((int) $data['contact_id']);
+            abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
+            if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
+            if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
+        }        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], $institutionId), 422, 'Select an active CRM team member from this institution.');
         }
 
@@ -229,7 +413,16 @@ class CrmGrowthController extends Controller
             'lost_reason' => ['nullable', 'string', 'max:180'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);
-        if (!empty($data['assigned_to'])) {
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === $institutionId, 422, 'The selected account belongs to another institution.');
+        }
+        if (!empty($data['contact_id'])) {
+            $contact = TagoreCrmContact::findOrFail((int) $data['contact_id']);
+            abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
+            if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
+            if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
+        }        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], (int) $opportunity->institution_id), 422, 'Select an active CRM team member from this institution.');
         }
         if ($data['stage'] === 'lost') {
@@ -286,6 +479,8 @@ class CrmGrowthController extends Controller
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'lead_id' => ['nullable', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'contact_id' => ['nullable', 'integer'],
             'opportunity_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:180'],
             'task_type' => ['required', Rule::in(self::TASK_TYPES)],
@@ -308,7 +503,16 @@ class CrmGrowthController extends Controller
                 abort(422, 'The selected lead and opportunity do not match.');
             }
         }
-        if (!empty($data['assigned_to'])) {
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === $institutionId, 422, 'The selected account belongs to another institution.');
+        }
+        if (!empty($data['contact_id'])) {
+            $contact = TagoreCrmContact::findOrFail((int) $data['contact_id']);
+            abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
+            if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
+            if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
+        }        if (!empty($data['assigned_to'])) {
             abort_unless($this->staffBelongsToInstitution((int) $data['assigned_to'], $institutionId), 422, 'Select an active CRM team member from this institution.');
         }
 
@@ -357,6 +561,8 @@ class CrmGrowthController extends Controller
         $data = $request->validate([
             'institution_id' => ['required', 'integer'],
             'lead_id' => ['nullable', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'contact_id' => ['nullable', 'integer'],
             'student_id' => ['nullable', 'integer'],
             'parent_user_id' => ['nullable', 'integer'],
             'subject' => ['required', 'string', 'max:180'],
@@ -370,7 +576,16 @@ class CrmGrowthController extends Controller
         abort_unless(in_array($institutionId, $institutionIds, true), 403);
         abort_unless(!empty($data['lead_id']) || !empty($data['student_id']) || !empty($data['parent_user_id']), 422, 'Link this case to a lead, student or parent.');
 
-        if (!empty($data['lead_id'])) {
+        if (!empty($data['account_id'])) {
+            $account = TagoreCrmAccount::findOrFail((int) $data['account_id']);
+            abort_unless((int) $account->institution_id === $institutionId, 422, 'The selected account belongs to another institution.');
+        }
+        if (!empty($data['contact_id'])) {
+            $contact = TagoreCrmContact::findOrFail((int) $data['contact_id']);
+            abort_unless((int) $contact->institution_id === $institutionId, 422, 'The selected contact belongs to another institution.');
+            if (!empty($data['account_id']) && (int) $contact->account_id !== (int) $data['account_id']) abort(422, 'The selected contact does not belong to this account.');
+            if (empty($data['account_id']) && $contact->account_id) $data['account_id'] = $contact->account_id;
+        }        if (!empty($data['lead_id'])) {
             $lead = TagoreAdmissionLead::findOrFail((int) $data['lead_id']);
             abort_unless((int) $lead->institution_id === $institutionId, 422, 'The selected lead belongs to another institution.');
         }

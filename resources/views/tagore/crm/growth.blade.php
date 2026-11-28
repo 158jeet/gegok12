@@ -50,6 +50,8 @@
   <div class="crm-kpi"><span>Weighted pipeline</span><strong>₹{{ number_format($metrics['weighted_pipeline'],0) }}</strong></div>
   <div class="crm-kpi"><span>Won value</span><strong>₹{{ number_format($metrics['won_value'],0) }}</strong></div>
   <div class="crm-kpi"><span>Active campaigns</span><strong>{{ number_format($metrics['active_campaigns']) }}</strong></div>
+  <div class="crm-kpi"><span>Accounts</span><strong>{{ number_format($metrics['accounts']) }}</strong></div>
+  <div class="crm-kpi"><span>Contacts</span><strong>{{ number_format($metrics['contacts']) }}</strong></div>
   <div class="crm-kpi"><span>Open tasks</span><strong>{{ number_format($metrics['open_tasks']) }}</strong></div>
   <div class="crm-kpi"><span>Overdue tasks</span><strong>{{ number_format($metrics['overdue_tasks']) }}</strong></div>
   <div class="crm-kpi"><span>Open support cases</span><strong>{{ number_format($metrics['open_cases']) }}</strong></div>
@@ -66,12 +68,84 @@
 </section>
 
 <div class="crm-grid">
+  @if($canManageAccounts)
+  <section class="crm-card">
+    <h2>Accounts / organisations</h2><p class="crm-sub">Maintain family, partner, vendor, school and corporate accounts in each institution's own scope.</p>
+    <form class="crm-form" method="POST" action="{{ route('tagore.crm.accounts.store') }}">@csrf
+      <div><label>Institution</label><select name="institution_id" required>@foreach($institutions as $institution)<option value="{{ $institution->id }}">{{ $institution->display_name }}</option>@endforeach</select></div>
+      <div><label>Account type</label><select name="account_type"><option value="family">Family</option><option value="organization">Organisation</option><option value="corporate">Corporate</option><option value="partner">Partner</option><option value="vendor">Vendor</option><option value="school">School</option><option value="agency">Agency</option></select></div>
+      <div class="crm-full"><label>Account name</label><input name="name" required maxlength="180" placeholder="Family name / organisation name"></div>
+      <div><label>Phone</label><input name="phone" maxlength="40"></div><div><label>Email</label><input name="email" type="email" maxlength="180"></div>
+      <div><label>Website</label><input name="website" type="url" maxlength="500"></div><div><label>Industry</label><input name="industry" maxlength="100" placeholder="Education, manufacturing, partner"></div>
+      <div><label>City</label><input name="city" maxlength="100"></div><div><label>State</label><input name="state" maxlength="100"></div>
+      <div><label>Account owner</label><select name="owner_user_id"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}">{{ $person->name }}</option>@endforeach</select></div>
+      <div><label>Parent account</label><select name="parent_account_id"><option value="">No parent account</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></div>
+      <div class="crm-full"><label>Notes</label><textarea name="notes" maxlength="5000"></textarea></div>
+      <div class="crm-full"><button class="crm-btn primary" type="submit">Create account</button></div>
+    </form>
+  </section>
+  @endif
+  @if($canManageContacts)
+  <section class="crm-card">
+    <h2>Contacts / decision makers</h2><p class="crm-sub">Keep parent, student, prospect, partner and institutional decision-maker records linked to accounts or admission leads.</p>
+    <form class="crm-form" method="POST" action="{{ route('tagore.crm.contacts.store') }}">@csrf
+      <div><label>Institution</label><select name="institution_id" required>@foreach($institutions as $institution)<option value="{{ $institution->id }}">{{ $institution->display_name }}</option>@endforeach</select></div>
+      <div><label>Contact type</label><select name="contact_type"><option value="parent">Parent / guardian</option><option value="student">Student</option><option value="prospect">Prospect</option><option value="decision_maker">Decision maker</option><option value="partner">Partner</option><option value="vendor">Vendor</option><option value="other">Other</option></select></div>
+      <div><label>First name</label><input name="first_name" required maxlength="100"></div><div><label>Last name</label><input name="last_name" maxlength="100"></div>
+      <div><label>Phone</label><input name="phone" maxlength="40"></div><div><label>Email</label><input name="email" type="email" maxlength="180"></div>
+      <div><label>Account</label><select name="account_id"><option value="">No account linked</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></div>
+      <div><label>Admission lead</label><select name="lead_id"><option value="">No lead linked</option>@foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->lead_no }} - {{ $lead->student_name }}</option>@endforeach</select></div>
+      <div><label>Title / role</label><input name="title" maxlength="100" placeholder="Parent, director, principal"></div><div><label>Department</label><input name="department" maxlength="100"></div>
+      <div><label>Preferred channel</label><select name="preferred_channel"><option value="call">Call</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
+      <div><label>Contact owner</label><select name="owner_user_id"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}">{{ $person->name }}</option>@endforeach</select></div>
+      <div class="crm-full"><label><input type="checkbox" name="contact_consent" value="1" style="width:auto"> Contact consent recorded</label></div>
+      <div class="crm-full"><label>Notes</label><textarea name="notes" maxlength="5000"></textarea></div>
+      <div class="crm-full"><button class="crm-btn primary" type="submit">Create contact</button></div>
+    </form>
+  </section>
+  @endif
+</div>
+<section class="crm-card">
+  <h2>Accounts and contacts</h2><p class="crm-sub">Institution-scoped records, linked contacts and opportunity counts.</p>
+  <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Account</th><th>Type</th><th>Contacts</th><th>Opportunities</th><th>Phone / email</th><th>Owner</th><th>Manage</th></tr></thead><tbody>
+  @forelse($accounts as $account)
+    <tr><td><strong>{{ $account->name }}</strong><div class="crm-sub">{{ $account->city ?: '' }}{{ $account->state ? ', '.$account->state : '' }}</div></td><td>{{ ucfirst($account->account_type) }}</td><td>{{ $account->contacts_count }}</td><td>{{ $account->opportunities_count }}</td><td>{{ $account->phone ?: '—' }}<div class="crm-sub">{{ $account->email ?: '' }}</div></td><td>{{ $owners[$account->owner_user_id] ?? 'Unassigned' }}</td><td class="crm-row-actions"><details><summary>Edit</summary><form class="crm-form" method="POST" action="{{ route('tagore.crm.accounts.update',$account->id) }}">@csrf @method('PATCH')
+<div><label>Type</label><select name="account_type">@foreach(['family','organization','corporate','partner','vendor','school','agency'] as $type)<option value="{{ $type }}" @selected($account->account_type===$type)>{{ ucfirst($type) }}</option>@endforeach</select></div>
+<div><label>Name</label><input name="name" required value="{{ $account->name }}"></div><div><label>Phone</label><input name="phone" value="{{ $account->phone }}"></div><div><label>Email</label><input name="email" type="email" value="{{ $account->email }}"></div>
+<div><label>Website</label><input name="website" type="url" value="{{ $account->website }}"></div><div><label>Industry</label><input name="industry" value="{{ $account->industry }}"></div>
+<div><label>City</label><input name="city" value="{{ $account->city }}"></div><div><label>State</label><input name="state" value="{{ $account->state }}"></div>
+<div><label>Owner</label><select name="owner_user_id"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}" @selected((int)$account->owner_user_id===(int)$person->id)>{{ $person->name }}</option>@endforeach</select></div>
+<div><label>Status</label><select name="status"><option value="active" @selected($account->status==='active')>Active</option><option value="inactive" @selected($account->status==='inactive')>Inactive</option></select></div>
+<div class="crm-full"><label>Notes</label><textarea name="notes">{{ $account->notes }}</textarea></div><div class="crm-full"><button class="crm-btn primary" type="submit">Save account</button></div></form></details></td></tr>
+  @empty
+    <tr><td colspan="7" class="crm-empty">No CRM accounts configured.</td></tr>
+  @endforelse
+  </tbody></table></div>
+  <div class="crm-table-wrap" style="margin-top:12px"><table class="crm-table"><thead><tr><th>Contact</th><th>Type</th><th>Account</th><th>Linked lead</th><th>Phone / email</th><th>Consent</th><th>Owner</th></tr></thead><tbody>
+  @forelse($contacts as $contact)
+    <tr><td><strong>{{ $contact->full_name }}</strong><div class="crm-sub">{{ $contact->title ?: '' }}{{ $contact->department ? ' · '.$contact->department : '' }}</div></td><td>{{ ucfirst(str_replace('_',' ',$contact->contact_type)) }}</td><td>{{ $contact->account->name ?? '—' }}</td><td>@if($contact->lead)<a href="{{ route('tagore.admissions.show',$contact->lead_id) }}">{{ $contact->lead->lead_no }}</a>@else — @endif</td><td>{{ $contact->phone ?: '—' }}<div class="crm-sub">{{ $contact->email ?: '' }}</div></td><td>{{ $contact->contact_consent ? 'Recorded' : 'Not recorded' }}</td><td>{{ $owners[$contact->owner_user_id] ?? 'Unassigned' }}</td><td class="crm-row-actions"><details><summary>Edit</summary><form class="crm-form" method="POST" action="{{ route('tagore.crm.contacts.update',$contact->id) }}">@csrf @method('PATCH')
+<div><label>First name</label><input name="first_name" required value="{{ $contact->first_name }}"></div><div><label>Last name</label><input name="last_name" value="{{ $contact->last_name }}"></div>
+<div><label>Type</label><select name="contact_type">@foreach(['parent','student','prospect','decision_maker','partner','vendor','other'] as $type)<option value="{{ $type }}" @selected($contact->contact_type===$type)>{{ ucfirst(str_replace('_',' ',$type)) }}</option>@endforeach</select></div>
+<div><label>Account</label><select name="account_id"><option value="">No account</option>@foreach($accounts as $account)<option value="{{ $account->id }}" @selected((int)$contact->account_id===(int)$account->id)>{{ $account->name }}</option>@endforeach</select></div>
+<div><label>Lead</label><select name="lead_id"><option value="">No lead</option>@foreach($leads as $lead)<option value="{{ $lead->id }}" @selected((int)$contact->lead_id===(int)$lead->id)>{{ $lead->lead_no }}</option>@endforeach</select></div>
+<div><label>Phone</label><input name="phone" value="{{ $contact->phone }}"></div><div><label>Email</label><input name="email" type="email" value="{{ $contact->email }}"></div>
+<div><label>Preferred channel</label><select name="preferred_channel"><option value="call" @selected($contact->preferred_channel==='call')>Call</option><option value="whatsapp" @selected($contact->preferred_channel==='whatsapp')>WhatsApp</option><option value="email" @selected($contact->preferred_channel==='email')>Email</option></select></div>
+<div><label>Owner</label><select name="owner_user_id"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}" @selected((int)$contact->owner_user_id===(int)$person->id)>{{ $person->name }}</option>@endforeach</select></div>
+<div><label>Status</label><select name="status"><option value="active" @selected($contact->status==='active')>Active</option><option value="inactive" @selected($contact->status==='inactive')>Inactive</option></select></div>
+<div class="crm-full"><label><input type="checkbox" name="contact_consent" value="1" style="width:auto" @checked($contact->contact_consent)> Contact consent recorded</label></div>
+<div class="crm-full"><label>Notes</label><textarea name="notes">{{ $contact->notes }}</textarea></div><div class="crm-full"><button class="crm-btn primary" type="submit">Save contact</button></div></form></details></td></tr>
+  @empty
+    <tr><td colspan="8" class="crm-empty">No CRM contacts configured.</td></tr>
+  @endforelse
+  </tbody></table></div>
+</section><div class="crm-grid">
   @if($canManageOpportunities)
   <section class="crm-card">
     <h2>Create opportunity</h2><p class="crm-sub">Create a revenue opportunity for admissions, hostel, coaching, college or partnerships. Link an enquiry to preserve its history.</p>
     <form class="crm-form" method="POST" action="{{ route('tagore.crm.opportunities.store') }}">@csrf
       <div><label>Institution</label><select name="institution_id" required>@foreach($institutions as $institution)<option value="{{ $institution->id }}">{{ $institution->display_name }}</option>@endforeach</select></div>
-      <div><label>Linked lead ID (optional)</label><input type="number" name="lead_id" min="1" placeholder="Admission enquiry ID"></div>
+      <div><label>Linked lead ID (optional)</label><input type="number" name="lead_id" min="1" placeholder="Admission enquiry ID"></div>      <div><label>Account</label><select name="account_id"><option value="">No account</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></div>
+      <div><label>Contact</label><select name="contact_id"><option value="">No contact</option>@foreach($contacts as $contact)<option value="{{ $contact->id }}">{{ $contact->full_name }}</option>@endforeach</select></div>
       <div class="crm-full"><label>Opportunity name</label><input name="name" required maxlength="180" placeholder="e.g. Class 11 NEET 2027 admission"></div>
       <div><label>Type</label><select name="opportunity_type" required><option value="admission">School admission</option><option value="hostel">Hostel</option><option value="coaching">Vedant coaching</option><option value="college">PG college</option><option value="partnership">Partnership</option><option value="corporate">Corporate / institutional</option></select></div>
       <div><label>Stage</label><select name="stage" required>@foreach(['qualification','needs_analysis','proposal','negotiation','won','lost'] as $stage)<option value="{{ $stage }}">{{ ucfirst(str_replace('_',' ',$stage)) }}</option>@endforeach</select></div>
@@ -122,7 +196,8 @@
       <div><label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
       <div><label>Due date / time</label><input type="datetime-local" name="due_at"></div>
       <div><label>Linked lead</label><select name="lead_id"><option value="">No lead linked</option>@foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->lead_no }} · {{ $lead->student_name }}</option>@endforeach</select></div>
-      <div><label>Linked opportunity</label><select name="opportunity_id"><option value="">No opportunity linked</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->name }}</option>@endforeach</select></div>
+      <div><label>Linked opportunity</label><select name="opportunity_id"><option value="">No opportunity linked</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->name }}</option>@endforeach</select></div>      <div><label>Account</label><select name="account_id"><option value="">No account linked</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></div>
+      <div><label>Contact</label><select name="contact_id"><option value="">No contact linked</option>@foreach($contacts as $contact)<option value="{{ $contact->id }}">{{ $contact->full_name }}</option>@endforeach</select></div>
       <div><label>Assigned to</label><select name="assigned_to"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}">{{ $person->name }}</option>@endforeach</select></div>
       <div class="crm-full"><label>Instructions</label><textarea name="description" maxlength="5000"></textarea></div>
       <div class="crm-full"><button class="crm-btn primary" type="submit">Create task</button></div>
@@ -138,7 +213,8 @@
       <div class="crm-full"><label>Case subject</label><input name="subject" required maxlength="180" placeholder="Parent requests fee correction / transport support"></div>
       <div><label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
       <div><label>Service deadline</label><input type="datetime-local" name="due_at"></div>
-      <div><label>Linked lead</label><select name="lead_id"><option value="">No lead linked</option>@foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->lead_no }} · {{ $lead->student_name }}</option>@endforeach</select></div>
+      <div><label>Linked lead</label><select name="lead_id"><option value="">No lead linked</option>@foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->lead_no }} · {{ $lead->student_name }}</option>@endforeach</select></div>      <div><label>Account</label><select name="account_id"><option value="">No account linked</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></div>
+      <div><label>Contact</label><select name="contact_id"><option value="">No contact linked</option>@foreach($contacts as $contact)<option value="{{ $contact->id }}">{{ $contact->full_name }}</option>@endforeach</select></div>
       <div><label>Student</label><select name="student_id"><option value="">No student linked</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->name }}</option>@endforeach</select></div>
       <div><label>Parent / guardian</label><select name="parent_user_id"><option value="">No parent linked</option>@foreach($parents as $parent)<option value="{{ $parent->id }}">{{ $parent->name }}</option>@endforeach</select></div>
       <div><label>Assigned to</label><select name="assigned_to"><option value="">Unassigned</option>@foreach($staff as $person)<option value="{{ $person->id }}">{{ $person->name }}</option>@endforeach</select></div>
@@ -163,7 +239,7 @@
   <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Opportunity</th><th>Institution</th><th>Lead</th><th>Stage</th><th>Value</th><th>Probability</th><th>Expected close</th><th>Owner</th><th>Update</th></tr></thead><tbody>
   @forelse($opportunities as $opportunity)
     <tr>
-      <td><strong>{{ $opportunity->name }}</strong><div class="crm-sub">{{ ucfirst($opportunity->opportunity_type) }} · {{ $opportunity->source ?: 'Direct' }}{{ $opportunity->campaign ? ' · '.$opportunity->campaign : '' }}</div></td>
+      <td><strong>{{ $opportunity->name }}</strong><div class="crm-sub">{{ ucfirst($opportunity->opportunity_type) }} · {{ $opportunity->source ?: 'Direct' }}{{ $opportunity->campaign ? ' · '.$opportunity->campaign : '' }}</div><div class="crm-sub">{{ $opportunity->account->name ?? 'No account' }}{{ $opportunity->contact ? ' - '. $opportunity->contact->full_name : '' }}</div></td>
       <td>{{ optional($institutions->firstWhere('id',$opportunity->institution_id))->display_name ?: '—' }}</td>
       <td>@if($opportunity->lead)<a href="{{ route('tagore.admissions.show',$opportunity->lead_id) }}">{{ $opportunity->lead->lead_no }}</a><div class="crm-sub">{{ $opportunity->lead->student_name }}</div>@else — @endif</td>
       <td><span class="crm-pill {{ $opportunity->stage }}">{{ ucfirst(str_replace('_',' ',$opportunity->stage)) }}</span></td>
@@ -207,7 +283,7 @@
   <h2>Task queue</h2><p class="crm-sub">Open and upcoming work across admissions, marketing and opportunity follow-ups. Overdue tasks are prioritised.</p>
   <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Task</th><th>Linked record</th><th>Priority</th><th>Due</th><th>Owner</th><th>Status / update</th></tr></thead><tbody>
   @forelse($tasks as $task)
-    <tr><td><strong>{{ $task->title }}</strong><div class="crm-sub">{{ ucfirst(str_replace('_',' ',$task->task_type)) }}</div></td><td>@if($task->lead)<a href="{{ route('tagore.admissions.show',$task->lead_id) }}">{{ $task->lead->lead_no }}</a>@elseif($task->opportunity){{ $task->opportunity->name }}@else — @endif</td><td><span class="crm-pill {{ in_array($task->priority,['urgent','high'],true) ? 'negotiation' : '' }}">{{ ucfirst($task->priority) }}</span></td><td>{{ optional($task->due_at)->format('d M Y, H:i') ?: '—' }} @if($task->due_at && $task->due_at->isPast() && in_array($task->status,['open','in_progress'],true))<div class="crm-sub" style="color:#a43e4a">Overdue</div>@endif</td><td>{{ $task->assignee->name ?? 'Unassigned' }}</td>
+    <tr><td><strong>{{ $task->title }}</strong><div class="crm-sub">{{ ucfirst(str_replace('_',' ',$task->task_type)) }}</div></td><td>@if($task->lead)<a href="{{ route('tagore.admissions.show',$task->lead_id) }}">{{ $task->lead->lead_no }}</a>@elseif($task->opportunity){{ $task->opportunity->name }}@elseif($task->contact){{ $task->contact->full_name }}@elseif($task->account){{ $task->account->name }}@else — @endif</td><td><span class="crm-pill {{ in_array($task->priority,['urgent','high'],true) ? 'negotiation' : '' }}">{{ ucfirst($task->priority) }}</span></td><td>{{ optional($task->due_at)->format('d M Y, H:i') ?: '—' }} @if($task->due_at && $task->due_at->isPast() && in_array($task->status,['open','in_progress'],true))<div class="crm-sub" style="color:#a43e4a">Overdue</div>@endif</td><td>{{ $task->assignee->name ?? 'Unassigned' }}</td>
       <td class="crm-row-actions">@if($canManageTasks)<details><summary>{{ ucfirst(str_replace('_',' ',$task->status)) }} · Update</summary><form class="crm-form" method="POST" action="{{ route('tagore.crm.tasks.update',$task->id) }}">@csrf @method('PATCH')
         <div><label>Status</label><select name="status">@foreach(['open','in_progress','completed','cancelled'] as $status)<option value="{{ $status }}" @selected($task->status===$status)>{{ ucfirst(str_replace('_',' ',$status)) }}</option>@endforeach</select></div>
         <div><label>Priority</label><select name="priority">@foreach(['low','normal','high','urgent'] as $priority)<option value="{{ $priority }}" @selected($task->priority===$priority)>{{ ucfirst($priority) }}</option>@endforeach</select></div>
@@ -227,7 +303,7 @@
   <h2>Customer support cases</h2><p class="crm-sub">Parent and student issues with priority, SLA deadline, ownership and resolution history.</p>
   <div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Case</th><th>Contact</th><th>Category</th><th>Priority</th><th>Due</th><th>Owner</th><th>Status / update</th></tr></thead><tbody>
   @forelse($cases as $case)
-    <tr><td><strong>#{{ $case->id }} · {{ $case->subject }}</strong><div class="crm-sub">{{ $case->description }}</div></td><td>@if($case->lead)<a href="{{ route('tagore.admissions.show',$case->lead_id) }}">{{ $case->lead->lead_no }}</a>@endif{{ $case->student->name ?? '' }}{{ $case->parent_user_id ? ' · '.($case->parent->name ?? '') : '' }}</td><td>{{ ucfirst(str_replace('_',' ',$case->category)) }}</td><td><span class="crm-pill {{ in_array($case->priority,['urgent','high'],true) ? 'negotiation' : '' }}">{{ ucfirst($case->priority) }}</span></td><td>{{ optional($case->due_at)->format('d M Y, H:i') ?: '—' }} @if($case->due_at && $case->due_at->isPast() && in_array($case->status,['open','in_progress','waiting_on_parent'],true))<div class="crm-sub" style="color:#a43e4a">SLA overdue</div>@endif</td><td>{{ $case->assignee->name ?? 'Unassigned' }}</td>
+    <tr><td><strong>#{{ $case->id }} · {{ $case->subject }}</strong><div class="crm-sub">{{ $case->description }}</div></td><td>@if($case->lead)<a href="{{ route('tagore.admissions.show',$case->lead_id) }}">{{ $case->lead->lead_no }}</a>@endif{{ $case->student->name ?? '' }}{{ $case->parent_user_id ? ' - '.($case->parent->name ?? '') : '' }}{{ $case->contact->full_name ?? $case->account->name ?? '' }}</td><td>{{ ucfirst(str_replace('_',' ',$case->category)) }}</td><td><span class="crm-pill {{ in_array($case->priority,['urgent','high'],true) ? 'negotiation' : '' }}">{{ ucfirst($case->priority) }}</span></td><td>{{ optional($case->due_at)->format('d M Y, H:i') ?: '—' }} @if($case->due_at && $case->due_at->isPast() && in_array($case->status,['open','in_progress','waiting_on_parent'],true))<div class="crm-sub" style="color:#a43e4a">SLA overdue</div>@endif</td><td>{{ $case->assignee->name ?? 'Unassigned' }}</td>
       <td class="crm-row-actions">@if($canManageCases)<details><summary>{{ ucfirst(str_replace('_',' ',$case->status)) }} · Update</summary><form class="crm-form" method="POST" action="{{ route('tagore.crm.cases.update',$case->id) }}">@csrf @method('PATCH')
         <div><label>Status</label><select name="status">@foreach(['open','in_progress','waiting_on_parent','resolved','closed'] as $status)<option value="{{ $status }}" @selected($case->status===$status)>{{ ucfirst(str_replace('_',' ',$status)) }}</option>@endforeach</select></div>
         <div><label>Priority</label><select name="priority">@foreach(['low','normal','high','urgent'] as $priority)<option value="{{ $priority }}" @selected($case->priority===$priority)>{{ ucfirst($priority) }}</option>@endforeach</select></div>

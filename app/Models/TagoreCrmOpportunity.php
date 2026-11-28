@@ -12,7 +12,7 @@ class TagoreCrmOpportunity extends Model
     protected $table = 'tagore_crm_opportunities';
 
     protected $fillable = [
-        'institution_id', 'lead_id', 'assigned_to', 'created_by', 'name',
+        'institution_id', 'lead_id', 'account_id', 'contact_id', 'assigned_to', 'created_by', 'name',
         'opportunity_type', 'stage', 'status', 'amount', 'probability',
         'expected_close_date', 'source', 'campaign', 'lost_reason',
         'converted_student_id', 'notes',
@@ -27,5 +27,15 @@ class TagoreCrmOpportunity extends Model
     public function lead()
     {
         return $this->belongsTo(TagoreAdmissionLead::class, 'lead_id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(TagoreCrmAccount::class, 'account_id');
+    }
+
+    public function contact()
+    {
+        return $this->belongsTo(TagoreCrmContact::class, 'contact_id');
     }
 }

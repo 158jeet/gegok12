@@ -12,9 +12,9 @@ class TagoreCrmTask extends Model
     protected $table = 'tagore_crm_tasks';
 
     protected $fillable = [
-        'institution_id', 'lead_id', 'opportunity_id', 'call_id', 'assigned_to', 'created_by',
-        'title', 'task_type', 'priority', 'status', 'due_at', 'completed_at',
-        'outcome', 'description',
+        'institution_id', 'lead_id', 'opportunity_id', 'account_id', 'contact_id',
+        'call_id', 'assigned_to', 'created_by', 'title', 'task_type', 'priority',
+        'status', 'due_at', 'completed_at', 'outcome', 'description',
     ];
 
     protected $casts = [
@@ -30,6 +30,16 @@ class TagoreCrmTask extends Model
     public function opportunity()
     {
         return $this->belongsTo(TagoreCrmOpportunity::class, 'opportunity_id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(TagoreCrmAccount::class, 'account_id');
+    }
+
+    public function contact()
+    {
+        return $this->belongsTo(TagoreCrmContact::class, 'contact_id');
     }
 
     public function call()

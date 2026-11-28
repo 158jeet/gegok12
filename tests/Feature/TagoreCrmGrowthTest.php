@@ -107,6 +107,91 @@ class TagoreCrmGrowthTest extends TestCase
             ->assertOk()->assertSee($campaignCode)->assertSee('300.0%')->assertSee('2,000');
     }
 
+    public function test_crm_accounts_contacts_and_opportunities_are_linked_with_institution_boundaries(): void
+    {
+        $owner = $this->owner();
+        $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->orderBy('id')->value('id');
+        $leadId = $this->lead($institutionId, 'CRM Account Contact Lead');
+        $leadMobile = DB::table('tagore_admission_leads')->where('id', $leadId)->value('mobile');
+
+        $this->actingAs($owner)->post(route('tagore.crm.accounts.store'), [
+            'institution_id' => $institutionId,
+            'account_type' => 'family',
+            'name' => 'QA CRM Family Account',
+            'phone' => '+919876543210',
+            'email' => 'family.crm@example.test',
+            'city' => 'Gudha Gorji',
+            'state' => 'Rajasthan',
+            'owner_user_id' => $owner->id,
+        ])->assertRedirect()->assertSessionHas('success');
+        $accountId = (int) DB::table('tagore_crm_accounts')->where('name', 'QA CRM Family Account')->value('id');
+        $this->assertGreaterThan(0, $accountId);        $this->actingAs($owner)->patch(route('tagore.crm.accounts.update', $accountId), [
+            'account_type' => 'family', 'name' => 'QA CRM Family Account Updated',
+            'phone' => '+919876543210', 'email' => 'family.crm@example.test',
+            'website' => null, 'industry' => 'Education', 'city' => 'Gudha Gorji',
+            'state' => 'Rajasthan', 'owner_user_id' => $owner->id,
+            'status' => 'active', 'notes' => 'Primary family account.',
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->actingAs($owner)->post(route('tagore.crm.contacts.store'), [
+            'institution_id' => $institutionId,
+            'account_id' => $accountId,
+            'lead_id' => $leadId,
+            'first_name' => 'CRM Parent',
+            'last_name' => 'Acceptance',
+            'contact_type' => 'parent',
+            'preferred_channel' => 'whatsapp',
+            'contact_consent' => 1,
+            'owner_user_id' => $owner->id,
+        ])->assertRedirect()->assertSessionHas('success');
+        $contactId = (int) DB::table('tagore_crm_contacts')->where('full_name', 'CRM Parent Acceptance')->value('id');
+        $this->assertGreaterThan(0, $contactId);        $this->actingAs($owner)->patch(route('tagore.crm.contacts.update', $contactId), [
+            'account_id' => $accountId, 'lead_id' => $leadId,
+            'first_name' => 'CRM Parent Updated', 'last_name' => 'Acceptance',
+            'title' => 'Parent', 'department' => 'Family', 'contact_type' => 'parent',
+            'email' => null, 'phone' => $leadMobile, 'alternate_phone' => null,
+            'preferred_channel' => 'whatsapp', 'contact_consent' => 1,
+            'owner_user_id' => $owner->id, 'status' => 'active', 'notes' => 'Updated contact record.',
+        ])->assertRedirect()->assertSessionHas('success');
+        $this->assertDatabaseHas('tagore_crm_contacts', [
+            'id' => $contactId, 'account_id' => $accountId, 'lead_id' => $leadId,
+            'phone' => $leadMobile, 'contact_consent' => 1,
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.crm.opportunities.store'), [
+            'institution_id' => $institutionId,
+            'lead_id' => $leadId,
+            'account_id' => $accountId,
+            'contact_id' => $contactId,
+            'name' => 'QA Family Coaching Opportunity',
+            'opportunity_type' => 'coaching',
+            'stage' => 'proposal',
+            'amount' => 45000,
+            'probability' => 75,
+        ])->assertRedirect()->assertSessionHas('success');
+        $this->assertDatabaseHas('tagore_crm_opportunities', [
+            'name' => 'QA Family Coaching Opportunity', 'account_id' => $accountId, 'contact_id' => $contactId,
+        ]);
+
+        $schoolId = (int) DB::table('schools')->where('slug', 'tagore-acceptance-unlinked-school')->value('id');
+        $groupId = (int) DB::table('tagore_groups')->where('code', 'TAGORE')->value('id');
+        $otherInstitutionId = (int) (DB::table('tagore_institutions')->where('school_id', $schoolId)->value('id') ?: DB::table('tagore_institutions')->insertGetId([
+            'tagore_group_id' => $groupId, 'school_id' => $schoolId,
+            'code' => 'QA-CRM-ACCOUNT-BOUNDARY', 'display_name' => 'QA CRM Account Boundary',
+            'type' => 'school', 'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
+        ]));
+        $otherAccountId = DB::table('tagore_crm_accounts')->insertGetId([
+            'institution_id' => $otherInstitutionId, 'account_type' => 'corporate',
+            'name' => 'Other Institution Account', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->actingAs($owner)->post(route('tagore.crm.contacts.store'), [
+            'institution_id' => $institutionId,
+            'account_id' => $otherAccountId,
+            'first_name' => 'Cross Scope',
+            'contact_type' => 'prospect',
+            'preferred_channel' => 'call',
+        ])->assertStatus(422);
+    }
     public function test_crm_tasks_and_support_cases_are_assigned_tracked_and_audited(): void
     {
         $owner = $this->owner();

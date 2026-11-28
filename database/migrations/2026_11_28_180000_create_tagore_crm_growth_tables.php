@@ -7,10 +7,69 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        Schema::create('tagore_crm_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
+            $table->foreignId('parent_account_id')->nullable()->constrained('tagore_crm_accounts')->nullOnDelete();
+            $table->string('account_type', 32)->default('family');
+            $table->string('name', 180);
+            $table->string('website', 500)->nullable();
+            $table->string('industry', 100)->nullable();
+            $table->string('phone', 40)->nullable();
+            $table->string('email', 180)->nullable();
+            $table->string('address_line', 255)->nullable();
+            $table->string('city', 100)->nullable();
+            $table->string('state', 100)->nullable();
+            $table->string('country', 100)->default('India');
+            $table->unsignedInteger('owner_user_id')->nullable();
+            $table->foreign('owner_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->unsignedInteger('created_by')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->string('status', 20)->default('active');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->index(['institution_id', 'account_type', 'status'], 'tagore_crm_account_type_idx');
+            $table->index(['institution_id', 'owner_user_id'], 'tagore_crm_account_owner_idx');
+        });
+
+        Schema::create('tagore_crm_contacts', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('tagore_crm_accounts')->nullOnDelete();
+            $table->foreignId('lead_id')->nullable()->constrained('tagore_admission_leads')->nullOnDelete();
+            $table->unsignedInteger('linked_user_id')->nullable();
+            $table->foreign('linked_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->string('first_name', 100);
+            $table->string('last_name', 100)->nullable();
+            $table->string('full_name', 180);
+            $table->string('title', 100)->nullable();
+            $table->string('department', 100)->nullable();
+            $table->string('contact_type', 32)->default('prospect');
+            $table->string('email', 180)->nullable();
+            $table->string('phone', 40)->nullable();
+            $table->string('alternate_phone', 40)->nullable();
+            $table->string('preferred_channel', 24)->default('call');
+            $table->boolean('contact_consent')->default(false);
+            $table->unsignedInteger('owner_user_id')->nullable();
+            $table->foreign('owner_user_id')->references('id')->on('users')->nullOnDelete();
+            $table->unsignedInteger('created_by')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            $table->string('status', 20)->default('active');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->index(['institution_id', 'contact_type', 'status'], 'tagore_crm_contact_type_idx');
+            $table->index(['institution_id', 'owner_user_id'], 'tagore_crm_contact_owner_idx');
+            $table->index(['phone', 'email'], 'tagore_crm_contact_reach_idx');
+        });
+
         Schema::create('tagore_crm_opportunities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained('tagore_admission_leads')->nullOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('tagore_crm_accounts')->nullOnDelete();
+            $table->foreignId('contact_id')->nullable()->constrained('tagore_crm_contacts')->nullOnDelete();
             $table->unsignedInteger('assigned_to')->nullable();
             $table->foreign('assigned_to')->references('id')->on('users')->nullOnDelete();
             $table->unsignedInteger('created_by')->nullable();
@@ -34,6 +93,7 @@ return new class extends Migration {
             $table->index(['institution_id', 'assigned_to', 'status'], 'tagore_crm_opp_owner_idx');
             $table->index(['institution_id', 'expected_close_date'], 'tagore_crm_opp_close_idx');
             $table->index(['lead_id', 'status'], 'tagore_crm_opp_lead_idx');
+            $table->index(['account_id', 'contact_id'], 'tagore_crm_opp_account_contact_idx');
         });
 
         Schema::create('tagore_crm_campaigns', function (Blueprint $table) {
@@ -67,6 +127,8 @@ return new class extends Migration {
             $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained('tagore_admission_leads')->nullOnDelete();
             $table->foreignId('opportunity_id')->nullable()->constrained('tagore_crm_opportunities')->nullOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('tagore_crm_accounts')->nullOnDelete();
+            $table->foreignId('contact_id')->nullable()->constrained('tagore_crm_contacts')->nullOnDelete();
             $table->foreignId('call_id')->nullable()->unique()->constrained('tagore_crm_calls')->nullOnDelete();
             $table->unsignedInteger('assigned_to')->nullable();
             $table->foreign('assigned_to')->references('id')->on('users')->nullOnDelete();
@@ -90,6 +152,8 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('institution_id')->constrained('tagore_institutions')->restrictOnDelete();
             $table->foreignId('lead_id')->nullable()->constrained('tagore_admission_leads')->nullOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('tagore_crm_accounts')->nullOnDelete();
+            $table->foreignId('contact_id')->nullable()->constrained('tagore_crm_contacts')->nullOnDelete();
             $table->unsignedInteger('student_id')->nullable();
             $table->foreign('student_id')->references('id')->on('users')->nullOnDelete();
             $table->unsignedInteger('parent_user_id')->nullable();
@@ -137,5 +201,7 @@ return new class extends Migration {
         Schema::dropIfExists('tagore_crm_tasks');
         Schema::dropIfExists('tagore_crm_campaigns');
         Schema::dropIfExists('tagore_crm_opportunities');
+        Schema::dropIfExists('tagore_crm_contacts');
+        Schema::dropIfExists('tagore_crm_accounts');
     }
 };
