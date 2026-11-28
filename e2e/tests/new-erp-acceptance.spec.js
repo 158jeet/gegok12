@@ -179,7 +179,7 @@ test.describe('New ERP acceptance slices', () => {
     }
 
     await page.getByRole('link', { name: 'Cloud calling' }).click();
-    await expect(page).toHaveURL(/\\/tagore\\/crm\\/telephony/);
+    await expect(page).toHaveURL(/\/tagore\/crm\/telephony/);
     await expect(page.getByRole('heading', { name: 'CRM · Cloud calling' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Connect Exotel' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Assign calling agents' })).toBeVisible();
