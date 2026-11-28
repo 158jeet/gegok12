@@ -25,7 +25,7 @@ class BiometricDeviceController extends Controller
             ? DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')->pluck('id')->map(fn ($id) => (int) $id)->all()
             : DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
                 ->where('ur.user_id', $userId)->where('ur.status', 'active')
-                ->whereIn('r.code', ['PRINCIPAL', 'HR'])->whereNotNull('ur.institution_id')
+                ->whereIn('r.code', ['PRINCIPAL', 'HR'])->whereNotNull('ur.institution_id')->whereIn('ur.institution_id', DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')->pluck('id'))
                 ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
                 ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
                 ->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();

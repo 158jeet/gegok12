@@ -207,3 +207,8 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Integrated a multi-site Realtime T304F device registry, institution-scoped employee-ID mapping, evidence-preserving raw-punch schema and Owner/Central Accounts group-wide access.
 - HR and Principal access remains institution-scoped with date-effective role assignments. Central Accounts receives group-wide payroll scope; Owner retains full group-wide authority.
 - Device sync is intentionally disabled and no endpoint or credentials are assumed. Live polling, punch ingestion, reconciliation and payroll posting remain blocked until the exact model/firmware vendor contract is verified and a read-only synthetic acceptance passes.
+## Operational assurance foundation - 2026-11-28
+
+- Integrated versioned audit templates, idempotent instance generation, institution/role-scoped submission, template-bound control keys and evidence classes, independent review, response verification state and event history.
+- Audit records, responses, evidence and alert references now use restrictive foreign-key deletion semantics to protect historical evidence.
+- This is a service/data foundation only. Owner Command Centre screens, template administration, evidence upload UI, alert workflows and full hostel operations remain implementation work; no complete module is claimed.

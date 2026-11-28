@@ -241,3 +241,7 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Integrated multi-site T304F registration and institution-scoped employee mapping. Raw punch evidence has restrictive relationships and dedupe keys; no biometric templates are copied into ERP.
 - Central Accounts is group-wide for payroll and device visibility; HR/Principal remain institution-scoped and role dates are enforced.
 - Sync remains disabled pending the exact vendor API/SDK, firmware, auth, network and event semantics. No live device or payroll data has been imported.
+## 2026-11-28 - Operational assurance foundation
+
+- Integrated versioned audit templates, idempotent audit instances, role-scoped submission, immutable template control snapshots, evidence-class validation, independent verification and append-only instance events.
+- Historical evidence is protected from cascade deletion. UI, template administration, evidence upload, alert management and hostel workflows remain open implementation tasks.
