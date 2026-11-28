@@ -218,6 +218,10 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/examinations/{examId}/publish', [ExaminationController::class, 'publish'])->whereNumber('examId')->name('tagore.examinations.publish');
     Route::post('/examinations/{examId}/withdraw', [ExaminationController::class, 'withdraw'])->whereNumber('examId')->name('tagore.examinations.withdraw');
     Route::get('/learning', [LearningController::class, 'index'])->name('tagore.learning.index');
+    Route::get('/website', [\App\Http\Controllers\Tagore\WebsiteController::class, 'index'])->name('tagore.website.index');
+    Route::post('/website/site', [\App\Http\Controllers\Tagore\WebsiteController::class, 'storeSite'])->name('tagore.website.site.store');
+    Route::post('/website/pages', [\App\Http\Controllers\Tagore\WebsiteController::class, 'storePage'])->name('tagore.website.pages.store');
+    Route::patch('/website/pages/{pageId}/publish', [\App\Http\Controllers\Tagore\WebsiteController::class, 'publish'])->whereNumber('pageId')->name('tagore.website.pages.publish');
     Route::get('/platform', [PlatformController::class, 'index'])->name('tagore.platform.index');
     Route::get('/platform/cctv/status', [PlatformController::class, 'cctvStatus'])->middleware('throttle:30,1')->name('tagore.platform.cctv.status');
     Route::get('/documents', [DocumentController::class, 'index'])->name('tagore.documents.index');
@@ -284,3 +288,6 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::delete('/operations/{module}/{id}', [\App\Http\Controllers\Tagore\OperationsController::class, 'destroy'])->whereIn('module', ['payroll','inventory','expense','transport','hostel','alumni','visitor','gatepass','survey','notification','document','course','content','report','social','website','store','fee-plan','integration','automation','creative'])->whereNumber('id')->name('tagore.operations.destroy');
     Route::get('/api/dashboard', [DashboardController::class, 'api'])->name('tagore.dashboard.api');
 });
+
+Route::get('/website/preview/{pageId}', [\App\Http\Controllers\Tagore\WebsiteController::class, 'preview'])->whereNumber('pageId')->middleware(['signed', 'throttle:60,1'])->name('tagore.website.preview');
+Route::get('/website/{siteKey}/{slug?}', [\App\Http\Controllers\Tagore\WebsiteController::class, 'publicPage'])->where(['siteKey' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+'])->name('tagore.website.public');
