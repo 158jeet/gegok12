@@ -9,7 +9,9 @@
 .assign-form{display:grid;gap:12px}
 .assign-form label{display:grid;gap:6px;color:var(--tg-muted);font-size:12px}
 .assign-form select,.assign-form input{width:100%;min-width:0}
-.assign-table{min-width:680px}
+.assign-table{min-width:680px;width:100%}
+.assign-table-wrap{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.assign-table-wrap table{margin-bottom:0}
 .assign-note{padding:13px 15px;border:1px solid var(--tg-line);border-radius:12px;background:var(--tg-card);color:var(--tg-muted)}
 .cashier-muted{font-size:11px;color:var(--tg-muted)}
 @media(max-width:720px){.assign-grid{grid-template-columns:1fr}}
@@ -30,7 +32,6 @@
   <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">⌂</span>Cashier desk</a>
   <a class="tg-side-link active" href="{{ route('tagore.cashier.fees') }}"><span class="tg-side-icon">₹</span>Fee assignments</a>
   <a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}"><span class="tg-side-icon">▤</span>Accounts & collections</a>
-  <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
   <div class="tg-side-label">Assigned institutions</div>
   @foreach($institutions as $institution)<span class="tg-side-link" style="cursor:default"><span class="tg-side-icon">▦</span>{{ $institution->display_name }}</span>@endforeach
 </aside>
@@ -56,7 +57,7 @@
   <section class="tg-section">
     <div class="tg-section-head"><div><h2>Assigned fee plans</h2><p>Generate only missing student demands. Existing demands are skipped to prevent duplicate billing.</p></div><span class="tg-status">{{ $assignments->count() }} active assignments</span></div>
     <div class="tg-card" style="padding:14px">
-      <div class="tg-table-wrap"><table class="table assign-table"><thead><tr><th>Institution / class</th><th>Fee structure</th><th>Academic year</th><th>Generate demands</th></tr></thead><tbody>
+      <div class="assign-table-wrap"><table class="table assign-table"><thead><tr><th>Institution / class</th><th>Fee structure</th><th>Academic year</th><th>Generate demands</th></tr></thead><tbody>
       @forelse($assignments as $assignment)
         <tr><td><strong>{{ $assignment->institution }}</strong><div class="cashier-muted">{{ $assignment->standard }} · {{ $assignment->section }}</div></td><td>{{ $assignment->fee_structure }}</td><td>{{ $assignment->academic_year ?: '—' }}</td><td>@php($preview = session('cashier_bulk_preview_'.$assignment->id)) @if(is_array($preview) && ($preview['expires_at'] ?? 0) >= now()->timestamp)<div class="cashier-muted">{{ $preview['eligible_count'] }} eligible · {{ $preview['new_count'] }} new · {{ $preview['existing_count'] }} already billed</div>@if($preview['new_count'] > 0)<form method="POST" action="{{ route('tagore.cashier.fees.generate',$assignment->id) }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px">@csrf<input type="date" name="due_date" value="{{ now()->addDays(30)->toDateString() }}" min="{{ today()->toDateString() }}" required aria-label="Fee due date"><button class="tg-btn primary" type="submit">Confirm {{ $preview['new_count'] }} demands</button></form>@else<span class="cashier-muted">No new demands to create</span>@endif @else<form method="POST" action="{{ route('tagore.cashier.fees.preview',$assignment->id) }}">@csrf<button class="tg-btn" type="submit">Preview demand creation</button></form>@endif</td></tr>
       @empty
