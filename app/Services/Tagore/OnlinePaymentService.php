@@ -221,15 +221,19 @@ class OnlinePaymentService
         }
 
         $paymentIds = DB::transaction(function () use ($event, $eventId) {
-            if (DB::table('tagore_payment_events')->where('event_id', $eventId)->exists()) {
+            if (DB::table('tagore_payment_events')->where('gateway', 'razorpay')->where('event_id', $eventId)->exists()) {
                 return [];
             }
 
             DB::table('tagore_payment_events')->insert([
+                'gateway' => 'razorpay',
                 'event_id' => $eventId,
                 'event_type' => (string) ($event['event'] ?? 'unknown'),
                 'payload_json' => json_encode($event, JSON_UNESCAPED_SLASHES),
+                'received_at' => now(),
+                'processing_status' => 'received',
                 'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             if (($event['event'] ?? '') !== 'payment.captured') {

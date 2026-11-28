@@ -76,6 +76,7 @@ class CrmTelephonyController extends Controller
         [$roles, $institutionIds] = $this->authorizeStaff($request);
         $isOwner = $roles->contains('OWNER');
         $canManageAgents = $roles->intersect(['OWNER', 'CRM_MANAGER'])->isNotEmpty();
+        $canListenRecordings = $roles->intersect(['OWNER', 'CRM_MANAGER'])->isNotEmpty();
 
         $accounts = TagoreCrmTelephonyAccount::whereIn('institution_id', $institutionIds)
             ->orderBy('institution_id')->orderByDesc('id')->get();
@@ -98,7 +99,7 @@ class CrmTelephonyController extends Controller
             ->whereIn('r.code', self::STAFF_ROLES)->whereNull('u.deleted_at')
             ->select('u.id', 'u.name')->distinct()->orderBy('u.name')->get();
 
-        return view('tagore.crm.telephony', compact('accounts', 'calls', 'agents', 'institutions', 'staff', 'isOwner', 'canManageAgents'));
+        return view('tagore.crm.telephony', compact('accounts', 'calls', 'agents', 'institutions', 'staff', 'isOwner', 'canManageAgents', 'canListenRecordings'));
     }
 
     public function saveAccount(Request $request)
@@ -165,7 +166,7 @@ class CrmTelephonyController extends Controller
             ['telephony_account_id' => $account->id, 'user_id' => (int) $data['user_id']],
             [
                 'institution_id' => $account->institution_id,
-                'agent_number' => $data['agent_number'],
+                'agent_number' => $normalizedAgentNumber,
                 'is_active' => (bool) ($data['is_active'] ?? true),
                 'created_by' => $request->user()->id,
             ],
@@ -251,10 +252,8 @@ class CrmTelephonyController extends Controller
             }
         }
 
-        $providerPayload = $request->except(['token']);
-        if (!$account->record_calls) {
-            unset($providerPayload['RecordingUrl'], $providerPayload['recording_url']);
-        }
+        $providerPayload = $request->only(['CallSid', 'Sid', 'Status', 'CallStatus', 'ConversationDuration', 'Duration', 'From', 'To', 'Direction']);
+        if ($account->record_calls && $recordingUrl) $providerPayload['RecordingUrl'] = $recordingUrl;
 
         $call = TagoreCrmCall::updateOrCreate(
             ['telephony_account_id' => $account->id, 'provider_call_id' => $providerId],

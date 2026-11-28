@@ -94,7 +94,7 @@
                     <td>{{ $call->direction === 'inbound' ? $call->from_number : $call->to_number }}</td>
                     <td>{{ ucfirst(str_replace('-',' ',$call->status)) }}</td>
                     <td>{{ $call->duration_seconds }} sec</td>
-                    <td>@if($call->recording_url)<a href="{{ $call->recording_url }}" target="_blank" rel="noopener noreferrer">Listen</a>@else — @endif</td>
+                    <td>@if($call->recording_url && $canListenRecordings)<a href="{{ $call->recording_url }}" target="_blank" rel="noopener noreferrer">Listen</a>@elseif($call->recording_url)Restricted @else — @endif</td>
                     <td>
                         <form method="post" action="{{ route('tagore.crm.telephony.disposition',$call) }}" class="d-flex gap-1 flex-wrap">@csrf
                             <select name="disposition" class="form-select form-select-sm" required><option value="">Disposition</option>@foreach(['connected','callback','interested','not_interested','wrong_number','admission_confirmed'] as $value)<option value="{{ $value }}" @selected($call->disposition===$value)>{{ ucfirst(str_replace('_',' ',$value)) }}</option>@endforeach</select>
