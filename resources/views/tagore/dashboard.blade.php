@@ -46,7 +46,7 @@
     <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">₹</span>Cashier desk</a>
     <a class="tg-side-link" href="{{ route('tagore.cashier.fees') }}"><span class="tg-side-icon">▤</span>Fee assignments</a>
   @endif
-  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
     <a class="tg-side-link" href="{{ route('tagore.crm.index') }}"><span class="tg-side-icon">▦</span>CRM & growth</a>
   @endif
@@ -89,7 +89,7 @@
       @if($roles->contains('CASHIER'))
         <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Open cashier desk</a>
       @endif
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
@@ -199,7 +199,7 @@
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.examinations.index') }}"><div class="tg-module-icon">▤</div><b>Examinations & results</b><span>Schedules, marks entry, moderation and published results</span></a>
       @endif
-      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
+      @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())
       <a class="tg-module" href="{{ route('tagore.admissions.index') }}"><div class="tg-module-icon">↗</div><b>Admissions CRM</b><span>{{ $erp['admission_leads'] }} leads · {{ $erp['pending_leads'] }} need follow-up</span></a>
       @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
@@ -275,7 +275,7 @@
 <a href="{{ url('/student/dashboard') }}"><b>▦</b>Portal</a>
 @endif
 @if($roles->contains('FEE_EDITOR'))<a href="{{ route('tagore.fees.editor') }}"><b>₹</b>Fee editor</a>@endif
-@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
+@if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])->isNotEmpty())<a href="{{ route('tagore.admissions.index') }}"><b>↗</b>Admissions</a>@endif
 @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','TEACHER','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.tasks.index') }}"><b>✓</b>Tasks</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR'])->isNotEmpty())<a href="{{ route('tagore.communication.index') }}"><b>✉</b>Messages</a>@endif
 @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())<a href="{{ route('tagore.reports.index') }}"><b>▥</b>Reports</a>@endif
