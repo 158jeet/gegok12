@@ -235,6 +235,25 @@ class TagoreManagerDashboardTest extends TestCase
         $response->assertOk()->assertSee('Go to work')->assertSee('Fee outstanding')->assertSee('Admissions pipeline');
     }
 
+    public function test_group_control_centre_is_visible_only_to_owner(): void
+    {
+        $owner = User::query()->where('email', 'owner@tagore-demo.local')->firstOrFail();
+
+        $this->actingAs($owner)->get(route('tagore.dashboard'))
+            ->assertOk()
+            ->assertSee('Group control centre')
+            ->assertSee('Institution portfolio')
+            ->assertSee('Group fee collections')
+            ->assertSee('Platform runtime')
+            ->assertSee('Queue driver');
+
+        $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
+        $this->actingAs($principal)->get(route('tagore.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Group control centre')
+            ->assertDontSee('Platform runtime');
+    }
+
     public function test_mobile_dashboard_api_returns_scoped_erp_payload(): void
     {
         $owner = User::query()->where('email','owner@tagore-demo.local')->firstOrFail();
