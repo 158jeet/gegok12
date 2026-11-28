@@ -106,6 +106,7 @@
       @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
         <a class="tg-btn" href="{{ route('tagore.fees.manage') }}">⚙ Manage fee structures</a>
       @endif
+      @if($roles->contains('CASHIER'))<a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Open cashier desk ↗</a>@endif
       <a class="tg-btn" href="#transactions">View transactions ↓</a>
     </div>
   </section>
@@ -152,7 +153,7 @@
                 <td>
                   <form class="tg-accounts-form" method="POST" action="{{ route('tagore.fees.payment', ['studentId' => $student->student_id]) }}">@csrf
                     <input name="amount" type="number" min="0.01" max="{{ $student->outstanding }}" step="0.01" placeholder="Amount" aria-label="Collection amount" required>
-                    <select name="payment_mode" aria-label="Payment mode" required><option value="cash">Cash</option><option value="cheque">Cheque</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select>
+                    <select name="payment_mode" aria-label="Payment mode" required><option value="cash">Cash</option><option value="upi">UPI / QR</option><option value="card">Card / POS</option><option value="cheque">Cheque</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select>
                     <input class="wide" name="reference_number" placeholder="Reference / receipt note (optional)" aria-label="Payment reference">
                     <button class="tg-btn primary wide" type="submit">Record payment</button>
                   </form>

@@ -29,6 +29,7 @@ use App\Http\Controllers\Tagore\ExaminationController;
 use App\Http\Controllers\Tagore\PlatformController;
 use App\Http\Controllers\Tagore\DocumentController;
 use App\Http\Controllers\Tagore\FeeWalletController;
+use App\Http\Controllers\Tagore\CashierController;
 use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
@@ -110,6 +111,12 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/child/{studentId}/fees', [FeeController::class, 'student'])->whereNumber('studentId')->name('tagore.fees.student');
     Route::post('/child/{studentId}/fees/pay', [OnlinePaymentController::class, 'initiate'])->whereNumber('studentId')->name('tagore.payments.initiate');
     Route::post('/payments/confirm', [OnlinePaymentController::class, 'confirm'])->name('tagore.payments.confirm');
+    Route::get('/cashier', [CashierController::class, 'index'])->name('tagore.cashier.index');
+    Route::get('/cashier/export', [CashierController::class, 'export'])->name('tagore.cashier.export');
+    Route::post('/cashier/students/{studentId}/reminder', [CashierController::class, 'sendReminder'])->whereNumber('studentId')->middleware('throttle:5,1')->name('tagore.cashier.reminder');
+    Route::get('/cashier/fees', [FeeManagementController::class, 'cashierAssignments'])->name('tagore.cashier.fees');
+    Route::post('/cashier/fees/assignments', [FeeManagementController::class, 'storeAssignment'])->name('tagore.cashier.fees.assign');
+    Route::post('/cashier/fees/assignments/{assignmentId}/generate', [FeeManagementController::class, 'generateCashierBulk'])->whereNumber('assignmentId')->name('tagore.cashier.fees.generate');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
     Route::post('/accounts/fees/payment/{paymentId}/reconcile', [FeeController::class, 'reconcile'])->whereNumber('paymentId')->name('tagore.fees.reconcile');

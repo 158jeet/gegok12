@@ -165,7 +165,7 @@ class FeeController extends Controller
 
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_mode' => ['required', 'in:cash,cheque,bank_transfer,other'],
+            'payment_mode' => ['required', 'in:cash,upi,card,cheque,bank_transfer,other'],
             'reference_number' => ['nullable', 'string', 'max:160'],
         ]);
         $paymentId = $feeService->recordOfflinePayment($studentId, $student->institution_id, (float) $data['amount'], null, $userId, $data['reference_number'] ?? null, [], $data['payment_mode']);

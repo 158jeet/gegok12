@@ -37,6 +37,10 @@
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
     <a class="tg-side-link" href="{{ route('tagore.staff.leave') }}"><span class="tg-side-icon">◷</span>People & leave</a>
   @endif
+  @if($roles->contains('CASHIER'))
+    <a class="tg-side-link" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">₹</span>Cashier desk</a>
+    <a class="tg-side-link" href="{{ route('tagore.cashier.fees') }}"><span class="tg-side-icon">▤</span>Fee assignments</a>
+  @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
   @endif
@@ -76,6 +80,9 @@
     <h1>{{ $greeting }}, {{ auth()->user()->name ?? 'there' }}.</h1>
     <p>{{ $roleLabel ?: 'Tagore ERP user' }} · @if($roles->contains('PARENT'))Your family, fees and school updates in one place.@elseif($roles->contains('STUDENT'))Your learning, attendance and school updates in one place.@else Your school operations, people, academics and finance in one workspace.@endif</p>
     <div class="tg-hero-actions">
+      @if($roles->contains('CASHIER'))
+        <a class="tg-btn primary" href="{{ route('tagore.cashier.index') }}">Open cashier desk</a>
+      @endif
       @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
         <a class="tg-btn primary" href="{{ route('tagore.admissions.create') }}">＋ New admission</a>
       @endif
