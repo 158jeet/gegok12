@@ -270,3 +270,38 @@ The discovery and architecture-contract work already recorded in this programme 
 ## Website CMS scope addendum
 
 A dedicated implementation track J, Website CMS & Public Site Platform, is defined in `website-cms-product-scope-and-acceptance.md`. The existing basic CMS page form and generic website records are foundations only, not a completed website builder. All institute websites must be independently editable by authorised institute administrators with strict content, media, preview, publish and hostname isolation.
+
+
+## Superadmin / Platform Owner benchmark addendum — 28 November 2026
+
+Reference reviewed: Multi School ERP v3.8 Super Admin demo entry and its public platform documentation. The protected dashboard itself redirects to login, so this addendum uses only publicly visible demo descriptions and documentation; it does not claim a visual inspection of authenticated screens.
+
+### Reference capabilities worth adopting
+- A clear platform-owner layer above institution-level administration, with a single cross-school overview.
+- Institution portfolio and usage reporting, with drill-down into each institution.
+- Consolidated fee collection and financial reporting.
+- Login/security audit, school engagement/usage signals, attendance trends and communication-cost visibility.
+- Operational control surfaces for backups, updates, integrations, platform settings and server health.
+- Dashboard KPI cards with trends and role-appropriate quick actions.
+- A clean separation between global platform controls and institution-local administration.
+
+### Tagore adaptation
+- Keep the existing Owner role as the only global platform authority; do not introduce a second Superadmin/Branch Admin login in this release. Principals and other institute staff remain scoped to their assigned active institutions.
+- The integrated Owner dashboard now adds a group control centre with active-institution portfolio cards, student/staff counts, pending admissions leads, active tasks, recorded fee collections, outstanding fees and a derived collection rate.
+- The same view exposes the current database connection plus the configured environment, queue driver and cache store. These are configuration/runtime indicators, not a substitute for real infrastructure monitoring.
+- The existing Administration, Reports, Platform Services, Operations and Performance workspaces remain the drill-down destinations.
+
+### Remaining Owner-console gaps (release work, not completion claims)
+1. Actual server/container health, worker and scheduler heartbeat, disk/storage capacity and TLS expiry monitoring.
+2. Backup freshness, off-site copy verification, restore rehearsal history and retention status surfaced in the console.
+3. Login/session security audit and institution engagement/usage reports.
+4. Attendance trend and communication delivery/cost analytics with institution filters.
+5. Fee collection trend and reconciliation reporting by institution, academic year and payment channel.
+6. Institution-level module enablement, branding/domain status and integration health.
+7. Owner audit history for high-risk platform changes and safe, reasoned rollback/restore workflows.
+
+### Acceptance
+- Owner can see all active institutions and consolidated group figures; a Principal sees only assigned institutions and never sees the Owner command centre.
+- Institution cards reconcile to the corresponding institution-scoped reports.
+- Runtime configuration is labelled accurately; no configured driver is represented as a verified healthy service.
+- Platform settings, backups and server-health controls remain unavailable to non-Owner roles.
