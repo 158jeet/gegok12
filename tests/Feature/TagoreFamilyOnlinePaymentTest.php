@@ -255,6 +255,18 @@ class TagoreFamilyOnlinePaymentTest extends TestCase
             'paid_amount' => '40.00',
             'outstanding_amount' => '60.00',
         ]);
+        $this->actingAs($this->owner)->post(route('tagore.fees.refund', $paymentIds[0]), [
+            'refund_reference' => 'rfnd_family_acceptance_1',
+            'refund_date' => now()->toDateString(),
+            'notes' => 'Synthetic acceptance: the complete family gateway payment was refunded.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_family_payment_groups', [
+            'id' => $order['group_id'],
+            'status' => 'refunded',
+        ]);
+        $this->assertSame(2, DB::table('tagore_payments')->whereIn('id', $paymentIds)->where('status', 'refunded')->count());
+        $this->assertSame(2, DB::table('tagore_payment_orders')->where('family_payment_group_id', $order['group_id'])->where('status', 'refunded')->count());
     }
 
     public function test_parent_cannot_create_family_checkout_for_an_unlinked_child(): void

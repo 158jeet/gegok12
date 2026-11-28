@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Accounts & fee collection · Tagore ERP</title>
 <link rel="icon" type="image/webp" href="{{ asset('uploads/tgi-logo.webp') }}">
-<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261029-accounts-ui1' }}">
+<link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261128-accounts-ui2' }}">
 <style>
 .tg-accounts-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
 .tg-accounts-tools input{max-width:360px;min-width:180px}
@@ -19,7 +19,7 @@
 .tg-accounts-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;background:#263342;color:#c9d5e2}
 .tg-accounts-pill.pending{background:#49391d;color:#fbd38d}
 .tg-accounts-pill.matched{background:#123e31;color:#6ee7b7}
-.tg-accounts-pill.mismatch{background:#482630;color:#ff9eac}
+.tg-accounts-pill.mismatch{background:#482630;color:#ff9eac}.tg-accounts-pill.refunded{background:#263342;color:#cbd5e1}
 .tg-accounts-table .tg-btn{white-space:nowrap}
 .tg-accounts-table details{min-width:210px}
 .tg-accounts-table summary{cursor:pointer;color:#66e6b2;font-size:12px;font-weight:750;margin-top:7px}
@@ -191,27 +191,27 @@
       @if($pendingReconciliation)
         <div class="tg-list-item"><div><div class="tg-list-title">Payments awaiting settlement matching</div><div class="tg-list-meta">Open the relevant transaction below and record its settlement ID, amount and date.</div></div><span class="tg-status warning">{{ $pendingReconciliation }} to review</span></div>
       @else
-        <div class="tg-list-item"><div><div class="tg-list-title">No pending online settlements</div><div class="tg-list-meta">There are currently no successful online payments awaiting reconciliation in your visible scope.</div></div><span class="tg-status success">Up to date</span></div>
+        <div class="tg-list-item"><div><div class="tg-list-title">No pending online settlements or captured payments awaiting review</div><div class="tg-list-meta">There are currently no online payments awaiting settlement matching or captured-payment review in your visible scope.</div></div><span class="tg-status success">Up to date</span></div>
       @endif
     </div>
   </section>
   @endif
 
   <section class="tg-section" id="transactions">
-    <div class="tg-section-head"><div><h2>Payment transactions</h2><p>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())Recent successful payments, receipts and gateway settlement references.@else Recent successful payments and receipts in your authorised scope.@endif</p></div><span class="tg-status">{{ $recent->count() }} recent records</span></div>
+    <div class="tg-section-head"><div><h2>Payment transactions</h2><p>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())Recent successful, review-required and refunded payments, receipts and gateway settlement references.@else Recent successful payments and receipts in your authorised scope.@endif</p></div><span class="tg-status">{{ $recent->count() }} recent records</span></div>
     <div class="tg-card" style="padding:16px">
-      <div class="tg-accounts-tools"><input type="search" class="tg-local-filter" data-table="payments-table" placeholder="Filter by receipt, student, gateway or reference…" aria-label="Filter payment transactions"><span class="tg-accounts-subtle">Latest 100 successful payments</span></div>
-      <div class="tg-table-wrap"><table class="table tg-accounts-table" id="payments-table"><thead><tr><th>Receipt</th><th>Student</th><th>Institution</th><th>Paid at</th><th>Payment mode</th>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())<th>Gateway IDs</th><th>Reference</th><th>Settlement</th>@endif<th>Amount</th><th>Actions</th></tr></thead><tbody>
+      <div class="tg-accounts-tools"><input type="search" class="tg-local-filter" data-table="payments-table" placeholder="Filter by receipt, student, gateway or reference…" aria-label="Filter payment transactions"><span class="tg-accounts-subtle">Latest 100 payment records</span></div>
+      <div class="tg-table-wrap"><table class="table tg-accounts-table" id="payments-table"><thead><tr><th>Receipt</th><th>Student</th><th>Institution</th><th>Paid at</th><th>Payment mode</th><th>Status</th>@if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())<th>Gateway IDs</th><th>Reference</th><th>Settlement</th>@endif<th>Amount</th><th>Actions</th></tr></thead><tbody>
       @forelse($recent as $payment)
         <tr>
-          <td><strong>{{ $payment->receipt_no ?: '—' }}</strong></td><td>{{ $payment->student }}</td><td>{{ $payment->institution }}</td><td>{{ $payment->paid_at ? \Carbon\Carbon::parse($payment->paid_at)->format('d M Y, H:i') : '—' }}</td><td>{{ ucfirst(str_replace('_',' ',$payment->payment_mode ?: '—')) }}</td>
+          <td><strong>{{ $payment->receipt_no ?: '—' }}</strong></td><td>{{ $payment->student }}</td><td>{{ $payment->institution }}</td><td>{{ $payment->paid_at ? \Carbon\Carbon::parse($payment->paid_at)->format('d M Y, H:i') : '—' }}</td><td>{{ ucfirst(str_replace('_',' ',$payment->payment_mode ?: '—')) }}</td><td><span class="tg-accounts-pill {{ $payment->payment_status === 'success' ? 'matched' : ($payment->payment_status === 'review_required' ? 'pending' : ($payment->payment_status === 'refunded' ? 'refunded' : 'mismatch')) }}">{{ ucfirst(str_replace('_', ' ', $payment->payment_status)) }}</span></td>
           @if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty())
           <td><span class="tg-accounts-subtle">{{ $payment->gateway_order_id ?: '—' }}<br>{{ $payment->gateway_payment_id ?: '—' }}</span></td><td>{{ $payment->reference_number ?: '—' }}</td>
-          <td><span class="tg-accounts-pill {{ ($payment->reconciliation_status ?: 'pending') === 'matched' ? 'matched' : ((($payment->reconciliation_status ?: 'pending') === 'mismatch') ? 'mismatch' : 'pending') }}">{{ ucfirst($payment->reconciliation_status ?: 'pending') }}</span>@if($payment->settlement_id)<div class="tg-accounts-subtle">{{ $payment->settlement_id }}<br>₹{{ number_format($payment->settlement_amount,2) }}</div>@endif</td>
+          <td><span class="tg-accounts-pill {{ ($payment->reconciliation_status ?: 'pending') === 'matched' ? 'matched' : ((($payment->reconciliation_status ?: 'pending') === 'mismatch') ? 'mismatch' : ((($payment->reconciliation_status ?: 'pending') === 'refunded') ? 'refunded' : 'pending')) }}">{{ ucfirst($payment->reconciliation_status ?: 'pending') }}</span>@if($payment->settlement_id)<div class="tg-accounts-subtle">{{ $payment->settlement_id }}<br>₹{{ number_format($payment->settlement_amount,2) }}</div>@endif @if($payment->refund_reference)<div class="tg-accounts-subtle">Refund: {{ $payment->refund_reference }}<br>{{ $payment->refund_date }}</div>@endif</td>
           @endif
           <td class="tg-accounts-number"><strong>₹{{ number_format($payment->amount,2) }}</strong></td>
-          <td><a class="tg-btn" href="{{ route('tagore.fees.receipt',$payment->id) }}">Receipt ↗</a>
-            @if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty() && in_array($payment->gateway,['razorpay','online'],true))
+          <td>@if($payment->payment_status === 'success')<a class="tg-btn" href="{{ route('tagore.fees.receipt',$payment->id) }}">Receipt ↗</a>@endif
+            @if($roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty() && in_array($payment->gateway,['razorpay','online'],true) && in_array($payment->payment_status,['success','review_required'],true))
               <details><summary>Reconcile settlement</summary>
                 <form class="tg-accounts-form" method="POST" action="{{ route('tagore.fees.reconcile',$payment->id) }}">@csrf
                   <input name="settlement_id" placeholder="Settlement ID" aria-label="Settlement ID" value="{{ $payment->settlement_id }}">
@@ -221,11 +221,23 @@
                   <button class="tg-btn primary wide" type="submit">Save reconciliation</button>
                 </form>
               </details>
+              @if($payment->payment_status === 'review_required')
+                <details>
+                  <summary>Record verified refund</summary>
+                  <div class="tg-accounts-subtle">Only submit after the gateway confirms the refund. A family checkout refund resolves all child payments together.</div>
+                  <form class="tg-accounts-form" method="POST" action="{{ route('tagore.fees.refund',$payment->id) }}">@csrf
+                    <input class="wide" name="refund_reference" placeholder="Gateway refund reference" aria-label="Gateway refund reference" required>
+                    <input name="refund_date" type="date" aria-label="Refund date" value="{{ now()->toDateString() }}" required>
+                    <textarea class="wide" name="notes" placeholder="How the gateway refund was verified" aria-label="Refund verification notes" required></textarea>
+                    <button class="tg-btn primary wide" type="submit">Record verified refund</button>
+                  </form>
+                </details>
+              @endif
             @endif
           </td>
         </tr>
       @empty
-        <tr><td colspan="{{ $roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty() ? 10 : 7 }}"><div class="tg-accounts-empty"><strong>No successful payments recorded</strong>Payments will appear here after they are posted to the ledger.</div></td></tr>
+        <tr><td colspan="{{ $roles->intersect(['OWNER','ACCOUNTS'])->isNotEmpty() ? 11 : 8 }}"><div class="tg-accounts-empty"><strong>No payment records</strong>Payments will appear here after they are posted to the ledger.</div></td></tr>
       @endforelse
       </tbody></table></div>
     </div>

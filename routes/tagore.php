@@ -134,6 +134,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
     Route::post('/accounts/fees/payment/{paymentId}/reconcile', [FeeController::class, 'reconcile'])->whereNumber('paymentId')->name('tagore.fees.reconcile');
+    Route::post('/accounts/fees/payment/{paymentId}/refund', [FeeController::class, 'recordVerifiedRefund'])->whereNumber('paymentId')->name('tagore.fees.refund');
     Route::get('/accounts/fees/payment/{paymentId}/receipt', [FeeController::class, 'receipt'])->whereNumber('paymentId')->name('tagore.fees.receipt');
     Route::get('/accounts/fees/manage', [FeeManagementController::class, 'index'])->name('tagore.fees.manage');
     Route::get('/accounts/fees/editor', [FeeEditorController::class, 'index'])->name('tagore.fees.editor');

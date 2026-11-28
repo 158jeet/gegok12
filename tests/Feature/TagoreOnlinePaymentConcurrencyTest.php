@@ -307,6 +307,25 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
             'paid_amount' => '0.00',
             'outstanding_amount' => '100.00',
         ]);
+        $this->actingAs($this->owner)->post(route('tagore.fees.refund', $settledId), [
+            'refund_reference' => 'rfnd_tagore_acceptance_1',
+            'refund_date' => now()->toDateString(),
+            'notes' => 'Synthetic acceptance: gateway refund confirmed before recording.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tagore_payments', [
+            'id' => $settledId,
+            'status' => 'refunded',
+        ]);
+        $this->assertDatabaseHas('tagore_payment_orders', [
+            'id' => $order['order_id'],
+            'status' => 'refunded',
+        ]);
+        $this->assertDatabaseHas('tagore_payment_reconciliations', [
+            'payment_id' => $settledId,
+            'refund_reference' => 'rfnd_tagore_acceptance_1',
+            'status' => 'refunded',
+        ]);
     }
 
     public function test_authorized_but_not_captured_gateway_payment_does_not_post_a_payment(): void

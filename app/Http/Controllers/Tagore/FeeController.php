@@ -102,17 +102,21 @@ class FeeController extends Controller
             ->join('users as u', 'u.id', '=', 'p.student_id')
             ->join('tagore_institutions as i', 'i.id', '=', 'p.institution_id')
             ->leftJoin('tagore_payment_reconciliations as r', 'r.payment_id', '=', 'p.id')
-            ->whereIn('p.institution_id', $ids)
-            ->where('p.status', 'success');
+            ->whereIn('p.institution_id', $ids);
+                if ($roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()) {
+            $recentQuery->whereIn('p.status', ['success', 'review_required', 'refunded']);
+        } else {
+            $recentQuery->where('p.status', 'success');
+        }
         if ($scopedStudentIds !== null) $recentQuery->whereIn('p.student_id', $scopedStudentIds);
         $recent = $recentQuery
             ->orderByDesc('p.paid_at')->orderByDesc('p.id')->limit(100)
-            ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.payment_mode', 'p.gateway', 'p.gateway_order_id', 'p.gateway_payment_id', 'p.reference_number', 'p.paid_at', 'u.name as student', 'i.display_name as institution', 'r.status as reconciliation_status', 'r.settlement_id', 'r.settlement_amount', 'r.settlement_date']);
+            ->get(['p.id', 'p.receipt_no', 'p.amount', 'p.status as payment_status', 'p.payment_mode', 'p.gateway', 'p.gateway_order_id', 'p.gateway_payment_id', 'p.reference_number', 'p.paid_at', 'u.name as student', 'i.display_name as institution', 'r.status as reconciliation_status', 'r.settlement_id', 'r.settlement_amount', 'r.settlement_date', 'r.refund_reference', 'r.refund_date']);
 
-        $pendingReconciliation = $scopedStudentIds === null
-            ? (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online') && ($payment->reconciliation_status ?? 'pending') === 'pending')->count()
+        $pendingReconciliation = $roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty()
+            ? (clone $recent)->filter(fn ($payment) => ($payment->gateway === 'razorpay' || $payment->gateway === 'online')
+                && (($payment->payment_status ?? '') === 'review_required' || ($payment->reconciliation_status ?? 'pending') === 'pending'))->count()
             : 0;
-
         // Institution- and class-scoped students with outstanding balances for the collection workspace.
         $collectibleStudentsQuery = DB::table('tagore_fee_obligations as o')
             ->join('users as u', 'u.id', '=', 'o.student_id')
@@ -179,7 +183,7 @@ class FeeController extends Controller
         $roles = $this->roles($userId);
         abort_unless($roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty(), 403);
 
-        $payment = DB::table('tagore_payments')->where('id', $paymentId)->where('status', 'success')->first();
+        $payment = DB::table('tagore_payments')->where('id', $paymentId)->whereIn('status', ['success', 'review_required'])->first();
         abort_unless($payment, 404);
         $this->authorizeInstitution($userId, (int) $payment->institution_id, $roles);
         abort_unless(in_array($payment->gateway, ['razorpay', 'online'], true), 422, 'Only online gateway payments require reconciliation.');
@@ -225,6 +229,100 @@ class FeeController extends Controller
         return back()->with('success', $status === 'matched' ? 'Payment reconciled successfully.' : 'Reconciliation saved as a mismatch for review.');
     }
 
+    public function recordVerifiedRefund(Request $request, int $paymentId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        abort_unless($roles->intersect(['OWNER', 'ACCOUNTS'])->isNotEmpty(), 403);
+
+        $data = $request->validate([
+            'refund_reference' => ['required', 'string', 'max:160'],
+            'refund_date' => ['required', 'date', 'before_or_equal:today'],
+            'notes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($request, $userId, $roles, $paymentId, $data) {
+            $payment = DB::table('tagore_payments')->where('id', $paymentId)->lockForUpdate()->first();
+            abort_unless($payment && $payment->status === 'review_required', 404);
+            abort_unless(in_array($payment->gateway, ['razorpay', 'online'], true), 422, 'Only captured online payments can be marked refunded here.');
+
+            if ($payment->family_payment_group_id) {
+                $group = DB::table('tagore_family_payment_groups')->where('id', $payment->family_payment_group_id)->lockForUpdate()->first();
+                abort_unless($group && $group->status === 'review_required', 409, 'The family payment group is no longer awaiting review.');
+
+                $payments = DB::table('tagore_payments')->where('family_payment_group_id', $group->id)->lockForUpdate()->get();
+                $orders = DB::table('tagore_payment_orders')->where('family_payment_group_id', $group->id)->lockForUpdate()->get();
+                abort_unless($payments->isNotEmpty() && $payments->every(fn ($row) => $row->status === 'review_required'), 409, 'Every child payment in this family checkout must still be awaiting review.');
+                abort_unless($orders->isNotEmpty() && $orders->count() === $payments->count() && $orders->every(fn ($row) => $row->status === 'review_required'), 409, 'Every child order in this family checkout must still be awaiting review.');
+
+                foreach ($payments as $row) {
+                    $this->authorizeInstitution($userId, (int) $row->institution_id, $roles);
+                }
+                $paymentIds = $payments->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+                DB::table('tagore_family_payment_groups')->where('id', $group->id)->update([
+                    'status' => 'refunded',
+                    'notes' => 'Gateway refund recorded by authorised accounts operator: '.$data['refund_reference'].'. '.$data['notes'],
+                    'updated_at' => now(),
+                ]);
+                DB::table('tagore_payment_orders')->where('family_payment_group_id', $group->id)->update([
+                    'status' => 'refunded',
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $this->authorizeInstitution($userId, (int) $payment->institution_id, $roles);
+                $order = DB::table('tagore_payment_orders')->where('id', $payment->payment_order_id)->lockForUpdate()->first();
+                abort_unless($order && $order->status === 'review_required', 409, 'The payment order is no longer awaiting refund review.');
+                $paymentIds = [(int) $payment->id];
+                DB::table('tagore_payment_orders')->where('id', $payment->payment_order_id)->where('status', 'review_required')->update([
+                    'status' => 'refunded',
+                    'updated_at' => now(),
+                ]);
+            }
+
+            foreach ($paymentIds as $id) {
+                $row = DB::table('tagore_payments')->where('id', $id)->first();
+                DB::table('tagore_payments')->where('id', $id)->update([
+                    'status' => 'refunded',
+                    'notes' => trim((string) ($row->notes ?? '').' Gateway refund verified: '.$data['refund_reference'].'. '.$data['notes']),
+                    'updated_at' => now(),
+                ]);
+                $existingReconciliation = DB::table('tagore_payment_reconciliations')->where('payment_id', $id)->first();
+                DB::table('tagore_payment_reconciliations')->updateOrInsert(
+                    ['payment_id' => $id],
+                    [
+                        'gateway' => $row->gateway ?: 'razorpay',
+                        'settlement_id' => $existingReconciliation->settlement_id ?? null,
+                        'settlement_amount' => $existingReconciliation->settlement_amount ?? null,
+                        'settlement_date' => $existingReconciliation->settlement_date ?? null,
+                        'status' => 'refunded',
+                        'refund_reference' => $data['refund_reference'],
+                        'refund_date' => Carbon::parse($data['refund_date'])->toDateString(),
+                        'refund_notes' => $data['notes'],
+                        'reconciled_by' => $userId,
+                        'reconciled_at' => now(),
+                        'notes' => $existingReconciliation->notes ?? null,
+                        'created_at' => $existingReconciliation->created_at ?? now(),
+                        'updated_at' => now(),
+                    ],
+                );                DB::table('tagore_audit_events')->insert([
+                    'user_id' => $userId,
+                    'institution_id' => $row->institution_id,
+                    'action' => 'PAYMENT_REFUND_RECORDED',
+                    'entity_type' => 'tagore_payments',
+                    'entity_id' => $id,
+                    'old_values_json' => json_encode(['status' => 'review_required']),
+                    'new_values_json' => json_encode(['status' => 'refunded', 'refund_reference' => $data['refund_reference'], 'refund_date' => $data['refund_date']]),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 2000),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Verified gateway refund recorded. The affected fee balances are available for a fresh checkout.');
+    }
     public function receipt(Request $request, int $paymentId)
     {
         $userId = (int) $request->user()->id;
