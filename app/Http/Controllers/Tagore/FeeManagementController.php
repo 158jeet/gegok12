@@ -117,7 +117,7 @@ class FeeManagementController extends Controller
         $userId = (int) $request->user()->id;
         $roles = $this->roles($userId);
         $this->assertAssignmentAccess($userId, $roles);
-        $data = $request->validate(['due_date' => ['nullable', 'date']]);
+        $data = $request->validate(['due_date' => ['required', 'date', 'after_or_equal:today']]);
         $preview = session()->pull('cashier_bulk_preview_' . $assignmentId);
         abort_unless(is_array($preview) && ($preview['expires_at'] ?? 0) >= now()->timestamp, 409, 'Preview demand creation again before confirming.');
 
@@ -210,6 +210,7 @@ class FeeManagementController extends Controller
 
     private function authorizeInstitution(int $userId, int $institutionId, $roles): void
     {
+        abort_unless(DB::table('tagore_institutions')->where('id', $institutionId)->where('status', 'active')->exists(), 403);
         if ($roles->contains('OWNER')) return;
         $allowed = DB::table('tagore_user_roles')->where('user_id', $userId)
             ->where('institution_id', $institutionId)->where('status', 'active')
