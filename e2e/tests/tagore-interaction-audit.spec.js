@@ -89,9 +89,10 @@ test.describe('Full page-by-page interaction inventory (disposable CI data)', ()
       ])].filter(path => path.startsWith('/tagore/') && !/[{}]/.test(path));
 
       for (const path of paths) {
-        // This route returns an XLSX attachment, not an HTML page; its download is
-        // covered by the dedicated Olympiad workflow test rather than page inventory.
-        if (path === '/tagore/olympiad/question-template') continue;
+        // Attachment endpoints are not HTML pages and Chromium navigation to a
+        // streamed download is expected to fail. Their response/content is asserted
+        // in dedicated workflow tests (Olympiad template and cashier CSV export).
+        if (['/tagore/olympiad/question-template', '/tagore/cashier/export'].includes(path)) continue;
         if (visited.has(path)) continue;
         visited.add(path);
         const response = await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
