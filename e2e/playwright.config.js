@@ -2,10 +2,10 @@ const { defineConfig } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 60000,
-  globalTimeout: process.env.CI ? 12 * 60 * 1000 : 0,
+  globalTimeout: process.env.CI ? 25 * 60 * 1000 : 0,
   expect: { timeout: 10000 },
   fullyParallel: false,
-  workers: process.env.CI ? 2 : 1,
+  workers: 1,
   retries: 0,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
