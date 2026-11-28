@@ -231,3 +231,8 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 
 - Backup/restore branch integrated into the candidate as a deployable Windows PowerShell workflow: transactional MySQL dump, persistent storage snapshot, manifest and SHA-256 checks, encrypted rclone-crypt offsite upload, local retention and disposable MySQL restore rehearsal.
 - The backup is not release evidence until offsite copy, hashes, disposable restore and staging recovery are verified. No production restore or production database mutation is part of this feature.
+## 2026-11-28 - Partial online fee allocation and checkout concurrency
+
+- Integrated the parent-selectable fee allocation and checkout reservation implementation. A parent can select partial amounts against one or more fee obligations; server validation enforces exact allocation totals and institution/student ownership.
+- Active checkouts reserve their selected balances; expired/failed orders release reservations. Gateway I/O runs outside fee-row transactions. A captured payment that no longer matches the reserved balances is quarantined for reconciliation instead of over-allocating the fee ledger.
+- Acceptance uses synthetic data and a gateway fake. Live Razorpay credentials and webhook secret are not configured by this code change.
