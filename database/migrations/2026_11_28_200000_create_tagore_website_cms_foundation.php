@@ -24,6 +24,7 @@ return new class extends Migration {
             if (!Schema::hasColumn('tagore_cms_pages', 'locale')) $table->string('locale', 10)->default('en');
             if (!Schema::hasColumn('tagore_cms_pages', 'created_by')) $table->unsignedInteger('created_by')->nullable();
             if (!Schema::hasColumn('tagore_cms_pages', 'updated_by')) $table->unsignedInteger('updated_by')->nullable();
+            if (!Schema::hasColumn('tagore_cms_pages', 'draft_snapshot_json')) $table->longText('draft_snapshot_json')->nullable();
         });
 
         Schema::create('tagore_cms_page_revisions', function (Blueprint $table) {
@@ -44,7 +45,7 @@ return new class extends Migration {
     {
         Schema::dropIfExists('tagore_cms_page_revisions');
         Schema::table('tagore_cms_pages', function (Blueprint $table) {
-            foreach (['content_json', 'locale', 'created_by', 'updated_by'] as $column) {
+            foreach (['content_json', 'locale', 'created_by', 'updated_by', 'draft_snapshot_json'] as $column) {
                 if (Schema::hasColumn('tagore_cms_pages', $column)) $table->dropColumn($column);
             }
         });

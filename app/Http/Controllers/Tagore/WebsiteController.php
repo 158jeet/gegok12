@@ -23,11 +23,16 @@ class WebsiteController extends Controller
             ->join('tagore_institutions as i', 'i.id', '=', 's.institution_id')
             ->whereIn('s.institution_id', $ids)->orderBy('i.display_name')
             ->get(['s.*', 'i.display_name']);
+        $editingPage = null;
+        if ($request->filled('edit')) {
+            $editingPage = DB::table('tagore_cms_pages')->where('id', (int) $request->query('edit'))->whereIn('institution_id', $ids)->first();
+            abort_unless($editingPage, 404);
+        }
         $pages = DB::table('tagore_cms_pages as p')
             ->join('tagore_institutions as i', 'i.id', '=', 'p.institution_id')
             ->whereIn('p.institution_id', $ids)->orderByDesc('p.updated_at')->limit(200)
             ->get(['p.*', 'i.display_name']);
-        return view('tagore.website.index', compact('roles', 'institutions', 'sites', 'pages'));
+        return view('tagore.website.index', compact('roles', 'institutions', 'sites', 'pages', 'editingPage'));
     }
 
     public function storeSite(Request $request)
@@ -92,7 +97,12 @@ class WebsiteController extends Controller
             $page = DB::table('tagore_cms_pages')->where('id', $data['page_id'])
                 ->where('institution_id', $site->institution_id)->first();
             abort_unless($page, 404);
-            DB::table('tagore_cms_pages')->where('id', $page->id)->update($values);
+            if ($page->status === 'published') {
+                $draft = collect($values)->only(['slug', 'title', 'body', 'meta_title', 'meta_description', 'content_json', 'locale'])->all();
+                DB::table('tagore_cms_pages')->where('id', $page->id)->update(['draft_snapshot_json' => json_encode($draft, JSON_UNESCAPED_UNICODE), 'updated_by' => $request->user()->id, 'updated_at' => now()]);
+            } else {
+                DB::table('tagore_cms_pages')->where('id', $page->id)->update($values);
+            }
         } else {
             DB::table('tagore_cms_pages')->insert($values + [
                 'institution_id' => $site->institution_id, 'created_by' => $request->user()->id,
@@ -110,17 +120,13 @@ class WebsiteController extends Controller
         DB::transaction(function () use ($page, $request) {
             $locked = DB::table('tagore_cms_pages')->where('id', $page->id)->lockForUpdate()->first();
             $version = (int) DB::table('tagore_cms_page_revisions')->where('page_id', $page->id)->max('version') + 1;
-            $snapshot = collect($locked)->only(['slug', 'title', 'body', 'meta_title', 'meta_description', 'content_json', 'locale'])->all();
-            DB::table('tagore_cms_page_revisions')->insert([
-                'page_id' => $locked->id, 'institution_id' => $locked->institution_id,
-                'version' => $version, 'event' => 'publish',
-                'snapshot_json' => json_encode($snapshot, JSON_UNESCAPED_UNICODE),
-                'actor_id' => $request->user()->id, 'created_at' => now(),
-            ]);
-            DB::table('tagore_cms_pages')->where('id', $locked->id)->update([
-                'status' => 'published', 'published_at' => now(),
-                'updated_by' => $request->user()->id, 'updated_at' => now(),
-            ]);
+            $liveSnapshot = collect($locked)->only(['slug', 'title', 'body', 'meta_title', 'meta_description', 'content_json', 'locale'])->all();
+            $nextSnapshot = $locked->draft_snapshot_json ? (json_decode($locked->draft_snapshot_json, true) ?: $liveSnapshot) : $liveSnapshot;
+            if ($locked->status === 'published' && $locked->draft_snapshot_json) {
+                DB::table('tagore_cms_page_revisions')->insert(['page_id' => $locked->id, 'institution_id' => $locked->institution_id, 'version' => $version++, 'event' => 'superseded', 'snapshot_json' => json_encode($liveSnapshot, JSON_UNESCAPED_UNICODE), 'actor_id' => $request->user()->id, 'created_at' => now()]);
+            }
+            DB::table('tagore_cms_page_revisions')->insert(['page_id' => $locked->id, 'institution_id' => $locked->institution_id, 'version' => $version, 'event' => 'publish', 'snapshot_json' => json_encode($nextSnapshot, JSON_UNESCAPED_UNICODE), 'actor_id' => $request->user()->id, 'created_at' => now()]);
+            DB::table('tagore_cms_pages')->where('id', $locked->id)->update($nextSnapshot + ['status' => 'published', 'published_at' => now(), 'draft_snapshot_json' => null, 'updated_by' => $request->user()->id, 'updated_at' => now()]);
             DB::table('tagore_website_sites')->where('institution_id', $locked->institution_id)
                 ->update(['status' => 'published', 'updated_at' => now()]);
         });
@@ -131,6 +137,9 @@ class WebsiteController extends Controller
     {
         $page = DB::table('tagore_cms_pages')->where('id', $pageId)->first();
         abort_unless($page, 404);
+        if (!empty($page->draft_snapshot_json)) {
+            foreach ((json_decode($page->draft_snapshot_json, true) ?: []) as $key => $value) $page->{$key} = $value;
+        }
         return view('tagore.website.public', ['page' => $page, 'site' => null, 'preview' => true]);
     }
 
