@@ -54,7 +54,7 @@ export default {
       method: "post",
       headers: {
         "X-CSRF-TOKEN":
-          document.head.querySelector("[name=csrf-token]").content,
+          document.querySelector("[name=csrf-token]").content,
       },
       paramName: "assignment_file",   // IMPORTANT
       maxFilesize: 8,

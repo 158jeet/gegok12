@@ -52,13 +52,17 @@
     <a class="tg-btn" href="{{ route('tagore.dashboard') }}">← Dashboard</a>
   </div>
 </header>
+@if(session('success'))<div class="tg-alert success" role="status">{{ session('success') }}</div>@endif
+@if($errors->any())<div class="tg-alert danger" role="alert">{{ $errors->first() }}</div>@endif
 
 <div class="tg-layout">
 <aside class="tg-sidebar" aria-label="Main navigation">
   <div class="tg-side-label">Workspace</div>
   <a class="tg-side-link" href="{{ route('tagore.dashboard') }}"><span class="tg-side-icon">⌂</span>Overview</a>
-  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','CASHIER'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
+  @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.tasks.index') }}"><span class="tg-side-icon">✓</span>Work management</a>
   @endif
   @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS'])->isNotEmpty())
@@ -80,7 +84,9 @@
   @if($roles->contains('OWNER') || $roles->intersect(['PRINCIPAL','COORDINATOR','ACCOUNTS'])->isNotEmpty())
     <a class="tg-side-link" href="{{ route('tagore.reports.index') }}"><span class="tg-side-icon">▥</span>Reports</a>
   @endif
+  @if($roles->intersect(['OWNER','PRINCIPAL','COORDINATOR','ACCOUNTS','HR','TRANSPORT','HOSTEL','TEACHER'])->isNotEmpty())
   <a class="tg-side-link" href="{{ route('tagore.operations.index') }}"><span class="tg-side-icon">⋮</span>All operations</a>
+  @endif
 </aside>
 
 <main class="tg-main">
@@ -125,6 +131,43 @@
       </div>
     </div>
   </section>
+
+  @if($roles->intersect(['OWNER','PRINCIPAL','ACCOUNTS','CASHIER'])->isNotEmpty())
+  <section class="tg-section">
+    <div class="tg-section-head">
+      <div><h2>Collect fee</h2><p>Record full or partial collections against outstanding student dues. Cashiers can collect only for their assigned institution.</p></div>
+      <span class="tg-status">{{ $collectibleStudents->count() }} students with dues</span>
+    </div>
+    <div class="tg-card" style="padding:16px">
+      @if($collectibleStudents->isNotEmpty())
+        <div class="tg-table-wrap">
+          <table class="table tg-accounts-table">
+            <thead><tr><th>Student</th><th>Institution</th><th>Outstanding</th><th>Record collection</th></tr></thead>
+            <tbody>
+            @foreach($collectibleStudents as $student)
+              <tr>
+                <td><strong>{{ $student->student_name }}</strong><div class="tg-accounts-subtle">Student #{{ $student->student_id }}</div></td>
+                <td>{{ $student->institution }}</td>
+                <td class="tg-accounts-number"><strong>₹{{ number_format($student->outstanding,2) }}</strong></td>
+                <td>
+                  <form class="tg-accounts-form" method="POST" action="{{ route('tagore.fees.payment', ['studentId' => $student->student_id]) }}">@csrf
+                    <input name="amount" type="number" min="0.01" max="{{ $student->outstanding }}" step="0.01" placeholder="Amount" aria-label="Collection amount" required>
+                    <select name="payment_mode" aria-label="Payment mode" required><option value="cash">Cash</option><option value="cheque">Cheque</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select>
+                    <input class="wide" name="reference_number" placeholder="Reference / receipt note (optional)" aria-label="Payment reference">
+                    <button class="tg-btn primary wide" type="submit">Record payment</button>
+                  </form>
+                </td>
+              </tr>
+            @endforeach
+            </tbody>
+          </table>
+        </div>
+      @else
+        <div class="tg-accounts-empty"><strong>No outstanding student dues</strong>Students with pending or partial fee obligations will appear here.</div>
+      @endif
+    </div>
+  </section>
+  @endif
 
   <section class="tg-section">
     <div class="tg-section-head"><div><h2>Family fee balances</h2><p>Children linked to the same guardian are consolidated into one family-level balance.</p></div></div>

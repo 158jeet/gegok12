@@ -6,6 +6,8 @@ concurrency:
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main, 'integration/erp-7day', 'release/**', 'dev/server-workspace-2026-10-09']
   pull_request:
     branches: [main, 'integration/erp-7day']
 
@@ -95,6 +97,7 @@ jobs:
       MAIL_MAILER: array
       APP_URL: http://127.0.0.1:8000
       APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      TIMEZONE: Asia/Kolkata
       TAGORE_E2E_ENABLED: true
       TAGORE_OLYMPIAD_INTAKE_ENABLED: true
       TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
@@ -183,6 +186,14 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:8000
         run: npm run test:ci
+
+      - name: Run new ERP acceptance slices on desktop
+        working-directory: e2e
+        timeout-minutes: 25
+        env:
+          E2E_BASE_URL: http://127.0.0.1:8000
+        run: npx playwright test tests/new-erp-acceptance.spec.js --project=desktop --workers=1 --retries=0
+
       - name: Upload browser report
         if: always()
         uses: actions/upload-artifact@v4

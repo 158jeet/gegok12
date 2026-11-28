@@ -93,15 +93,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path $backup | Out-Null
           Push-Location $root
           try {
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --events tagore_erp > /tmp/tagore-predeploy.sql'
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T db sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --events --no-tablespaces tagore_erp > /tmp/tagore-predeploy.sql'
             if ($LASTEXITCODE -ne 0) { throw 'MySQL dump command failed.' }
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml cp db:/tmp/tagore-predeploy.sql "$backup\tagore_erp.sql"
+            docker cp windows-db-1:/tmp/tagore-predeploy.sql "$backup\tagore_erp.sql"
             if ($LASTEXITCODE -ne 0) { throw 'Could not copy database backup from container.' }
+            docker exec windows-db-1 rm -f /tmp/tagore-predeploy.sql
             if ((Get-Item "$backup\tagore_erp.sql").Length -lt 1024) { throw 'Database dump is unexpectedly small; refusing deployment.' }
             docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app tar -czf /tmp/tagore-storage-predeploy.tar.gz -C /var/www/html/storage .
             if ($LASTEXITCODE -ne 0) { throw 'Application storage archive failed.' }
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml cp app:/tmp/tagore-storage-predeploy.tar.gz "$backup\app-storage.tar.gz"
+            docker cp windows-app-1:/tmp/tagore-storage-predeploy.tar.gz "$backup\app-storage.tar.gz"
             if ($LASTEXITCODE -ne 0) { throw 'Could not copy application storage backup from container.' }
+            docker exec windows-app-1 rm -f /tmp/tagore-storage-predeploy.tar.gz
             if ((Get-Item "$backup\app-storage.tar.gz").Length -lt 100) { throw 'Application storage backup is unexpectedly small.' }
             tar.exe -tzf "$backup\app-storage.tar.gz" | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'Application storage backup archive failed validation.' }
@@ -120,6 +122,7 @@ jobs:
           git -c "safe.directory=$root" -C $root reset --hard $env:GITHUB_SHA
           if ($LASTEXITCODE -ne 0) { throw 'Could not update production checkout to the tested commit.' }
           git -c "safe.directory=$root" -C $root clean -fd
+          New-Item -ItemType Directory -Force -Path (Join-Path $root 'deploy\windows\acme-challenge') | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'Could not remove archived untracked source files from the production checkout.' }
           git -c "safe.directory=$root" -C $root submodule update --init --recursive --force
           if ($LASTEXITCODE -ne 0) { throw 'Could not synchronize production submodules.' }
@@ -133,13 +136,18 @@ jobs:
           $root = 'C:\server\gegok12-main-new'
           Push-Location $root
           try {
+            # Keep MySQL/Redis and their named volumes untouched; update only app/worker/web.
+            $runningServices = docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml ps --services --filter status=running
+            foreach ($requiredService in @('db','redis','app')) {
+              if ($runningServices -notcontains $requiredService) { throw "Required stateful service $requiredService is not running; refusing deployment." }
+            }
             docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml build app web
             if ($LASTEXITCODE -ne 0) { throw 'Production image build failed.' }
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm app php artisan migrate --force
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm --no-deps app php artisan migrate --force
             if ($LASTEXITCODE -ne 0) { throw 'Database migration failed. Preserve the verified backup for recovery.' }
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm app php artisan optimize:clear
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml run --rm --no-deps app php artisan optimize:clear
             if ($LASTEXITCODE -ne 0) { throw 'Laravel cache clear failed.' }
-            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d app worker web
+            docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml up -d --no-deps app worker web
             if ($LASTEXITCODE -ne 0) { throw 'Production services failed to start.' }
             docker compose --env-file .env.school -f deploy/windows/docker-compose.production.yml exec -T app php artisan config:cache
             if ($LASTEXITCODE -ne 0) { throw 'Config cache failed.' }
@@ -166,7 +174,62 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Laravel health check failed.' }
             $status = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://127.0.0.1/login
             if ($LASTEXITCODE -ne 0 -or $status -ne '200') { throw "Local HTTPS login smoke test failed: HTTP $status" }
-            $publicStatus = & curl.exe -k -sS -o NUL -w "%{http_code}" --connect-timeout 10 --max-time 30 https://59.90.66.12/login
-            if ($LASTEXITCODE -ne 0 -or $publicStatus -ne '200') { throw "Public HTTPS login smoke test failed: HTTP $publicStatus" }
             Write-Host 'Production deployment smoke tests passed.'
           } finally { Pop-Location }
+  public-smoke:
+    name: Verify public ERP and school websites from the internet
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check public endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          login_html="$(curl --insecure --location --silent --show-error --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "https://59.90.66.12/login")"
+          if ! grep -q "Sign in to Tagore ERP" <<<"$login_html" || grep -qi "Parent ERP Login" <<<"$login_html"; then
+            echo "::error title=Login branding mismatch::Expected generic Tagore ERP login wording."
+            exit 1
+          fi
+          echo "Generic Tagore ERP login branding verified."
+          urls=(
+            "https://59.90.66.12/tps/"
+            "https://59.90.66.12/tps/about"
+            "https://59.90.66.12/tps/admissions"
+            "https://59.90.66.12/tps/admissions/faq"
+            "https://59.90.66.12/tps/admissions/funnel"
+            "https://59.90.66.12/tps/admissions/parent-checklist"
+            "https://59.90.66.12/tps/admissions/pathways"
+            "https://59.90.66.12/tps/hostel/guide"
+            "https://59.90.66.12/tps/parent-guide"
+            "https://59.90.66.12/tps/start"
+            "https://59.90.66.12/tps/visit"
+            "https://59.90.66.12/tps/visit/guide"
+            "https://59.90.66.12/tps/admissions/pathways/early-years"
+            "https://59.90.66.12/tps/admissions/pathways/primary"
+            "https://59.90.66.12/tps/admissions/pathways/middle"
+            "https://59.90.66.12/tps/admissions/pathways/secondary"
+            "https://59.90.66.12/tps/admissions/pathways/senior-secondary"
+            "https://59.90.66.12/tier/"
+            "https://59.90.66.12/tier/about"
+            "https://59.90.66.12/tier/choose"
+            "https://59.90.66.12/tier/connect"
+            "https://59.90.66.12/tier/contact"
+            "https://59.90.66.12/tier/help"
+            "https://59.90.66.12/tier/institutions"
+            "https://59.90.66.12/tier/partnerships"
+            "https://59.90.66.12/tier/start"
+            "https://59.90.66.12/tier/institutions/tagore-bal-niketan"
+            "https://59.90.66.12/tier/institutions/tagore-smart-school"
+            "https://59.90.66.12/tier/institutions/tagore-vedant-academy"
+            "https://59.90.66.12/tier/institutions/tagore-pg-college"
+            "https://59.90.66.12/tier/institutions/tagore-hostel"
+          )
+          for url in "${urls[@]}"; do
+            status="$(curl --insecure --location --silent --show-error --output /dev/null --write-out "%{http_code}" --retry 2 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 30 "$url")"
+            if [[ "$status" != "200" ]]; then
+              echo "::error title=Public smoke test failed::$url returned HTTP $status"
+              exit 1
+            fi
+            echo "$url -> HTTP $status"
+          done

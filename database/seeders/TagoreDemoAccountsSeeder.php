@@ -45,7 +45,7 @@ class TagoreDemoAccountsSeeder extends Seeder
             ['coordinator@tagore-demo.local','Tagore Demo Coordinator',13,'COORDINATOR'],
             ['teacher@tagore-demo.local','Tagore Demo Teacher',5,'TEACHER'],
             ['accounts@tagore-demo.local','Tagore Demo Accounts',11,'ACCOUNTS'],
-            ['cashier@tagore-demo.local','Tagore Demo Cashier',11,'CASHIER'],
+            ['cashier@tagore-demo.local','Tagore Demo Cashier',13,'CASHIER'],
             ['fees@tagore-demo.local','Tagore Demo Fee Editor',13,'FEE_EDITOR'],
             ['parent@tagore-demo.local','Tagore Demo Parent',7,'PARENT'],
             ['student@tagore-demo.local','Tagore Demo Student',6,'STUDENT'],
@@ -95,6 +95,36 @@ class TagoreDemoAccountsSeeder extends Seeder
                 ['parent_user_id' => $ids['PARENT'], 'student_id' => $ids['STUDENT']],
                 ['relationship' => 'Guardian', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'updated_at' => $now, 'created_at' => $now]
             );
+        }
+
+        // The synthetic demo student must have a verified grade/institution record so
+        // student-facing Olympiad eligibility tests exercise the real class filter.
+        if (isset($ids['STUDENT'], $ids['TEACHER'])) {
+            $academicYear = DB::table('academic_years')->where('school_id', $school->id)->where('status', 1)->orderByDesc('id')->first(['id']);
+            $standard = DB::table('standards')->where('school_id', $school->id)->where('status', 1)->where('order', 9)->first(['id']);
+            if (!$standard) {
+                $standard = DB::table('standards')->where('school_id', $school->id)->where('status', 1)->where('name', '6')->first(['id']);
+            }
+            $section = DB::table('sections')->where('school_id', $school->id)->where('status', 1)->orderBy('id')->first(['id']);
+
+            if ($academicYear && $standard && $section) {
+                $standardLink = DB::table('standards_link')
+                    ->where('school_id', $school->id)->where('academic_year_id', $academicYear->id)
+                    ->where('standard_id', $standard->id)->where('section_id', $section->id)->first(['id']);
+                $standardLinkId = $standardLink?->id;
+                if (!$standardLinkId) {
+                    $standardLinkId = DB::table('standards_link')->insertGetId([
+                        'school_id' => $school->id, 'academic_year_id' => $academicYear->id,
+                        'class_teacher_id' => $ids['TEACHER'], 'standard_id' => $standard->id,
+                        'section_id' => $section->id, 'no_of_students' => 1, 'status' => 1,
+                        'created_at' => $now, 'updated_at' => $now,
+                    ]);
+                }
+                DB::table('student_academics')->updateOrInsert(
+                    ['school_id' => $school->id, 'academic_year_id' => $academicYear->id, 'user_id' => $ids['STUDENT']],
+                    ['standardLink_id' => $standardLinkId, 'roll_number' => 'TAGORE-DEMO-STUDENT-001', 'updated_at' => $now, 'created_at' => $now]
+                );
+            }
         }
     }
 }

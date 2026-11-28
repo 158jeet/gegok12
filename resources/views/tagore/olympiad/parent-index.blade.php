@@ -12,7 +12,7 @@
 @foreach($events as $event)<article class="tg-card"><div class="tg-card-head"><div><h2>{{ $event->title }}</h2><p class="tg-kpi-meta">{{ $event->code }} Â· {{ $event->duration_minutes }} minutes</p></div>
 @if($event->is_submitted)<span class="tg-status">Submitted</span>@elseif($event->registration)<span class="tg-status">{{ str_replace('_',' ',ucfirst($event->registration->status)) }}</span>@else<span class="tg-status">Registration</span>@endif</div>
 @if($event->description)<p>{{ $event->description }}</p>@endif
-<p class="tg-kpi-meta">Starts: {{ $event->exam_starts_at ? \Illuminate\Support\Carbon::parse($event->exam_starts_at)->timezone('Asia/Kolkata')->format('d M Y, h:i A') : 'Schedule pending' }}</p>
+<p class="tg-kpi-meta">Starts: {{ $event->exam_starts_at ? \Illuminate\Support\Carbon::parse($event->exam_starts_at, 'UTC')->timezone('Asia/Kolkata')->format('d M Y, h:i A') : 'Schedule pending' }}</p>
 <div class="tg-actions" style="margin-top:14px">
 @if($event->is_submitted)<a class="tg-btn primary" href="{{ route('tagore.parent.olympiad.result', ['studentId'=>$studentId,'olympiadId'=>$event->id]) }}">View result</a>
 @elseif($event->can_launch)<form method="post" action="{{ route('tagore.parent.olympiad.launch', ['studentId'=>$studentId,'olympiadId'=>$event->id]) }}">@csrf<button class="tg-btn primary" type="submit">{{ $event->registration->status === 'in_progress' ? 'Continue test' : 'Start test' }}</button></form>

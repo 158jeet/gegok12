@@ -1,0 +1,8 @@
+FROM tagore-erp-app:production
+
+# Reuse the exact PHP 8.4 runtime and extensions used by production.
+# Source is bind-mounted from the G-drive workspace when tests execute.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+ENTRYPOINT []

@@ -53,13 +53,14 @@ class TagoreParentOlympiadTest extends TestCase
         );
 
         $now = now();
+        $scheduleNow = $now->copy()->utc();
         $eventId = DB::table('tagore_olympiads')->insertGetId([
             'institution_id' => $institutionId, 'title' => 'Parent Flow QA Olympiad',
             'code' => 'PARENTQA-' . strtoupper(substr(md5((string) microtime(true)), 0, 8)),
             'description' => 'Synthetic isolated parent flow test', 'target_classes' => json_encode([(string) $grade]),
-            'registration_opens_at' => $now->copy()->subDay(), 'registration_closes_at' => $now->copy()->addMinutes(10),
-            'duration_minutes' => 30, 'max_marks' => 1, 'exam_starts_at' => $now->copy()->subMinutes(5),
-            'exam_ends_at' => $now->copy()->addHour(), 'status' => 'published', 'created_by' => $parent->id,
+            'registration_opens_at' => $scheduleNow->copy()->subDay(), 'registration_closes_at' => $scheduleNow->copy()->addMinutes(10),
+            'duration_minutes' => 30, 'max_marks' => 1, 'exam_starts_at' => $scheduleNow->copy()->subMinutes(5),
+            'exam_ends_at' => $scheduleNow->copy()->addHour(), 'status' => 'published', 'created_by' => $parent->id,
             'created_at' => $now, 'updated_at' => $now,
         ]);
         $questionId = DB::table('tagore_olympiad_questions')->insertGetId([
@@ -140,12 +141,13 @@ class TagoreParentOlympiadTest extends TestCase
         $this->assertLessThanOrEqual(12, $grade);
 
         $now = now();
+        $scheduleNow = $now->copy()->utc();
         $eventId = DB::table('tagore_olympiads')->insertGetId([
             'institution_id' => $institutionId, 'title' => 'Student Autosave QA Olympiad',
             'code' => 'STUDENTQA-' . strtoupper(substr(md5((string) microtime(true)), 0, 8)),
             'description' => 'Synthetic isolated student autosave test', 'target_classes' => json_encode([(string) $grade]),
-            'duration_minutes' => 30, 'max_marks' => 1, 'exam_starts_at' => $now->copy()->subMinutes(5),
-            'exam_ends_at' => $now->copy()->addHour(), 'status' => 'published', 'created_by' => $student->id,
+            'duration_minutes' => 30, 'max_marks' => 1, 'exam_starts_at' => $scheduleNow->copy()->subMinutes(5),
+            'exam_ends_at' => $scheduleNow->copy()->addHour(), 'status' => 'published', 'created_by' => $student->id,
             'created_at' => $now, 'updated_at' => $now,
         ]);
         $questionId = DB::table('tagore_olympiad_questions')->insertGetId([

@@ -13,7 +13,15 @@ COPY . .
 RUN npm run build
 FROM php:8.4-fpm-bookworm AS app
 RUN apt-get update && apt-get install -y libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev libicu-dev unzip git && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip && rm -rf /var/lib/apt/lists/*
-RUN sed -i 's/^;clear_env = yes/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf
+RUN sed -ri \
+    -e 's/^pm.max_children = .*/pm.max_children = 12/' \
+    -e 's/^pm.start_servers = .*/pm.start_servers = 4/' \
+    -e 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 3/' \
+    -e 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 8/' \
+    -e 's/^;?pm.max_requests = .*/pm.max_requests = 500/' \
+    -e 's/^;?clear_env = .*/clear_env = no/' \
+    /usr/local/etc/php-fpm.d/www.conf \
+    && php-fpm -tt
 WORKDIR /var/www/html
 COPY . .
 COPY --from=vendor /app/vendor ./vendor

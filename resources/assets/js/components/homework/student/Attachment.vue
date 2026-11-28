@@ -83,7 +83,7 @@ export default {
         method: "post",
         headers: {
           "X-CSRF-TOKEN":
-            document.head.querySelector("[name=csrf-token]").content,
+            document.querySelector("[name=csrf-token]").content,
         },
         paramName: "file",   // backend should use $request->file('file')
         maxFilesize: 8,

@@ -13,7 +13,7 @@ return new class extends Migration {
             $roleValues = [
                 'code' => 'CASHIER',
                 'name' => 'Cashier',
-                'description' => 'Institution-scoped fee account visibility and collection operations.',
+                'description' => 'Institution-scoped fee collection and admissions operations.',
                 'is_system' => true,
                 'status' => 'active',
                 'updated_at' => $now,

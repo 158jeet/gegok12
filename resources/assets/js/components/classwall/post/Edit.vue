@@ -173,7 +173,7 @@
                 url: this.url + '/' + this.mode + '/classwall/post/edit/attachment/' + this.id,
                 method: 'post',
                 headers: {
-                  "X-CSRF-TOKEN": document.head.querySelector("[name=csrf-token]").content
+                  "X-CSRF-TOKEN": document.querySelector("[name=csrf-token]").content
                 },
                 paramName: "file",
                 uploadMultiple: true,

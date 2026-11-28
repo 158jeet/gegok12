@@ -22,6 +22,10 @@ services:
       dockerfile: deploy/windows/Dockerfile
       target: web
     restart: unless-stopped
+    # Make host.docker.internal resolvable as IPv4 on Linux CI and Windows Docker Desktop.
+    # The TPS/TIER reverse proxies target services hosted on the Windows machine.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on: [app]
     ports:
       - "80:80"
