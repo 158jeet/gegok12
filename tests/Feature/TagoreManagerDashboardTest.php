@@ -245,7 +245,10 @@ class TagoreManagerDashboardTest extends TestCase
             ->assertSee('Institution portfolio')
             ->assertSee('Group fee collections')
             ->assertSee('Platform runtime')
-            ->assertSee('Queue driver');
+            ->assertSee('Queue driver')
+            ->assertSee('Operational assurance')
+            ->assertSee('Priority alerts')
+            ->assertSee('Recent operational activity');
 
         $principal = User::query()->where('email', 'principal@tagore-demo.local')->firstOrFail();
         $this->actingAs($principal)->get(route('tagore.dashboard'))
