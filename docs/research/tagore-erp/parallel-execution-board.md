@@ -252,3 +252,7 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Approved gate-pass verification is single-use, rate-limited, records anonymous/public scans without a user identity, and returns only the minimum safe fields. Security history is protected from institution/student cascade deletion.
 - Legacy impersonation now rejects inactive targets, requires an active date-effective Owner role for cross-school access, and records both start and stop events.
 - Visitor OTP delivery remains an operator-assisted/manual step; no SMS/WhatsApp provider is assumed.
+## 2026-11-28 - Operations search and direct control binding
+
+- Integrated the Operations module's live search and status filter across all module records, with empty-state feedback and direct DOM bindings that do not depend on the legacy jQuery event layer.
+- Added authenticated browser acceptance that creates an inventory record, searches it, filters it by status, and deletes the synthetic record. The release gate remains blocking.
