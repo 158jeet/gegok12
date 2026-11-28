@@ -7,7 +7,7 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: [main, 'integration/erp-7day', 'release/**', 'dev/server-workspace-2026-10-09']
+    branches: [main, 'integration/erp-7day', 'release/**', 'dev/server-workspace-2026-10-09', 'feature/**']
   pull_request:
     branches: [main, 'integration/erp-7day']
 
