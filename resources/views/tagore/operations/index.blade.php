@@ -173,6 +173,7 @@
           @endforelse
           </tbody>
         </table>
+        <div class="tg-pagination">{{ $rows->links() }}</div>
         <div id="tg-operations-empty" class="tg-operations-empty">No records match your search. Try another term or clear the status filter.</div>
       </div>
     </section>

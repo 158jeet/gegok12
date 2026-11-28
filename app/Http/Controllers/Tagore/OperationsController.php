@@ -130,8 +130,8 @@ class OperationsController extends Controller
         $rows = DB::table($table)
             ->whereIn('institution_id', $institutionIds ?: [-1])
             ->orderByDesc('id')
-            ->limit(200)
-            ->get();
+            ->simplePaginate(50)
+            ->withQueryString();
 
         $institutions = DB::table('tagore_institutions')
             ->whereIn('id', $institutionIds ?: [-1])

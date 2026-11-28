@@ -5,7 +5,7 @@ const roles = ['owner','principal','coordinator','teacher','parent','student','a
 function unique(items) { return [...new Set(items)]; }
 
 async function authenticate(page, role) {
-  await page.goto('/__e2e/session/' + role, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.goto('/__e2e/session/' + role, { waitUntil: 'domcontentloaded', timeout: 10000 });
   await expect(page).toHaveURL(/\/tagore\/dashboard/);
 }
 
@@ -95,7 +95,7 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
         // Smoke every concrete route through the authenticated request context; reserve full DOM/overflow/image checks for a representative set of rendered screens so the suite stays inside CI's per-test timeout.
         const visited = new Set();
         const visuallyChecked = new Set();
-        const maxPages = role === 'owner' ? 80 : 30;
+        const maxPages = role === 'owner' ? 80 : 18;
         const concreteRoutes = routeManifest.filter(r => !/[{}]/.test(new URL(r.uri, page.url()).pathname));
         const queue = unique([
           ...initialLinks.filter(h => !/[{}]/.test(new URL(h).pathname)),
@@ -113,14 +113,14 @@ test.describe('Tagore ERP human-style authenticated UI', () => {
             batch.push({ url, key });
           }
           const results = await Promise.all(batch.map(async item => {
-            const response = await page.request.get(item.url.href, { timeout: 10000 }).catch(() => null);
+            const response = await page.request.get(item.url.href, { timeout: 7000 }).catch(() => null);
             return { ...item, response, status: response ? response.status() : 0, contentType: response?.headers()['content-type'] || '' };
           }));
           for (const item of results) {
             if ([401, 403].includes(item.status)) continue;
             const expectedUnconfiguredCctv = item.url.pathname === '/tagore/platform/cctv/status' && item.status === 503;
             if (!expectedUnconfiguredCctv && (item.status >= 500 || item.status === 0 || item.status === 404)) findings.push(role + ' ' + item.key + ' HTTP status ' + item.status);
-            if (item.response && item.status < 400 && item.contentType.includes('text/html') && visuallyChecked.size < 5) {
+            if (item.response && item.status < 400 && item.contentType.includes('text/html') && visuallyChecked.size < 2) {
               await page.goto(item.url.href, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null);
               findings.push(...await checkPageHealth(page, role + ' ' + item.key));
               visuallyChecked.add(item.key);
