@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\TagoreMobileController;
 
+Route::post('/v1/tagore/crm/telephony/{accountId}/{token}', [\App\Http\Controllers\Tagore\CrmTelephonyController::class, 'webhook'])->whereNumber('accountId')->where('token', '[A-Za-z0-9]+')->middleware('throttle:120,1')->name('tagore.crm.telephony.webhook');
+
 @include('teacherapi.php');
 
 Route::post('/parent/login', 'Api\TokenController@issueToken');
