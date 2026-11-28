@@ -9,7 +9,7 @@ use Illuminate\View\View;
 
 class StaffController extends Controller
 {
-    private const MANAGER_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR'];
+    private const MANAGER_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'HR'];
 
     public function self(Request $request): View
     {
@@ -107,11 +107,12 @@ class StaffController extends Controller
 
     public function leave(Request $request): View
     {
-        [$userId, $roles, $institutionIds] = $this->context($request);
-        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
+        [$userId, $roles] = $this->context($request);
+        $managerInstitutionIds = $this->managerInstitutionIds($userId, $roles);
+        abort_unless($roles->contains('OWNER') || $managerInstitutionIds !== [], 403);
 
         $schoolIds = DB::table('tagore_institutions')
-            ->whereIn('id', $institutionIds)->where('status', 'active')->pluck('school_id')->all();
+            ->whereIn('id', $managerInstitutionIds)->where('status', 'active')->pluck('school_id')->all();
 
         $query = DB::table('teacher_leave_applications as l')
             ->join('users as u', 'u.id', '=', 'l.user_id')
@@ -147,28 +148,48 @@ class StaffController extends Controller
 
     public function decideLeave(Request $request, int $leaveId)
     {
-        [$userId, $roles, $institutionIds] = $this->context($request);
-        abort_unless($roles->intersect(self::MANAGER_ROLES)->isNotEmpty(), 403);
-
-        $schoolIds = DB::table('tagore_institutions')->whereIn('id', $institutionIds)->pluck('school_id')->all();
-        $leave = DB::table('teacher_leave_applications')->where('id', $leaveId)->whereIn('school_id', $schoolIds)->whereNull('deleted_at')->first();
-        abort_unless($leave, 404);
-        abort_unless($leave->status === 'pending', 422, 'Only pending leave applications can be decided.');
+        [$userId, $roles] = $this->context($request);
+        $managerInstitutionIds = $this->managerInstitutionIds($userId, $roles);
+        abort_unless($roles->contains('OWNER') || $managerInstitutionIds !== [], 403);
+        $schoolIds = DB::table('tagore_institutions')->whereIn('id', $managerInstitutionIds)->where('status', 'active')->pluck('school_id')->all();
 
         $data = $request->validate([
             'decision' => ['required','in:approved,cancelled'],
             'comments' => ['nullable','string','max:2000'],
         ]);
 
-        DB::table('teacher_leave_applications')->where('id',$leaveId)->update([
-            'status' => $data['decision'],
-            'approved_by' => $userId,
-            'approved_on' => now()->toDateString(),
-            'comments' => $data['comments'] ?? null,
-            'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($leaveId, $schoolIds, $data, $userId) {
+            $leave = DB::table('teacher_leave_applications')
+                ->where('id', $leaveId)->whereIn('school_id', $schoolIds)->whereNull('deleted_at')
+                ->lockForUpdate()->first();
+            abort_unless($leave, 404);
+            abort_unless($leave->status === 'pending', 422, 'Only pending leave applications can be decided.');
+
+            $updated = DB::table('teacher_leave_applications')->where('id', $leaveId)->where('status', 'pending')->update([
+                'status' => $data['decision'],
+                'approved_by' => $userId,
+                'approved_on' => now()->toDateString(),
+                'comments' => $data['comments'] ?? null,
+                'updated_at' => now(),
+            ]);
+            abort_unless($updated === 1, 409, 'This leave application was already decided.');
+        });
 
         return back()->with('success', $data['decision'] === 'approved' ? 'Leave approved.' : 'Leave application cancelled.');
+    }
+
+    private function managerInstitutionIds(int $userId, $roles): array
+    {
+        if ($roles->contains('OWNER')) {
+            return DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->whereIn('r.code', self::MANAGER_ROLES)->whereNotNull('ur.institution_id')
+            ->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     private function context(Request $request): array
