@@ -4,7 +4,7 @@
 @section('base-content')
 <link rel="stylesheet" href="{{ asset('tagore-erp.css') . '?v=20261026-ui7' }}">
 <div class="tg-app"><div class="tg-shell">
-<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Platform Services</span></div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="tg-btn primary" href="{{ route('tagore.website.index') }}">Website Management</a><a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></div></header>
+<header class="tg-topbar"><div class="tg-brand"><div class="tg-logo">T</div><div><strong>TagoreK12</strong><span>Platform Services</span></div></div><div style="display:flex;gap:10px;flex-wrap:wrap">@if($roles->contains('OWNER') || $roles->contains('PRINCIPAL'))<a class="tg-btn primary" href="{{ route('tagore.website.index') }}">Website Management</a>@endif<a class="tg-btn" href="{{ route('tagore.dashboard') }}">ERP Home</a></div></header>
 @if(session('success'))<div class="tg-alert success">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="tg-alert danger">{{ $errors->first() }}</div>@endif
 <section class="tg-hero"><div><span class="tg-eyebrow">Platform</span><h1>Alumni, Financing, CMS, Social & Automation</h1><p>Persistent configuration and workflows for the remaining Studybase-style platform capabilities.</p></div></section><section class="tg-section">
