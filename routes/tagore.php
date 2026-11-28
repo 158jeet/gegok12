@@ -35,7 +35,7 @@ use App\Http\Controllers\Tagore\PerformanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/tagore/payments/webhook/{gateway}', [OnlinePaymentController::class, 'webhook'])->where('gateway', 'razorpay')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
-Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->name('tagore.security.gatepass.verify');
+Route::get('/tagore/security/gatepass/verify/{token}', [SecurityController::class, 'verifyPass'])->middleware('throttle:30,1')->name('tagore.security.gatepass.verify');
 
 Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->prefix('tagore')->group(function () {
     Route::get('/profile', [\App\Http\Controllers\Tagore\ProfileController::class, 'edit'])->name('tagore.profile.edit');
@@ -219,7 +219,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/learning/store/order', [LearningController::class, 'order'])->name('tagore.learning.store.order');
     Route::post('/learning/store/product', [LearningController::class, 'createProduct'])->name('tagore.learning.product');
     Route::post('/security/visitor', [SecurityController::class, 'visitor'])->name('tagore.security.visitor');
-    Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->name('tagore.security.visitor.checkin');
+    Route::post('/security/visitor/{id}/checkin', [SecurityController::class, 'checkIn'])->whereNumber('id')->middleware('throttle:10,1')->name('tagore.security.visitor.checkin');
     Route::post('/security/visitor/{id}/checkout', [SecurityController::class, 'checkOut'])->whereNumber('id')->name('tagore.security.visitor.checkout');
     Route::post('/security/gatepass', [SecurityController::class, 'gatepass'])->name('tagore.security.gatepass');
     Route::patch('/security/gatepass/{id}/decide', [SecurityController::class, 'decidePass'])->whereNumber('id')->name('tagore.security.gatepass.decide');

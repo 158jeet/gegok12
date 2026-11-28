@@ -245,3 +245,10 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 
 - Integrated versioned audit templates, idempotent audit instances, role-scoped submission, immutable template control snapshots, evidence-class validation, independent verification and append-only instance events.
 - Historical evidence is protected from cascade deletion. UI, template administration, evidence upload, alert management and hostel workflows remain open implementation tasks.
+## 2026-11-28 - Security, visitor and gate-pass hardening
+
+- Security visitor and gate-pass actions are scoped to active, date-effective institution roles; Teacher scope is limited to gate-pass requests, while Owner remains group-wide.
+- Visitor hosts must be active staff at the selected institution. Visitor OTP check-in is rate-limited and OTPs remain hashed at rest.
+- Approved gate-pass verification is single-use, rate-limited, records anonymous/public scans without a user identity, and returns only the minimum safe fields. Security history is protected from institution/student cascade deletion.
+- Legacy impersonation now rejects inactive targets, requires an active date-effective Owner role for cross-school access, and records both start and stop events.
+- Visitor OTP delivery remains an operator-assisted/manual step; no SMS/WhatsApp provider is assumed.

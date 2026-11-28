@@ -142,6 +142,126 @@ class AuthorizationGateRegressionTest extends TestCase
         }
     }
 
+    public function test_legacy_impersonation_rejects_cross_school_targets_before_session_switch(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+
+        $targets = [
+            User::factory()->for($otherSchool)->create(['usergroup_id' => 5]),
+            User::factory()->for($otherSchool)->create(['usergroup_id' => 8]),
+            User::factory()->for($otherSchool)->create(['usergroup_id' => 6]),
+            User::factory()->for($otherSchool)->create(['usergroup_id' => 3]),
+        ];
+        $methods = ['impersonate', 'librarianimpersonate', 'studentimpersonate', 'schoolAdminimpersonate'];
+
+        $this->actingAs($actor);
+
+        foreach ($methods as $index => $method) {
+            try {
+                app(\App\Http\Controllers\Auth\ImpersonateController::class)->{$method}($targets[$index]->id);
+                $this->fail("The {$method} endpoint must reject a target in another school.");
+            } catch (HttpException $exception) {
+                $this->assertSame(403, $exception->getStatusCode());
+            }
+        }
+
+        $this->assertAuthenticatedAs($actor);
+    }
+
+    public function test_legacy_impersonation_routes_are_post_only_and_cross_school_post_is_denied(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($otherSchool)->create(['usergroup_id' => 5]);
+
+        $this->actingAs($actor)
+            ->get('/teacher/'.$target->id.'/impersonate')
+            ->assertStatus(405);
+
+        $this->actingAs($actor)
+            ->post('/teacher/'.$target->id.'/impersonate')
+            ->assertForbidden();
+    }
+
+    public function test_legacy_impersonation_never_allows_the_owner_account_as_a_target(): void
+    {
+        $school = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $owner = User::factory()->for($school)->schoolAdmin()->create();
+
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        if (!$ownerRoleId) {
+            $ownerRoleId = DB::table('tagore_roles')->insertGetId([
+                'name' => 'Owner',
+                'code' => 'OWNER',
+                'is_system' => true,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $owner->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($actor);
+
+        try {
+            app(\App\Http\Controllers\Auth\ImpersonateController::class)->impersonate($owner->id);
+            $this->fail('The Owner account must never be impersonated.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+
+        $this->assertAuthenticatedAs($actor);
+    }
+
+    public function test_stop_impersonation_returns_to_the_original_owner_dashboard(): void
+    {
+        $school = School::factory()->create();
+        $actor = User::factory()->for($school)->schoolAdmin()->create();
+        $target = User::factory()->for($school)->create(['usergroup_id' => 5]);
+
+        $ownerRoleId = DB::table('tagore_roles')->where('code', 'OWNER')->value('id');
+        if (!$ownerRoleId) {
+            $ownerRoleId = DB::table('tagore_roles')->insertGetId([
+                'name' => 'Owner',
+                'code' => 'OWNER',
+                'is_system' => true,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('tagore_user_roles')->insert([
+            'user_id' => $actor->id,
+            'role_id' => $ownerRoleId,
+            'institution_id' => null,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($actor)
+            ->post('/teacher/'.$target->id.'/impersonate')
+            ->assertRedirect('/teacher/dashboard');
+
+        $this->post('/teacher/impersonate/stop')
+            ->assertRedirect('/superadmin/dashboard');
+
+        $this->assertAuthenticatedAs($actor);
+    }
+
     public function test_post_reply_gate_checks_the_parent_post_school(): void
     {
         $school = School::factory()->create();
