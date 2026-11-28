@@ -130,6 +130,62 @@
   </section>
   @endif
 
+  @if($ownerConsole)
+  <section class="tg-section" aria-label="Platform Owner command centre">
+    <div class="tg-section-head">
+      <div><span class="tg-eyebrow">Platform Owner · Group-wide</span><h2>Group control centre</h2><p>One view of every active institution, consolidated collections and platform operations.</p></div>
+      <div class="tg-actions">
+        <a class="tg-btn primary" href="{{ route('tagore.admin') }}">Institutions & access</a>
+        <a class="tg-btn" href="{{ route('tagore.reports.index') }}">Group reports</a>
+      </div>
+    </div>
+    <div class="tg-grid" aria-label="Group finance and portfolio summary">
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Group fee collections</span><span class="tg-kpi-icon">₹</span></div><div class="tg-kpi-value">₹{{ number_format($erp['fee_collected'],0) }}</div><div class="tg-kpi-meta">Recorded payments across active institutions</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Outstanding fees</span><span class="tg-kpi-icon">◷</span></div><div class="tg-kpi-value">₹{{ number_format($erp['fee_outstanding'],0) }}</div><div class="tg-kpi-meta">Pending, partial and overdue balances</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Collection rate</span><span class="tg-kpi-icon">↗</span></div><div class="tg-kpi-value">{{ $ownerConsole['collection_rate'] }}%</div><div class="tg-kpi-meta">Collected ÷ collected plus outstanding</div></div>
+      <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Active institutions</span><span class="tg-kpi-icon">⌂</span></div><div class="tg-kpi-value">{{ $ownerConsole['institutions']->count() }}</div><div class="tg-kpi-meta">{{ number_format($erp['students']) }} students · {{ number_format($erp['staff']) }} staff</div></div>
+    </div>
+    <div class="tg-two">
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Institution portfolio</h3><p>Live operating signals by school and institution</p></div><span class="tg-status success">Group view</span></div>
+        <div class="tg-module-grid">
+          @forelse($ownerConsole['institutions'] as $unit)
+            <article class="tg-module">
+              <b>{{ $unit->display_name }}</b>
+              <span>{{ $unit->school_name }} · Active</span>
+              <div class="tg-three">
+                <div><div class="tg-kpi-label">Students</div><strong>{{ number_format($unit->students) }}</strong></div>
+                <div><div class="tg-kpi-label">Staff</div><strong>{{ number_format($unit->staff) }}</strong></div>
+                <div><div class="tg-kpi-label">Open leads</div><strong>{{ number_format($unit->pending_leads) }}</strong></div>
+              </div>
+              <div class="tg-list-meta">Collected ₹{{ number_format($unit->collected,0) }} · Due ₹{{ number_format($unit->outstanding,0) }} · {{ $unit->active_tasks }} active tasks</div>
+            </article>
+          @empty
+            <div class="tg-empty"><strong>No active institutions</strong><span>Activate an institution from Administration to include it in the group view.</span></div>
+          @endforelse
+        </div>
+      </div>
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Platform runtime</h3><p>Application configuration and live database access</p></div><span class="tg-status success">Connected</span></div>
+        <div class="tg-list">
+          <div class="tg-list-item"><div><div class="tg-list-title">Database</div><div class="tg-list-meta">Application database connection</div></div><span class="tg-status success">{{ $ownerConsole['database'] }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Environment</div><div class="tg-list-meta">Current application environment</div></div><span class="tg-status">{{ ucfirst($ownerConsole['environment']) }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Queue driver</div><div class="tg-list-meta">Background job configuration</div></div><span class="tg-status">{{ $ownerConsole['queue_driver'] }}</span></div>
+          <div class="tg-list-item"><div><div class="tg-list-title">Cache store</div><div class="tg-list-meta">Application cache configuration</div></div><span class="tg-status">{{ $ownerConsole['cache_store'] }}</span></div>
+        </div>
+        <div class="tg-divider"></div>
+        <div class="tg-module-grid">
+          <a class="tg-module" href="{{ route('tagore.platform.index') }}"><b>Platform services</b><span>CMS, integrations, automation and CCTV connector status</span></a>
+          <a class="tg-module" href="{{ route('tagore.operations.index') }}"><b>Operations hub</b><span>Inventory, transport, hostel, documents and group workflows</span></a>
+          <a class="tg-module" href="{{ route('tagore.performance') }}"><b>Performance monitor</b><span>Inspect application request and runtime performance</span></a>
+          <a class="tg-module" href="{{ route('tagore.biometric.index') }}"><b>Device registry</b><span>Manage institution-scoped biometric device mappings</span></a>
+        </div>
+        <p class="tg-list-meta">Global controls are Owner-only. Principals and institution teams retain their assigned institution scope.</p>
+      </div>
+    </div>
+  </section>
+  @endif
+
   @if($isManager)
   <section class="tg-section">
     <div class="tg-section-head"><div><h2>Command center</h2><p>What needs attention today, without digging through modules.</p></div><div class="tg-actions"><a class="tg-btn" href="{{ route('tagore.tasks.index') }}">Open work board →</a></div></div>
