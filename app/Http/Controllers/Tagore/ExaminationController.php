@@ -9,8 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class ExaminationController extends Controller
 {
-    private const MANAGERS = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'IT_ADMIN'];
-    private const MARKS_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER', 'IT_ADMIN'];
+    // Technical support roles do not receive academic business authority.
+    private const MANAGERS = ['OWNER', 'PRINCIPAL', 'COORDINATOR'];
+    private const MARKS_ROLES = ['OWNER', 'PRINCIPAL', 'COORDINATOR', 'TEACHER'];
+    private const PUBLISH_ROLES = ['OWNER', 'PRINCIPAL'];
 
     public function index(Request $request)
     {
@@ -216,7 +218,7 @@ class ExaminationController extends Controller
     public function moderate(Request $request, int $examId)
     {
         [$roles] = $this->context($request);
-        abort_unless($roles->intersect(['OWNER', 'PRINCIPAL', 'IT_ADMIN'])->isNotEmpty(), 403);
+        abort_unless($roles->intersect(self::PUBLISH_ROLES)->isNotEmpty(), 403);
         $exam = $this->examForUser($request, $examId);
         abort_unless($exam->status === 'submitted', 409, 'Only submitted results can be moderated.');
         DB::table('tagore_exams')->where('id', $examId)->update(['status' => 'moderated', 'moderated_by' => $request->user()->id, 'moderated_at' => now(), 'updated_at' => now()]);
