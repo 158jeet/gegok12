@@ -1,0 +1,252 @@
+/*
+ * Tagore ERP shared UI foundation
+ * Progressive, CSS-only layer for authenticated Tagore workspaces.
+ * Keep module-specific layout and workflow behaviour in their own views.
+ */
+:root {
+  --tg-ui-bg: #10151d;
+  --tg-ui-panel: #19232e;
+  --tg-ui-panel-raised: #202c39;
+  --tg-ui-panel-soft: #151e28;
+  --tg-ui-border: #344253;
+  --tg-ui-border-strong: #46586b;
+  --tg-ui-text: #edf2f7;
+  --tg-ui-muted: #aab7c6;
+  --tg-ui-subtle: #8291a3;
+  --tg-ui-accent: #19b77a;
+  --tg-ui-accent-hover: #28cb8b;
+  --tg-ui-accent-soft: rgba(25, 183, 122, .13);
+  --tg-ui-danger: #ff647c;
+  --tg-ui-warning: #f0b44b;
+  --tg-ui-radius-sm: 9px;
+  --tg-ui-radius: 13px;
+  --tg-ui-radius-lg: 17px;
+  --tg-ui-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+  --tg-ui-focus: 0 0 0 3px rgba(25, 183, 122, .2);
+}
+
+body.tagore-ui {
+  color-scheme: dark;
+  background: var(--tg-ui-bg) !important;
+  color: var(--tg-ui-text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  text-rendering: optimizeLegibility;
+}
+
+body.tagore-ui #app,
+body.tagore-ui main,
+body.tagore-ui .tagore-content {
+  min-width: 0;
+  color: var(--tg-ui-text);
+}
+
+body.tagore-ui .tagore-content {
+  background: var(--tg-ui-bg) !important;
+}
+
+body.tagore-ui h1,
+body.tagore-ui h2,
+body.tagore-ui h3,
+body.tagore-ui h4 {
+  color: var(--tg-ui-text);
+  letter-spacing: -.025em;
+}
+
+body.tagore-ui p,
+body.tagore-ui small,
+body.tagore-ui .text-muted,
+body.tagore-ui .muted,
+body.tagore-ui .help-block {
+  color: var(--tg-ui-muted);
+}
+
+body.tagore-ui a {
+  text-underline-offset: 3px;
+}
+
+body.tagore-ui :focus-visible {
+  outline: 2px solid var(--tg-ui-accent-hover) !important;
+  outline-offset: 2px;
+}
+
+/* Shared surfaces */
+body.tagore-ui .card,
+body.tagore-ui .panel,
+body.tagore-ui .well,
+body.tagore-ui .box,
+body.tagore-ui .modal-content,
+body.tagore-ui .list-group-item {
+  color: var(--tg-ui-text) !important;
+  background: var(--tg-ui-panel) !important;
+  border: 1px solid var(--tg-ui-border) !important;
+  border-radius: var(--tg-ui-radius) !important;
+  box-shadow: var(--tg-ui-shadow) !important;
+}
+
+body.tagore-ui .card-header,
+body.tagore-ui .panel-heading {
+  color: var(--tg-ui-text) !important;
+  background: var(--tg-ui-panel-raised) !important;
+  border-color: var(--tg-ui-border) !important;
+  border-radius: var(--tg-ui-radius) var(--tg-ui-radius) 0 0;
+  font-weight: 750;
+}
+
+/* Shared form controls; preserve native checkbox/radio sizing and behaviour. */
+body.tagore-ui input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+body.tagore-ui select,
+body.tagore-ui textarea,
+body.tagore-ui .form-control {
+  max-width: 100%;
+  min-width: 0;
+  color: var(--tg-ui-text) !important;
+  background: #111a24 !important;
+  border: 1px solid var(--tg-ui-border-strong) !important;
+  border-radius: var(--tg-ui-radius-sm) !important;
+  box-shadow: none;
+}
+
+body.tagore-ui input::placeholder,
+body.tagore-ui textarea::placeholder {
+  color: var(--tg-ui-subtle) !important;
+  opacity: 1;
+}
+
+body.tagore-ui input:focus,
+body.tagore-ui select:focus,
+body.tagore-ui textarea:focus,
+body.tagore-ui .form-control:focus {
+  border-color: var(--tg-ui-accent) !important;
+  box-shadow: var(--tg-ui-focus) !important;
+  outline: 0;
+}
+
+body.tagore-ui input[type="checkbox"],
+body.tagore-ui input[type="radio"] {
+  accent-color: var(--tg-ui-accent);
+}
+
+/* Shared action hierarchy. Existing semantic button classes remain authoritative. */
+body.tagore-ui .btn,
+body.tagore-ui button,
+body.tagore-ui input[type="submit"],
+body.tagore-ui input[type="button"] {
+  min-height: 36px;
+  border-radius: var(--tg-ui-radius-sm);
+  font-weight: 700;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+body.tagore-ui .btn-primary,
+body.tagore-ui button[type="submit"],
+body.tagore-ui input[type="submit"] {
+  color: #071b13 !important;
+  background: var(--tg-ui-accent) !important;
+  border-color: var(--tg-ui-accent) !important;
+}
+
+body.tagore-ui .btn-primary:hover,
+body.tagore-ui button[type="submit"]:hover,
+body.tagore-ui input[type="submit"]:hover {
+  background: var(--tg-ui-accent-hover) !important;
+  border-color: var(--tg-ui-accent-hover) !important;
+}
+
+/* Tables: predictable headers, row separation, and horizontal containment. */
+body.tagore-ui .table-responsive,
+body.tagore-ui .tg-table-wrap {
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.tagore-ui table,
+body.tagore-ui table.table {
+  max-width: 100%;
+  color: var(--tg-ui-text) !important;
+  background: var(--tg-ui-panel) !important;
+  border-color: var(--tg-ui-border) !important;
+}
+
+body.tagore-ui table thead th,
+body.tagore-ui table.table thead th {
+  color: #d2dce8 !important;
+  background: #253342 !important;
+  border-color: var(--tg-ui-border) !important;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+body.tagore-ui table td,
+body.tagore-ui table th {
+  border-color: var(--tg-ui-border) !important;
+  vertical-align: middle;
+}
+
+body.tagore-ui table tbody tr:hover td {
+  background: rgba(25, 183, 122, .055);
+}
+
+/* Feedback and validation */
+body.tagore-ui .alert {
+  border-radius: var(--tg-ui-radius);
+  line-height: 1.55;
+}
+
+body.tagore-ui .text-danger,
+body.tagore-ui .invalid-feedback {
+  color: #ff91a2 !important;
+}
+
+body.tagore-ui .is-invalid,
+body.tagore-ui .has-error .form-control {
+  border-color: var(--tg-ui-danger) !important;
+}
+
+body.tagore-ui .pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+body.tagore-ui .pagination > li > a,
+body.tagore-ui .pagination > li > span,
+body.tagore-ui .page-link {
+  color: var(--tg-ui-text) !important;
+  background: var(--tg-ui-panel-raised) !important;
+  border-color: var(--tg-ui-border) !important;
+  border-radius: 8px !important;
+}
+
+body.tagore-ui .pagination > .active > a,
+body.tagore-ui .pagination > .active > span,
+body.tagore-ui .page-item.active .page-link {
+  color: #071b13 !important;
+  background: var(--tg-ui-accent) !important;
+  border-color: var(--tg-ui-accent) !important;
+}
+
+@media (max-width: 760px) {
+  body.tagore-ui .tagore-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  body.tagore-ui .table-responsive > table,
+  body.tagore-ui .tg-table-wrap > table {
+    min-width: 640px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.tagore-ui *,
+  body.tagore-ui *::before,
+  body.tagore-ui *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
