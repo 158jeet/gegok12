@@ -371,31 +371,41 @@ class FieldworkFormController extends Controller
     private function managerInstitutions(int $userId, $roles): array
     {
         if ($roles->contains('OWNER')) {
-            return DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all();
+            return DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
         }
 
         return DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
             ->where('ur.user_id', $userId)
             ->where('ur.status', 'active')
-            ->whereNotNull('ur.institution_id')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
             ->whereIn('r.code', ['PRINCIPAL', 'COORDINATOR'])
-            ->pluck('ur.institution_id')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
+            ->where('i.status', 'active')->whereNull('i.deleted_at')
+            ->distinct()->pluck('ur.institution_id')
+            ->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     private function context(Request $request): array
     {
         $userId = (int) $request->user()->id;
         $roles = DB::table('tagore_user_roles as ur')->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
-            ->where('ur.user_id', $userId)->where('ur.status', 'active')->pluck('r.code')->unique()->values();
+            ->where('ur.user_id', $userId)->where('ur.status', 'active')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->pluck('r.code')->unique()->values();
+
         $institutions = $roles->contains('OWNER')
-            ? DB::table('tagore_institutions')->where('status', 'active')->pluck('id')->map(fn ($id) => (int) $id)->all()
-            : DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')
-                ->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+            ? DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')
+                ->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : DB::table('tagore_user_roles as ur')->join('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
+                ->where('ur.user_id', $userId)->where('ur.status', 'active')
+                ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+                ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+                ->where('i.status', 'active')->whereNull('i.deleted_at')->whereNotNull('ur.institution_id')
+                ->distinct()->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         return [$userId, $roles, $institutions];
     }
 }
