@@ -83,12 +83,43 @@ class FeeManagementController extends Controller
         $userId=(int)$request->user()->id;$roles=$this->roles($userId);$this->assertAssignmentAccess($userId,$roles);$data=$request->validate(['fee_structure_id'=>['required','integer','exists:tagore_fee_structures,id'],'standard_link_id'=>['required','integer','exists:standards_link,id']]);$structure=DB::table('tagore_fee_structures')->where('id',$data['fee_structure_id'])->where('status','active')->first();abort_unless($structure,404);$this->authorizeInstitution($userId,(int)$structure->institution_id,$roles);$link=DB::table('standards_link')->where('id',$data['standard_link_id'])->whereNull('deleted_at')->first();abort_unless($link,422);abort_unless($link->academic_year_id,422,'Select a class/section linked to an academic year.');$institution=DB::table('tagore_institutions')->where('id',$structure->institution_id)->first(['school_id']);abort_unless($institution&&(int)$institution->school_id===(int)$link->school_id,422);if($structure->academic_year_id)abort_unless((int)$structure->academic_year_id===(int)$link->academic_year_id,422);$this->authorizeClassScope($userId,(int)$data['standard_link_id'],$roles);$existing=DB::table('tagore_fee_structure_assignments')->where('fee_structure_id',$structure->id)->where('standard_link_id',$link->id)->first();$payload=['institution_id'=>$structure->institution_id,'academic_year_id'=>$link->academic_year_id,'status'=>'active','updated_at'=>now()];if($existing)DB::table('tagore_fee_structure_assignments')->where('id',$existing->id)->update($payload);else DB::table('tagore_fee_structure_assignments')->insert(array_merge(['fee_structure_id'=>$structure->id,'standard_link_id'=>$link->id,'created_at'=>now()],$payload));return back()->with('success','Fee structure assigned to the selected class/section.');
     }
 
+    public function cashierBulkPreview(Request $request, int $assignmentId)
+    {
+        $userId = (int) $request->user()->id;
+        $roles = $this->roles($userId);
+        $this->assertAssignmentAccess($userId, $roles);
+        $assignment = $this->assignmentForUser($userId, $roles, $assignmentId);
+        $structure = DB::table('tagore_fee_structures')->where('id', $assignment->fee_structure_id)
+            ->where('status', 'active')->first();
+        abort_unless($structure, 422, 'The assigned fee structure is no longer active.');
+
+        $students = $this->eligibleStudents($assignment);
+        $existing = DB::table('tagore_fee_obligations')
+            ->where('institution_id', $assignment->institution_id)
+            ->where('academic_year_id', $assignment->academic_year_id)
+            ->where('fee_structure_id', $assignment->fee_structure_id)
+            ->whereIn('student_id', $students->pluck('id'))->pluck('student_id');
+
+        $preview = [
+            'eligible_count' => $students->count(),
+            'existing_count' => $existing->count(),
+            'new_count' => $students->whereNotIn('id', $existing)->count(),
+            'expires_at' => now()->addMinutes(10)->timestamp,
+        ];
+        session()->put('cashier_bulk_preview_' . $assignmentId, $preview);
+
+        return redirect()->route('tagore.cashier.fees')
+            ->with('success', 'Preview ready. Review the new and existing demand counts before confirming.');
+    }
+
     public function generateCashierBulk(Request $request, int $assignmentId, FeeService $feeService)
     {
         $userId = (int) $request->user()->id;
         $roles = $this->roles($userId);
         $this->assertAssignmentAccess($userId, $roles);
         $data = $request->validate(['due_date' => ['nullable', 'date']]);
+        $preview = session()->pull('cashier_bulk_preview_' . $assignmentId);
+        abort_unless(is_array($preview) && ($preview['expires_at'] ?? 0) >= now()->timestamp, 409, 'Preview demand creation again before confirming.');
 
         $assignment = $this->assignmentForUser($userId, $roles, $assignmentId);
         $structure = DB::table('tagore_fee_structures')

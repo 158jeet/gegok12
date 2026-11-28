@@ -120,6 +120,10 @@ class TagoreCashierWorkspaceTest extends TestCase
             ->first();
         $this->assertNotNull($assignment);
 
+        $this->actingAs($cashier)->post(route('tagore.cashier.fees.preview', $assignment->id))
+            ->assertRedirect(route('tagore.cashier.fees'))
+            ->assertSessionHas('cashier_bulk_preview_' . $assignment->id);
+
         $this->actingAs($cashier)->post(route('tagore.cashier.fees.generate', $assignment->id), [
             'due_date' => now()->addDays(30)->toDateString(),
         ])->assertRedirect(route('tagore.cashier.fees'))->assertSessionHas('success');

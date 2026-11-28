@@ -116,6 +116,7 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/cashier/students/{studentId}/reminder', [CashierController::class, 'sendReminder'])->whereNumber('studentId')->middleware('throttle:5,1')->name('tagore.cashier.reminder');
     Route::get('/cashier/fees', [FeeManagementController::class, 'cashierAssignments'])->name('tagore.cashier.fees');
     Route::post('/cashier/fees/assignments', [FeeManagementController::class, 'storeAssignment'])->name('tagore.cashier.fees.assign');
+    Route::post('/cashier/fees/assignments/{assignmentId}/preview', [FeeManagementController::class, 'cashierBulkPreview'])->whereNumber('assignmentId')->name('tagore.cashier.fees.preview');
     Route::post('/cashier/fees/assignments/{assignmentId}/generate', [FeeManagementController::class, 'generateCashierBulk'])->whereNumber('assignmentId')->name('tagore.cashier.fees.generate');
     Route::get('/accounts/fees', [FeeController::class, 'accounts'])->name('tagore.fees.accounts');
     Route::post('/accounts/fees/student/{studentId}/payment', [FeeController::class, 'recordOfflinePayment'])->whereNumber('studentId')->name('tagore.fees.payment');
