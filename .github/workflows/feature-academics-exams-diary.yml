@@ -1,0 +1,84 @@
+name: Feature 4 - Academics, Exams and Diary
+on:
+  pull_request:
+    branches: [main, 'integration/erp-7day']
+    paths:
+      - 'app/**'
+      - 'routes/**'
+      - 'database/**'
+      - 'resources/**'
+      - 'tests/Feature/TagoreAcademicStructureTest.php'
+      - 'tests/Feature/TagoreExaminationTest.php'
+      - 'tests/Feature/TagoreDailyDiaryAcceptanceTest.php'
+      - 'tests/Feature/TagoreOlympiadTest.php'
+      - 'tests/Feature/TagoreParentOlympiadTest.php'
+      - '.github/workflows/feature-academics-exams-diary.yml'
+  push:
+    branches: [main, 'integration/erp-7day']
+    paths:
+      - 'app/**'
+      - 'routes/**'
+      - 'database/**'
+      - 'resources/**'
+      - 'tests/Feature/TagoreAcademicStructureTest.php'
+      - 'tests/Feature/TagoreExaminationTest.php'
+      - 'tests/Feature/TagoreDailyDiaryAcceptanceTest.php'
+      - 'tests/Feature/TagoreOlympiadTest.php'
+      - 'tests/Feature/TagoreParentOlympiadTest.php'
+      - '.github/workflows/feature-academics-exams-diary.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feature-academics-exams-diary-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Feature 4 - Academics, Exams and Diary
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/feature-ci.sqlite
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      TAGORE_OLYMPIAD_INTAKE_ENABLED: true
+      TAGORE_OLYMPIAD_INSTITUTION_ID: '1'
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, sqlite3, pdo_sqlite, intl
+          coverage: none
+      - name: Validate and install dependencies
+        run: |
+          composer validate --no-check-publish --no-interaction
+          composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare isolated database
+        run: |
+          mkdir -p database
+          touch database/feature-ci.sqlite
+          php artisan key:generate --force --no-interaction
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+      - name: Run focused regression tests
+        run: php artisan test tests/Feature/TagoreAcademicStructureTest.php tests/Feature/TagoreExaminationTest.php tests/Feature/TagoreDailyDiaryAcceptanceTest.php tests/Feature/TagoreOlympiadTest.php tests/Feature/TagoreParentOlympiadTest.php
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-academics-exams-diary-${{ github.sha }}
+          path: |
+            storage/logs/laravel.log
+            database/feature-ci.sqlite
+          if-no-files-found: warn
+          retention-days: 7
