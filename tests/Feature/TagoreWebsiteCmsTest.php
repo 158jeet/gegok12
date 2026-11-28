@@ -44,11 +44,11 @@ class TagoreWebsiteCmsTest extends TestCase
     {
         $owner = User::query()->where('email', 'owner@tagore-demo.local')->whereNull('deleted_at')->firstOrFail();
         $institution = DB::table('tagore_institutions')->where('status', 'active')->whereNull('deleted_at')->firstOrFail();
-        DB::table('tagore_website_sites')->insert([
-            'institution_id' => $institution->id, 'site_key' => 'cms-security-' . $institution->id,
-            'site_name' => $institution->display_name, 'status' => 'draft', 'locale' => 'en',
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
+        DB::table('tagore_website_sites')->updateOrInsert(
+            ['institution_id' => $institution->id],
+            ['site_key' => 'cms-security-' . $institution->id, 'site_name' => $institution->display_name,
+             'status' => 'draft', 'locale' => 'en', 'created_at' => now(), 'updated_at' => now()]
+        );
         $siteId = DB::table('tagore_website_sites')->where('institution_id', $institution->id)->value('id');
 
         $this->actingAs($owner)->from(route('tagore.website.index'))->post(route('tagore.website.pages.store'), [
