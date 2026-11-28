@@ -4,6 +4,7 @@ use App\Http\Controllers\Tagore\AcademicStructureController;
 use App\Http\Controllers\Tagore\AdministrationController;
 use App\Http\Controllers\Tagore\AdmissionsController;
 use App\Http\Controllers\Tagore\CrmTelephonyController;
+use App\Http\Controllers\Tagore\CrmGrowthController;
 use App\Http\Controllers\Tagore\DailyDiaryController;
 use App\Http\Controllers\Tagore\DashboardController;
 use App\Http\Controllers\Tagore\FeeController;
@@ -104,8 +105,17 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::post('/admissions/{leadId}/activity', [AdmissionsController::class, 'activity'])->whereNumber('leadId')->name('tagore.admissions.activity');
     Route::post('/admissions/{leadId}/link-family', [AdmissionsController::class, 'linkFamily'])->whereNumber('leadId')->name('tagore.admissions.link-family');
     Route::post('/admissions/{leadId}/link-student', [AdmissionsController::class, 'linkExistingStudent'])->whereNumber('leadId')->name('tagore.admissions.link-student');
+    Route::get('/crm', [CrmGrowthController::class, 'index'])->name('tagore.crm.index');
+    Route::post('/crm/opportunities', [CrmGrowthController::class, 'storeOpportunity'])->name('tagore.crm.opportunities.store');
+    Route::patch('/crm/opportunities/{opportunityId}', [CrmGrowthController::class, 'updateOpportunity'])->whereNumber('opportunityId')->name('tagore.crm.opportunities.update');
+    Route::post('/crm/campaigns', [CrmGrowthController::class, 'storeCampaign'])->name('tagore.crm.campaigns.store');
+    Route::post('/crm/tasks', [CrmGrowthController::class, 'storeTask'])->name('tagore.crm.tasks.store');
+    Route::patch('/crm/tasks/{taskId}', [CrmGrowthController::class, 'updateTask'])->whereNumber('taskId')->name('tagore.crm.tasks.update');
+    Route::post('/crm/cases', [CrmGrowthController::class, 'storeCase'])->name('tagore.crm.cases.store');
+    Route::patch('/crm/cases/{caseId}', [CrmGrowthController::class, 'updateCase'])->whereNumber('caseId')->name('tagore.crm.cases.update');
     Route::get('/crm/telephony', [CrmTelephonyController::class, 'index'])->name('tagore.crm.telephony.index');
     Route::post('/crm/telephony', [CrmTelephonyController::class, 'saveAccount'])->name('tagore.crm.telephony.save');
+    Route::post('/crm/telephony/agents', [CrmTelephonyController::class, 'saveAgent'])->name('tagore.crm.telephony.agents.save');
     Route::post('/admissions/{leadId}/call', [CrmTelephonyController::class, 'clickToCall'])->whereNumber('leadId')->middleware('throttle:10,1')->name('tagore.crm.telephony.call');
     Route::post('/crm/calls/{callId}/disposition', [CrmTelephonyController::class, 'disposition'])->whereNumber('callId')->name('tagore.crm.telephony.disposition');
 

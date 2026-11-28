@@ -29,6 +29,98 @@ class TagoreAdmissionsTest extends TestCase
             ->assertOk()->assertSee('QA Admission Student');
     }
 
+    public function test_duplicate_student_contact_is_flagged_without_blocking_sibling_shared_mobile(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
+        $mobile = '+91 98765 43210';
+        $existingLeadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institutionId,
+            'lead_no' => 'QA-DUPLICATE-' . uniqid(),
+            'student_name' => 'Duplicate Detection Student',
+            'parent_name' => 'Shared Parent',
+            'mobile' => $mobile,
+            'email' => 'duplicate.student@example.test',
+            'status' => 'follow_up',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('tagore.admissions.store'), [
+            'institution_id' => $institutionId,
+            'student_name' => 'Duplicate Detection Student',
+            'parent_name' => 'Shared Parent',
+            'mobile' => '9876543210',
+            'email' => 'DUPLICATE.STUDENT@example.test',
+            'class_name' => 'XI',
+        ])->assertRedirect(route('tagore.admissions.show', $existingLeadId))
+            ->assertSessionHas('warning');
+
+        $this->assertSame(1, DB::table('tagore_admission_leads')
+            ->where('institution_id', $institutionId)
+            ->where('student_name', 'Duplicate Detection Student')->count());
+
+        $this->actingAs($owner)->post(route('tagore.admissions.store'), [
+            'institution_id' => $institutionId,
+            'student_name' => 'Sibling With Shared Parent Mobile',
+            'parent_name' => 'Shared Parent',
+            'mobile' => '9876543210',
+            'class_name' => 'VIII',
+        ])->assertRedirect()->assertSessionMissing('warning');
+
+        $this->assertDatabaseHas('tagore_admission_leads', [
+            'institution_id' => $institutionId,
+            'student_name' => 'Sibling With Shared Parent Mobile',
+        ]);
+    }
+
+    public function test_lead_engagement_score_is_explainable_and_uses_activity_and_call_history(): void
+    {
+        $owner = User::query()->where('email', 'demoschool@mailinator.com')->firstOrFail();
+        $institutionId = (int) DB::table('tagore_institutions')->where('status', 'active')->value('id');
+        $leadId = DB::table('tagore_admission_leads')->insertGetId([
+            'institution_id' => $institutionId,
+            'lead_no' => 'QA-SCORE-' . uniqid(),
+            'student_name' => 'High Intent CRM Student',
+            'parent_name' => 'High Intent Parent',
+            'mobile' => '+919876543210',
+            'email' => 'high.intent@example.test',
+            'class_name' => 'XI',
+            'source' => 'website',
+            'campaign' => 'JEE-2027',
+            'status' => 'qualified',
+            'marketing_consent' => true,
+            'next_follow_up_at' => now()->addDay(),
+            'last_contacted_at' => now()->subHour(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('tagore_admission_activities')->insert([
+            'lead_id' => $leadId, 'user_id' => $owner->id, 'type' => 'call',
+            'outcome' => 'connected', 'notes' => 'Parent requested counselling.',
+            'completed_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $accountId = DB::table('tagore_crm_telephony_accounts')->insertGetId([
+            'institution_id' => $institutionId, 'provider' => 'exotel',
+            'account_sid' => 'qa-lead-score-account', 'credentials' => json_encode([]),
+            'caller_id' => '+911234567890', 'webhook_token_hash' => hash('sha256', 'qa-score-token'),
+            'record_calls' => false, 'is_active' => true, 'created_by' => $owner->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);        DB::table('tagore_crm_calls')->insert([
+            'institution_id' => $institutionId, 'telephony_account_id' => $accountId,
+            'lead_id' => $leadId, 'provider_call_id' => 'QA-LEAD-SCORE-CALL',
+            'direction' => 'outbound', 'status' => 'completed', 'duration_seconds' => 90,
+            'started_at' => now()->subMinutes(2), 'ended_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $lead = TagoreAdmissionLead::query()->withCount(['activities', 'calls'])->findOrFail($leadId);
+        $score = app(\App\Services\Tagore\CrmLeadScoringService::class)->score($lead);
+
+        $this->assertSame('hot', $score['band']);
+        $this->assertGreaterThanOrEqual(90, $score['score']);
+        $this->assertContains('Cloud call history exists', $score['signals']);
+    }
     public function test_teacher_cannot_access_admissions_module(): void
     {
         $teacher=User::query()->where('usergroup_id',5)->whereNull('deleted_at')->orderBy('id')->firstOrFail();

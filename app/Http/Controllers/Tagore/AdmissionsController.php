@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tagore;
 use App\Http\Controllers\Controller;
 use App\Models\TagoreAdmissionActivity;
 use App\Models\TagoreAdmissionLead;
+use App\Models\TagoreCrmTelephonyAgent;
+use App\Services\Tagore\CrmLeadScoringService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -13,15 +15,15 @@ use Illuminate\Support\Str;
 
 class AdmissionsController extends Controller
 {
-    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR','CASHIER'];
+    private const STAFF_ROLES = ['OWNER','PRINCIPAL','COORDINATOR','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'];
 
-    public function index(Request $request): View
+    public function index(Request $request, CrmLeadScoringService $scoring): View
     {
         $userId=(int)$request->user()->id; $roles=$this->roles($userId);
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
 
-        $query=TagoreAdmissionLead::query()->whereIn('institution_id',$ids)
+        $query=TagoreAdmissionLead::query()->withCount(['activities','calls'])->whereIn('institution_id',$ids)
             ->orderByRaw("case when status='new' then 0 when status='follow_up' then 1 else 2 end")
             ->orderBy('next_follow_up_at')->orderByDesc('id');
 
@@ -39,8 +41,17 @@ class AdmissionsController extends Controller
         }
 
         $leads=$query->paginate(25)->withQueryString();
+        $leads->getCollection()->transform(function ($lead) use ($scoring) {
+            $lead->engagement_score = $scoring->score($lead);
+            return $lead;
+        });
         $base=TagoreAdmissionLead::whereIn('institution_id',$ids);
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         $sources=(clone $base)->whereNotNull('source')->select('source',DB::raw('count(*) as total'))->groupBy('source')->orderByDesc('total')->limit(10)->get();
         $campaigns=(clone $base)->whereNotNull('campaign')->select('campaign',DB::raw('count(*) as total'))->groupBy('campaign')->orderByDesc('total')->limit(10)->get();
         $ownerPerformance=(clone $base)->whereNotNull('assigned_to')->select('assigned_to',DB::raw('count(*) as total'),DB::raw("sum(case when status='admitted' then 1 else 0 end) as admitted"),DB::raw("sum(case when status='lost' then 1 else 0 end) as lost"))->groupBy('assigned_to')->orderByDesc('admitted')->limit(10)->get();
@@ -66,7 +77,12 @@ class AdmissionsController extends Controller
         abort_unless($roles->intersect(self::STAFF_ROLES)->isNotEmpty(),403);
         $ids=$this->institutionIds($userId,$roles);
         $institutions=DB::table('tagore_institutions')->whereIn('id',$ids)->where('status','active')->orderBy('display_name')->get(['id','display_name']);
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->whereIn('ur.institution_id',$ids)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
         return view('tagore.admissions.create',compact('institutions','staff'));
     }
 
@@ -85,6 +101,31 @@ class AdmissionsController extends Controller
         abort_unless(in_array((int)$data['institution_id'],$this->institutionIds($userId,$roles),true),403);
         if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$data['institution_id']),422);
 
+        // Same guardian mobile is common across siblings; only flag a duplicate
+        // when the student name and at least one contact identifier also match.
+        $normalisePhone = static function ($value): string {
+            $digits = preg_replace('/\\D+/', '', (string) $value);
+            return strlen($digits) > 10 ? substr($digits, -10) : $digits;
+        };
+        $mobileKey = $normalisePhone($data['mobile'] ?? '');
+        $emailKey = mb_strtolower(trim((string) ($data['email'] ?? '')));
+        if ($mobileKey !== '' || $emailKey !== '') {
+            $nameKey = mb_strtolower(trim($data['student_name']));
+            $possibleDuplicates = TagoreAdmissionLead::query()
+                ->where('institution_id', (int) $data['institution_id'])
+                ->whereNotIn('status', ['lost'])
+                ->whereRaw('lower(trim(student_name)) = ?', [$nameKey])
+                ->get(['id', 'lead_no', 'student_name', 'mobile', 'email']);
+            $duplicate = $possibleDuplicates->first(function ($candidate) use ($normalisePhone, $mobileKey, $emailKey) {
+                $sameMobile = $mobileKey !== '' && $normalisePhone($candidate->mobile) === $mobileKey;
+                $sameEmail = $emailKey !== '' && mb_strtolower(trim((string) $candidate->email)) === $emailKey;
+                return $sameMobile || $sameEmail;
+            });
+            if ($duplicate) {
+                return redirect()->route('tagore.admissions.show', $duplicate->id)
+                    ->with('warning', 'Possible duplicate enquiry detected. Review existing lead ' . $duplicate->lead_no . ' instead of creating another record.');
+            }
+        }
         $lead=DB::transaction(function() use($data,$userId){
             $institutionId=(int)$data['institution_id'];
             // Use the database-generated ID for the human-readable lead number.
@@ -105,6 +146,7 @@ class AdmissionsController extends Controller
         abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
         $data=$request->validate(['assigned_to'=>['nullable','integer']]);
         if (!empty($data['assigned_to'])) abort_unless($this->staffBelongsToInstitution((int)$data['assigned_to'],(int)$lead->institution_id),422);
+
         $lead->update(['assigned_to'=>$data['assigned_to'] ?? null]);
         TagoreAdmissionActivity::create(['lead_id'=>$lead->id,'user_id'=>$userId,'type'=>'note','outcome'=>'assignment','notes'=>$lead->assigned_to ? 'Lead assigned to user #'.$lead->assigned_to : 'Lead unassigned','completed_at'=>now()]);
         return back()->with('success','Lead assignment updated.');
@@ -120,8 +162,14 @@ class AdmissionsController extends Controller
         $classOptions=DB::table('standards_link as sl')->join('standards as st','st.id','=','sl.standard_id')->join('sections as sec','sec.id','=','sl.section_id')->join('academic_years as ay','ay.id','=','sl.academic_year_id')->where('sl.school_id',$institution->school_id)->where('sl.status',1)->whereNull('sl.deleted_at')->orderByDesc('ay.start_date')->orderBy('st.name')->orderBy('sec.name')->select('sl.id','sl.academic_year_id','ay.name as academic_year_name','st.name as standard_name','sec.name as section_name')->get();
         $conversion=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
         $calls=\App\Models\TagoreCrmCall::where('lead_id',$lead->id)->latest()->limit(30)->get();
-        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')->where('ur.institution_id',$lead->institution_id)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
-        return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion','calls'));
+        $staff=DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->join('users as u','u.id','=','ur.user_id')
+            ->where(function($query) use ($lead) { $query->where('ur.institution_id',$lead->institution_id)->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER')); })
+            ->where('ur.status','active')->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER','CRM_MANAGER','ADMISSIONS','TELECALLER','MARKETING'])
+            ->whereNull('u.deleted_at')->select('u.id','u.name')->distinct()->orderBy('u.name')->get();
+        $hasAgent=TagoreCrmTelephonyAgent::where('institution_id',$lead->institution_id)->where('user_id',$userId)->where('is_active',true)->whereHas('account',fn($query)=>$query->where('is_active',true))->exists();
+        return view('tagore.admissions.show',compact('lead','staff','classOptions','conversion','calls','hasAgent'));
     }
 
     public function linkExistingStudent(Request $request, int $leadId)
@@ -371,19 +419,33 @@ class AdmissionsController extends Controller
 
     private function staffBelongsToInstitution(int $userId,int $institutionId): bool
     {
-        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')->where('ur.user_id',$userId)->where('ur.institution_id',$institutionId)->where('ur.status','active')->whereIn('r.code',['OWNER','PRINCIPAL','COORDINATOR','TEACHER','CASHIER'])->exists();
+        return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')
+            ->where('ur.user_id',$userId)
+            ->where(function($query) use ($institutionId) {
+                $query->where('ur.institution_id',$institutionId)
+                    ->orWhere(fn($global)=>$global->whereNull('ur.institution_id')->where('r.code','OWNER'));
+            })
+            ->where('ur.status','active')
+            ->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->whereIn('r.code',self::STAFF_ROLES)->exists();
     }
 
     private function roles(int $userId)
     {
         return DB::table('tagore_user_roles as ur')->join('tagore_roles as r','r.id','=','ur.role_id')
-            ->where('ur.user_id',$userId)->where('ur.status','active')->pluck('r.code')->unique()->values();
+            ->where('ur.user_id',$userId)->where('ur.status','active')
+            ->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
+            ->pluck('r.code')->unique()->values();
     }
 
     private function institutionIds(int $userId,$roles): array
     {
-        if($roles->contains('OWNER')) return DB::table('tagore_institutions')->where('status','active')->pluck('id')->map(fn($id)=>(int)$id)->all();
+        if($roles->contains('OWNER')) return DB::table('tagore_institutions')->where('status','active')->whereNull('deleted_at')->pluck('id')->map(fn($id)=>(int)$id)->all();
         return DB::table('tagore_user_roles')->where('user_id',$userId)->where('status','active')->whereNotNull('institution_id')
+            ->where(fn($query)=>$query->whereNull('start_date')->orWhereDate('start_date','<=',today()))
+            ->where(fn($query)=>$query->whereNull('end_date')->orWhereDate('end_date','>=',today()))
             ->pluck('institution_id')->map(fn($id)=>(int)$id)->unique()->values()->all();
     }
 }

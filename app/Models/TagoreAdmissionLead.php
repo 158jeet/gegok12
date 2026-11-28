@@ -24,4 +24,8 @@ class TagoreAdmissionLead extends Model
     {
         return $this->hasMany(TagoreAdmissionActivity::class, 'lead_id');
     }
+    public function calls()
+    {
+        return $this->hasMany(TagoreCrmCall::class, 'lead_id');
+    }
 }
