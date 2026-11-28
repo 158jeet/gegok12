@@ -24,6 +24,7 @@ class CrmTelephonyController extends Controller
     {
         return DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('r.status', 'active')
             ->where('ur.user_id', $userId)->where('ur.status', 'active')
             ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
             ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
@@ -37,11 +38,14 @@ class CrmTelephonyController extends Controller
                 ->pluck('id')->map(fn ($id) => (int) $id)->all();
         }
 
-        return DB::table('tagore_user_roles')->where('user_id', $userId)->where('status', 'active')
-            ->whereNotNull('institution_id')
-            ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', today()))
-            ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', today()))
-            ->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+        return DB::table('tagore_user_roles as ur')
+            ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->join('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
+            ->where('ur.user_id', $userId)->where('ur.status', 'active')->where('r.status', 'active')
+            ->where('i.status', 'active')->whereNull('i.deleted_at')->whereNotNull('ur.institution_id')
+            ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
+            ->distinct()->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 
     private function authorizeStaff(Request $request, bool $ownerOnly = false): array
