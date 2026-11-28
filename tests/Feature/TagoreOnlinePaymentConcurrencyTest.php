@@ -34,11 +34,33 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
             'services.razorpay.key' => 'rzp_test_tagore',
             'services.razorpay.secret' => 'test_secret_for_acceptance',
         ]);
+        DB::table('tagore_parent_students')->updateOrInsert(
+            ['parent_user_id' => $this->parent->id, 'student_id' => $this->student->id],
+            ['relationship' => 'Parent', 'is_primary' => true, 'is_guardian' => true, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+        );
+
         Http::fake([
             'https://api.razorpay.com/v1/orders' => Http::sequence()
                 ->push(['id' => 'order_test_tagore_1'], 200)
                 ->push(['id' => 'order_test_tagore_2'], 200)
                 ->push(['id' => 'order_test_tagore_3'], 200),
+            'https://api.razorpay.com/v1/payments/*' => function ($request) {
+                $paymentId = basename(parse_url($request->url(), PHP_URL_PATH));
+                $amount = match ($paymentId) {
+                    'pay_test_tagore_stale' => 8000,
+                    'pay_test_tagore_valid' => 6000,
+                    'pay_test_tagore_mismatch' => 5000,
+                    'pay_test_tagore_authorized' => 6000,
+                    default => 0,
+                };
+                return Http::response([
+                    'id' => $paymentId,
+                    'order_id' => 'order_test_tagore_1',
+                    'status' => $paymentId === 'pay_test_tagore_authorized' ? 'authorized' : 'captured',
+                    'amount' => $amount,
+                    'currency' => 'INR',
+                ], 200);
+            },
         ]);
 
         $this->obligationId = app(FeeService::class)->createObligation(
@@ -251,6 +273,104 @@ class TagoreOnlinePaymentConcurrencyTest extends TestCase
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('amount', $exception->errors());
         }
+    }
+
+    public function test_captured_gateway_amount_mismatch_is_quarantined_without_ledger_entries(): void
+    {
+        $service = app(OnlinePaymentService::class);
+        $order = $service->createOrder((int) $this->student->id, (int) $this->parent->id, 60.00);
+        $paymentId = 'pay_test_tagore_mismatch';
+        $settledId = $service->confirm([
+            'razorpay_order_id' => $order['gateway_order_id'],
+            'razorpay_payment_id' => $paymentId,
+            'razorpay_signature' => hash_hmac('sha256', $order['gateway_order_id'].'|'.$paymentId, 'test_secret_for_acceptance'),
+        ]);
+
+        $this->assertDatabaseHas('tagore_payments', [
+            'id' => $settledId,
+            'status' => 'review_required',
+            'amount' => '50.00',
+            'gateway_payment_id' => $paymentId,
+        ]);
+        $this->assertDatabaseHas('tagore_payment_reconciliations', [
+            'payment_id' => $settledId,
+            'settlement_amount' => '50.00',
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseMissing('tagore_payment_allocations', ['payment_id' => $settledId]);
+        $this->assertDatabaseMissing('tagore_financial_transactions', [
+            'reference_type' => 'tagore_payment',
+            'reference_id' => $settledId,
+        ]);
+        $this->assertDatabaseHas('tagore_fee_obligations', [
+            'id' => $this->obligationId,
+            'paid_amount' => '0.00',
+            'outstanding_amount' => '100.00',
+        ]);
+    }
+
+    public function test_authorized_but_not_captured_gateway_payment_does_not_post_a_payment(): void
+    {
+        $service = app(OnlinePaymentService::class);
+        $order = $service->createOrder((int) $this->student->id, (int) $this->parent->id, 60.00);
+        $paymentId = 'pay_test_tagore_authorized';
+
+        try {
+            $service->confirm([
+                'razorpay_order_id' => $order['gateway_order_id'],
+                'razorpay_payment_id' => $paymentId,
+                'razorpay_signature' => hash_hmac('sha256', $order['gateway_order_id'].'|'.$paymentId, 'test_secret_for_acceptance'),
+            ]);
+            $this->fail('An authorized but uncaptured payment must not be posted to the fee ledger.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment', $exception->errors());
+        }
+
+        $this->assertDatabaseMissing('tagore_payments', ['gateway_payment_id' => $paymentId]);
+        $this->assertDatabaseHas('tagore_payment_orders', [
+            'id' => $order['order_id'],
+            'status' => 'payment_initiated',
+        ]);
+        $this->assertDatabaseHas('tagore_fee_obligations', [
+            'id' => $this->obligationId,
+            'paid_amount' => '0.00',
+            'outstanding_amount' => '100.00',
+        ]);
+    }
+
+    public function test_webhook_uses_raw_body_signature_and_is_idempotent(): void
+    {
+        config(['services.razorpay.webhook_secret' => 'webhook_test_secret']);
+        $order = app(OnlinePaymentService::class)->createOrder((int) $this->student->id, (int) $this->parent->id, 60.00);
+        $event = [
+            'id' => 'evt_tagore_online_payment_1',
+            'event' => 'payment.captured',
+            'payload' => [
+                'payment' => [
+                    'entity' => [
+                        'id' => 'pay_test_tagore_valid',
+                        'order_id' => $order['gateway_order_id'],
+                        'status' => 'captured',
+                        'amount' => 6000,
+                        'currency' => 'INR',
+                    ],
+                ],
+            ],
+        ];
+        $rawBody = json_encode($event, JSON_UNESCAPED_SLASHES);
+        $signature = hash_hmac('sha256', $rawBody, 'webhook_test_secret');
+        $service = app(OnlinePaymentService::class);
+
+        $service->webhook($signature, $rawBody, $event, 'evt_tagore_online_payment_1');
+        $service->webhook($signature, $rawBody, $event, 'evt_tagore_online_payment_1');
+
+        $this->assertSame(1, DB::table('tagore_payment_events')->where('event_id', 'evt_tagore_online_payment_1')->count());
+        $this->assertSame(1, DB::table('tagore_payments')->where('payment_order_id', $order['order_id'])->where('status', 'success')->count());
+        $this->assertDatabaseHas('tagore_fee_obligations', [
+            'id' => $this->obligationId,
+            'paid_amount' => '60.00',
+            'outstanding_amount' => '40.00',
+        ]);
     }
 
 }

@@ -33,8 +33,8 @@ class OnlinePaymentService
                 ->get();
             $reserved = DB::table('tagore_payment_order_allocations as a')
                 ->join('tagore_payment_orders as o', 'o.id', '=', 'a.payment_order_id')
-                ->whereIn('o.status', ['created', 'payment_initiated'])
-                ->where('o.expires_at', '>', now())
+                ->whereIn('o.status', ['created', 'payment_initiated', 'review_required'])
+                ->where(function ($query) { $query->where('o.status', 'review_required')->orWhere('o.expires_at', '>', now()); })
                 ->whereIn('a.fee_obligation_id', $obligations->pluck('id'))
                 ->groupBy('a.fee_obligation_id')
                 ->select('a.fee_obligation_id', DB::raw('SUM(a.amount) as reserved_amount'))
@@ -181,118 +181,288 @@ class OnlinePaymentService
     public function confirm(array $data): int
     {
         $this->assertGatewayConfigured();
-        $order=DB::table('tagore_payment_orders')->where('gateway_order_id',$data['razorpay_order_id'])->lockForUpdate()->first();
-        if(!$order) throw ValidationException::withMessages(['payment'=>'Payment order not found.']);
-        $expected=hash_hmac('sha256',$order->gateway_order_id.'|'.$data['razorpay_payment_id'],(string)config('services.razorpay.secret'));
-        if(!hash_equals($expected,$data['razorpay_signature'])) throw ValidationException::withMessages(['payment'=>'Payment signature verification failed.']);
-        return $this->settle($order->id,$data['razorpay_payment_id']);
-    }
+        $order = DB::table('tagore_payment_orders')->where('gateway_order_id', $data['razorpay_order_id'])->first();
+        if (!$order) {
+            throw ValidationException::withMessages(['payment' => 'Payment order not found.']);
+        }
+        if (!empty($order->family_payment_group_id)) {
+            throw ValidationException::withMessages(['payment' => 'This order belongs to a family checkout and must be confirmed through the family payment flow.']);
+        }
 
-    public function webhook(string $signature, string $payload, array $event, ?string $eventId=null): void
+        $expected = hash_hmac('sha256', $order->gateway_order_id.'|'.$data['razorpay_payment_id'], (string) config('services.razorpay.secret'));
+        if (!hash_equals($expected, $data['razorpay_signature'])) {
+            throw ValidationException::withMessages(['payment' => 'Payment signature verification failed.']);
+        }
+
+        $response = Http::timeout(15)
+            ->withBasicAuth((string) config('services.razorpay.key'), (string) config('services.razorpay.secret'))
+            ->get('https://api.razorpay.com/v1/payments/'.$data['razorpay_payment_id']);
+        if (!$response->successful()) {
+            throw ValidationException::withMessages(['payment' => 'Could not verify the captured payment with Razorpay. Please retry confirmation.']);
+        }
+
+        return $this->settle((int) $order->id, (string) $data['razorpay_payment_id'], $response->json() ?: []);
+    }
+    public function webhook(string $signature, string $rawBody, array $event, string $eventId): void
     {
-        $this->assertGatewayConfigured();
-        $expected=hash_hmac('sha256',$payload,(string)config('services.razorpay.webhook_secret'));
-        if(!hash_equals($expected,$signature)) throw ValidationException::withMessages(['webhook'=>'Invalid webhook signature.']);
-        $eventId=$eventId ?: hash('sha256',$payload);
-        $paymentId = DB::transaction(function() use($event,$eventId){
-            if(DB::table('tagore_payment_events')->where('gateway','razorpay')->where('event_id',$eventId)->lockForUpdate()->exists()) return 0;
-            DB::table('tagore_payment_events')->insert(['gateway'=>'razorpay','event_id'=>$eventId,'event_type'=>(string)($event['event']??'unknown'),'payload_json'=>json_encode($event),'received_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
-            if(($event['event']??'')==='payment.captured'){
-                $entity=$event['payload']['payment']['entity']??[];
-                if(!empty($entity['order_id'])&&!empty($entity['id'])) return $this->settleByGatewayOrder((string)$entity['order_id'],(string)$entity['id']);
+        $webhookSecret = (string) config('services.razorpay.webhook_secret');
+        if ($webhookSecret === '') {
+            throw ValidationException::withMessages(['webhook' => 'Razorpay webhook secret is not configured.']);
+        }
+
+        $expected = hash_hmac('sha256', $rawBody, $webhookSecret);
+        if (!hash_equals($expected, $signature)) {
+            throw ValidationException::withMessages(['webhook' => 'Webhook signature verification failed.']);
+        }
+
+        $eventId = $eventId !== '' ? $eventId : (string) ($event['id'] ?? '');
+        if ($eventId === '') {
+            throw ValidationException::withMessages(['webhook' => 'Webhook event id is required for idempotent processing.']);
+        }
+
+        $paymentIds = DB::transaction(function () use ($event, $eventId) {
+            if (DB::table('tagore_payment_events')->where('event_id', $eventId)->exists()) {
+                return [];
             }
-            return 0;
+
+            DB::table('tagore_payment_events')->insert([
+                'event_id' => $eventId,
+                'event_type' => (string) ($event['event'] ?? 'unknown'),
+                'payload_json' => json_encode($event, JSON_UNESCAPED_SLASHES),
+                'created_at' => now(),
+            ]);
+
+            if (($event['event'] ?? '') !== 'payment.captured') {
+                return [];
+            }
+
+            $entity = $event['payload']['payment']['entity'] ?? [];
+            $gatewayOrderId = (string) ($entity['order_id'] ?? '');
+            $gatewayPaymentId = (string) ($entity['id'] ?? '');
+            if ($gatewayOrderId === '' || $gatewayPaymentId === '') {
+                return [];
+            }
+
+            $familyGroup = DB::table('tagore_family_payment_groups')->where('gateway_order_id', $gatewayOrderId)->first();
+            if ($familyGroup) {
+                return app(FamilyOnlinePaymentService::class)->settleByGatewayOrder($gatewayOrderId, $gatewayPaymentId, $entity);
+            }
+
+            $paymentId = $this->settleByGatewayOrder($gatewayOrderId, $gatewayPaymentId, $entity);
+            return $paymentId ? [(int) $paymentId] : [];
         });
-        if ($paymentId && DB::table('tagore_payments')->where('id',$paymentId)->where('status','success')->exists()) {
-            app(FeeReceiptMailer::class)->send((int)$paymentId);
+
+        foreach ($paymentIds as $paymentId) {
+            $payment = DB::table('tagore_payments')->where('id', $paymentId)->where('status', 'success')->first();
+            if ($payment) {
+                app(FeeReceiptMailer::class)->send($paymentId);
+            }
         }
     }
-
     private function assertGatewayConfigured(): void
     {
         $gateway = config('tagore.payment_gateway');
-        if (!$gateway) throw ValidationException::withMessages(['payment' => 'Online payments are disabled until a payment gateway is configured.']);
-        if ($gateway !== 'razorpay') throw ValidationException::withMessages(['payment' => 'Configured payment gateway is not supported yet: '.$gateway]);
-        if (!config('services.razorpay.key') || !config('services.razorpay.secret')) throw ValidationException::withMessages(['payment' => 'Payment gateway credentials are not configured.']);
+        if (!$gateway) {
+            throw ValidationException::withMessages(['payment' => 'Online payments are disabled until a payment gateway is configured.']);
+        }
+        if ($gateway !== 'razorpay') {
+            throw ValidationException::withMessages(['payment' => 'Configured payment gateway is not supported yet: ' . $gateway]);
+        }
+        if (!config('services.razorpay.key') || !config('services.razorpay.secret')) {
+            throw ValidationException::withMessages(['payment' => 'Payment gateway credentials are not configured.']);
+        }
     }
-
-    private function settleByGatewayOrder(string $gatewayOrderId,string $gatewayPaymentId): int
+    private function settleByGatewayOrder(string $gatewayOrderId, string $gatewayPaymentId, array $gatewayEntity): int
     {
-        $order=DB::table('tagore_payment_orders')->where('gateway_order_id',$gatewayOrderId)->lockForUpdate()->first();
-        return $order ? $this->settle($order->id,$gatewayPaymentId) : 0;
+        $order = DB::table('tagore_payment_orders')
+            ->where('gateway_order_id', $gatewayOrderId)
+            ->whereNull('family_payment_group_id')
+            ->lockForUpdate()
+            ->first();
+
+        return $order ? $this->settle((int) $order->id, $gatewayPaymentId, $gatewayEntity) : 0;
     }
-
-    private function settle(int $orderId,string $gatewayPaymentId): int
+    private function settle(int $orderId, string $gatewayPaymentId, array $gatewayEntity): int
     {
-        return DB::transaction(function() use($orderId,$gatewayPaymentId){
-            $order=DB::table('tagore_payment_orders')->where('id',$orderId)->lockForUpdate()->first();
-            if(!$order) throw ValidationException::withMessages(['payment'=>'Payment order not found.']);
-            $existing=DB::table('tagore_payments')->where('payment_order_id',$orderId)->whereIn('status',['success','review_required'])->first();
-            if($existing) return (int)$existing->id;
+        return DB::transaction(function () use ($orderId, $gatewayPaymentId, $gatewayEntity) {
+            $order = DB::table('tagore_payment_orders')->where('id', $orderId)->lockForUpdate()->first();
+            if (!$order) {
+                throw ValidationException::withMessages(['payment' => 'Payment order not found.']);
+            }
+            if (!empty($order->family_payment_group_id)) {
+                throw ValidationException::withMessages(['payment' => 'Family payment orders must be settled as one family group.']);
+            }
+
+            $existing = DB::table('tagore_payments')->where('payment_order_id', $orderId)
+                ->whereIn('status', ['success', 'review_required'])->first();
+            if ($existing) {
+                return (int) $existing->id;
+            }
             if (!in_array($order->status, ['payment_initiated', 'created'], true)) {
                 throw ValidationException::withMessages(['payment' => 'This payment order is no longer eligible for settlement.']);
             }
 
-            $now=now();
-            $allocations=DB::table('tagore_payment_order_allocations')
-                ->where('payment_order_id',$orderId)
+            $paymentData = $this->capturedPaymentData($order, $gatewayPaymentId, $gatewayEntity);
+            if (!$paymentData['captured']) {
+                throw ValidationException::withMessages(['payment' => 'The gateway has not confirmed a captured payment. No fee balance was changed.']);
+            }
+
+            $now = now();
+            $allocations = DB::table('tagore_payment_order_allocations')
+                ->where('payment_order_id', $orderId)
                 ->orderBy('fee_obligation_id')
                 ->get();
-            $obligationIds=$allocations->pluck('fee_obligation_id')->unique()->sort()->values();
-            $lockedObligations=DB::table('tagore_fee_obligations')
-                ->whereIn('id',$obligationIds)
+            $obligationIds = $allocations->pluck('fee_obligation_id')->unique()->sort()->values();
+            $lockedObligations = DB::table('tagore_fee_obligations')
+                ->whereIn('id', $obligationIds)
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
-            $allocatedTotal=round((float)$allocations->sum('amount'),2);
-            $allocationIsCurrent=abs($allocatedTotal-(float)$order->amount)<=0.009;
-            foreach($allocations as $allocation){
-                $obligation=$lockedObligations->get($allocation->fee_obligation_id);
-                if(!$obligation
-                    || (int)$obligation->student_id !== (int)$order->student_id
-                    || (int)$obligation->institution_id !== (int)$order->institution_id
-                    || (float)$allocation->amount > (float)$obligation->outstanding_amount + 0.009){
-                    $allocationIsCurrent=false;
+
+            $studentActive = DB::table('users')->where('id', $order->student_id)
+                ->where('usergroup_id', 6)->where('status', 'active')->whereNull('deleted_at')->exists();
+            $institutionActive = DB::table('tagore_institutions')->where('id', $order->institution_id)
+                ->where('status', 'active')->whereNull('deleted_at')->exists();
+            $parentLinkActive = DB::table('tagore_parent_students')->where('parent_user_id', $order->parent_user_id)
+                ->where('student_id', $order->student_id)->where('status', 'active')->exists();
+
+            $allocatedTotal = round((float) $allocations->sum('amount'), 2);
+            $allocationIsCurrent = $paymentData['valid']
+                && $studentActive
+                && $institutionActive
+                && $parentLinkActive
+                && (!$order->expires_at || $now->lte($order->expires_at))
+                && abs($allocatedTotal - (float) $order->amount) <= 0.009;
+
+            foreach ($allocations as $allocation) {
+                $obligation = $lockedObligations->get($allocation->fee_obligation_id);
+                if (!$obligation
+                    || (int) $obligation->student_id !== (int) $order->student_id
+                    || (int) $obligation->institution_id !== (int) $order->institution_id
+                    || !in_array($obligation->status, ['pending', 'partial', 'overdue'], true)
+                    || (float) $allocation->amount > (float) $obligation->outstanding_amount + 0.009) {
+                    $allocationIsCurrent = false;
                     break;
                 }
             }
 
             if (!$allocationIsCurrent) {
-                // The gateway has captured money, but the reserved fee balance changed
-                // after checkout. Record it for reconciliation; never over-allocate it.
-                $paymentId=DB::table('tagore_payments')->insertGetId([
-                    'payment_order_id'=>$orderId,'student_id'=>$order->student_id,
-                    'parent_user_id'=>$order->parent_user_id,'institution_id'=>$order->institution_id,
-                    'amount'=>$order->amount,'currency'=>'INR','gateway'=>'razorpay',
-                    'gateway_order_id'=>$order->gateway_order_id,'gateway_payment_id'=>$gatewayPaymentId,
-                    'status'=>'review_required','paid_at'=>$now,'notes'=>'Gateway captured payment; fee balances changed after checkout. Manual reconciliation or refund is required.',
-                    'created_at'=>$now,'updated_at'=>$now,
+                $reason = !$paymentData['valid']
+                    ? 'Gateway capture amount, currency, order or payment identity did not match the checkout.'
+                    : 'Gateway captured payment, but the fee balance or parent/institution eligibility changed after checkout.';
+                $paymentId = DB::table('tagore_payments')->insertGetId([
+                    'payment_order_id' => $orderId,
+                    'student_id' => $order->student_id,
+                    'parent_user_id' => $order->parent_user_id,
+                    'institution_id' => $order->institution_id,
+                    'amount' => $paymentData['amount'],
+                    'currency' => $paymentData['currency'] ?: 'INR',
+                    'gateway' => 'razorpay',
+                    'gateway_order_id' => $order->gateway_order_id,
+                    'gateway_payment_id' => $gatewayPaymentId,
+                    'status' => 'review_required',
+                    'paid_at' => $now,
+                    'notes' => $reason.' Expected checkout amount: '.$order->amount.' INR.',
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
                 DB::table('tagore_payment_reconciliations')->insert([
-                    'payment_id'=>$paymentId,'gateway'=>'razorpay','settlement_amount'=>$order->amount,
-                    'status'=>'pending','notes'=>'Captured payment could not be allocated because one or more fee obligations changed after checkout. Review allocation and refund if necessary.',
-                    'created_at'=>$now,'updated_at'=>$now,
+                    'payment_id' => $paymentId,
+                    'gateway' => 'razorpay',
+                    'settlement_amount' => $paymentData['amount'],
+                    'status' => 'pending',
+                    'notes' => $reason.' Actual gateway capture: '.$paymentData['amount'].' '.$paymentData['currency'].'.',
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
-                DB::table('tagore_payment_orders')->where('id',$orderId)->update(['status'=>'review_required','updated_at'=>$now]);
+                DB::table('tagore_payment_orders')->where('id', $orderId)->update([
+                    'status' => 'review_required',
+                    'updated_at' => $now,
+                ]);
+
                 return $paymentId;
             }
 
-            $receiptNo=$this->nextReceiptNo((int)$order->institution_id);
-            $paymentId=DB::table('tagore_payments')->insertGetId(['payment_order_id'=>$orderId,'receipt_no'=>$receiptNo,'student_id'=>$order->student_id,'parent_user_id'=>$order->parent_user_id,'institution_id'=>$order->institution_id,'amount'=>$order->amount,'currency'=>'INR','gateway'=>'razorpay','gateway_order_id'=>$order->gateway_order_id,'gateway_payment_id'=>$gatewayPaymentId,'status'=>'success','paid_at'=>$now,'created_at'=>$now,'updated_at'=>$now]);
-            foreach($allocations as $allocation){
-                $obligation=$lockedObligations->get($allocation->fee_obligation_id);
-                DB::table('tagore_payment_allocations')->insert(['payment_id'=>$paymentId,'fee_obligation_id'=>$allocation->fee_obligation_id,'fee_installment_id'=>$allocation->fee_installment_id,'amount'=>$allocation->amount,'created_at'=>$now,'updated_at'=>$now]);
-                $paid=round((float)$obligation->paid_amount+(float)$allocation->amount,2);
-                $outstanding=max(0,round((float)$obligation->net_amount-$paid,2));
-                DB::table('tagore_fee_obligations')->where('id',$obligation->id)->update(['paid_amount'=>$paid,'outstanding_amount'=>$outstanding,'status'=>$outstanding<=0.009?'paid':'partial','updated_at'=>$now]);
+            $receiptNo = $this->nextReceiptNo((int) $order->institution_id);
+            $paymentId = DB::table('tagore_payments')->insertGetId([
+                'payment_order_id' => $orderId,
+                'receipt_no' => $receiptNo,
+                'student_id' => $order->student_id,
+                'parent_user_id' => $order->parent_user_id,
+                'institution_id' => $order->institution_id,
+                'amount' => $order->amount,
+                'currency' => 'INR',
+                'gateway' => 'razorpay',
+                'gateway_order_id' => $order->gateway_order_id,
+                'gateway_payment_id' => $gatewayPaymentId,
+                'status' => 'success',
+                'paid_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            foreach ($allocations as $allocation) {
+                $obligation = $lockedObligations->get($allocation->fee_obligation_id);
+                DB::table('tagore_payment_allocations')->insert([
+                    'payment_id' => $paymentId,
+                    'fee_obligation_id' => $allocation->fee_obligation_id,
+                    'fee_installment_id' => $allocation->fee_installment_id,
+                    'amount' => $allocation->amount,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $paid = round((float) $obligation->paid_amount + (float) $allocation->amount, 2);
+                $outstanding = max(0, round((float) $obligation->net_amount - $paid, 2));
+                DB::table('tagore_fee_obligations')->where('id', $obligation->id)->update([
+                    'paid_amount' => $paid,
+                    'outstanding_amount' => $outstanding,
+                    'status' => $outstanding <= 0.009 ? 'paid' : 'partial',
+                    'updated_at' => $now,
+                ]);
             }
-            DB::table('tagore_financial_transactions')->insert(['institution_id'=>$order->institution_id,'student_id'=>$order->student_id,'parent_user_id'=>$order->parent_user_id,'transaction_type'=>'PAYMENT','reference_type'=>'tagore_payment','reference_id'=>$paymentId,'debit'=>0,'credit'=>$order->amount,'description'=>'Online fee payment','transaction_date'=>$now,'created_at'=>$now,'updated_at'=>$now]);
-            DB::table('tagore_payment_orders')->where('id',$orderId)->update(['status'=>'paid','updated_at'=>$now]);
+
+            DB::table('tagore_financial_transactions')->insert([
+                'institution_id' => $order->institution_id,
+                'student_id' => $order->student_id,
+                'parent_user_id' => $order->parent_user_id,
+                'transaction_type' => 'PAYMENT',
+                'reference_type' => 'tagore_payment',
+                'reference_id' => $paymentId,
+                'debit' => 0,
+                'credit' => $order->amount,
+                'description' => 'Online fee payment',
+                'transaction_date' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            DB::table('tagore_payment_orders')->where('id', $orderId)->update([
+                'status' => 'paid',
+                'updated_at' => $now,
+            ]);
+
             return $paymentId;
         });
     }
 
+    private function capturedPaymentData(object $order, string $paymentId, array $entity): array
+    {
+        $captured = (string) ($entity['status'] ?? '') === 'captured';
+        $amountPaise = (int) ($entity['amount'] ?? 0);
+        $amount = round($amountPaise / 100, 2);
+        $currency = strtoupper((string) ($entity['currency'] ?? ''));
+
+        return [
+            'captured' => $captured,
+            'amount' => $amount,
+            'currency' => $currency,
+            'valid' => $captured
+                && (string) ($entity['id'] ?? '') === $paymentId
+                && (string) ($entity['order_id'] ?? '') === (string) $order->gateway_order_id
+                && $amountPaise === (int) round((float) $order->amount * 100)
+                && $currency === 'INR',
+        ];
+    }
     private function nextReceiptNo(int $institutionId): string
     {
         $last=DB::table('tagore_payments')->where('institution_id',$institutionId)->whereNotNull('receipt_no')->lockForUpdate()->orderByDesc('id')->value('receipt_no');

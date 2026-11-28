@@ -13,6 +13,7 @@ use App\Http\Controllers\Tagore\FeeManagementController;
 use App\Http\Controllers\Tagore\LegacyStudentMappingController;
 use App\Http\Controllers\Tagore\LegacyFeeReconciliationController;
 use App\Http\Controllers\Tagore\OnlinePaymentController;
+use App\Http\Controllers\Tagore\FamilyOnlinePaymentController;
 use App\Http\Controllers\Tagore\ParentDashboardController;
 use App\Http\Controllers\Tagore\StudentParentMigrationController;
 use App\Http\Controllers\Tagore\StudentLifecycleController;
@@ -47,6 +48,9 @@ Route::middleware(['auth', \App\Http\Middleware\TagorePerformance::class])->pref
     Route::get('/system/performance', [PerformanceController::class, 'index'])->name('tagore.performance');
     Route::get('/dashboard/department/{departmentId}', [DashboardController::class, 'departmentProfile'])->whereNumber('departmentId')->name('tagore.department.profile');
     Route::get('/parent', [ParentDashboardController::class, 'index'])->name('tagore.parent.dashboard');
+    Route::post('/payments/family/initiate', [FamilyOnlinePaymentController::class, 'initiate'])->name('tagore.payments.family.initiate');
+    Route::post('/payments/family/confirm', [FamilyOnlinePaymentController::class, 'confirm'])->name('tagore.payments.family.confirm');
+
     Route::get('/parent/olympiad/{studentId}', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'index'])->whereNumber('studentId')->name('tagore.parent.olympiad.index');
     Route::post('/parent/olympiad/{studentId}/{olympiadId}/register', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'register'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.register');
     Route::post('/parent/olympiad/{studentId}/{olympiadId}/launch', [\App\Http\Controllers\Tagore\ParentOlympiadController::class, 'launch'])->whereNumber('studentId')->whereNumber('olympiadId')->name('tagore.parent.olympiad.launch');
