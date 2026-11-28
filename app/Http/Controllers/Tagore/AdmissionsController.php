@@ -28,7 +28,7 @@ class AdmissionsController extends Controller
         if($request->filled('status')) $query->where('status',$request->string('status')->toString());
         if($request->filled('assigned_to')) $query->where('assigned_to',(int)$request->input('assigned_to'));
         if($request->input('follow_up')==='due') $query->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->whereNotIn('status',['admitted','lost']);
-        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost']);
+        if($request->input('follow_up')==='overdue') $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost']);
         if($request->input('source')) $query->where('source',$request->string('source')->toString());
         if($request->input('campaign')) $query->where('campaign',$request->string('campaign')->toString());
 
@@ -51,7 +51,7 @@ class AdmissionsController extends Controller
             'new'=>(clone $base)->where('status','new')->count(),
             'follow_up'=>(clone $base)->where('status','follow_up')->count(),
             'due_today'=>(clone $base)->whereBetween('next_follow_up_at',[now()->startOfDay(),now()->endOfDay()])->count(),
-            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now()->startOfDay())->whereNotIn('status',['admitted','lost'])->count(),
+            'overdue'=>(clone $base)->whereNotNull('next_follow_up_at')->where('next_follow_up_at','<',now())->whereNotIn('status',['admitted','lost'])->count(),
             'qualified'=>(clone $base)->where('status','qualified')->count(),
             'admitted'=>(clone $base)->where('status','admitted')->count(),
             'lost'=>(clone $base)->where('status','lost')->count(),
@@ -264,7 +264,7 @@ class AdmissionsController extends Controller
             abort_unless(in_array((int)$lead->institution_id,$this->institutionIds($userId,$roles),true),403);
             $existing=DB::table('tagore_admission_conversions')->where('lead_id',$lead->id)->first();
             if($existing) return ['conversion' => $existing, 'created' => false];
-            abort_unless($lead->status==='admitted',422,'Mark the lead as admitted before creating the student account.');
+            abort_unless(in_array($lead->status,['qualified','admitted'],true),422,'Qualify the lead before creating the student account.');
 
             $institution=DB::table('tagore_institutions')->where('id',$lead->institution_id)->where('status','active')->first();
             abort_unless($institution,422,'The admission institution is not active.');

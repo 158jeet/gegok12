@@ -99,7 +99,7 @@ class TagoreAdmissionsTest extends TestCase
         $this->assertNotNull($lead->last_contacted_at);
 
         $this->actingAs($owner)->post(route('tagore.admissions.activity',$leadId),[
-            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'admitted',
+            'type'=>'meeting','outcome'=>'Admission confirmed','status'=>'qualified',
         ])->assertRedirect();
 
         $this->assertNull($lead->fresh()->converted_at, 'Admitted status alone must not pretend a student was created.');
