@@ -3,10 +3,12 @@ function localDateTime(value) {
   const timeZone = process.env.TIMEZONE || 'Asia/Kolkata';
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(value);
   const fields = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  return `${fields.year}-${fields.month}-${fields.day}T${fields.hour}:${fields.minute}:${fields.second}`;
+  // Playwright's datetime-local fill expects minute precision. The form accepts
+  // minute values even when step=1, so avoid browser-specific seconds parsing.
+  return `${fields.year}-${fields.month}-${fields.day}T${fields.hour}:${fields.minute}`;
 }
 const path = require('path');
 
