@@ -428,7 +428,8 @@ class AdmissionsController extends Controller
             ->where('ur.status','active')
             ->where(fn($query)=>$query->whereNull('ur.start_date')->orWhereDate('ur.start_date','<=',today()))
             ->where(fn($query)=>$query->whereNull('ur.end_date')->orWhereDate('ur.end_date','>=',today()))
-            ->whereIn('r.code',self::STAFF_ROLES)->exists();
+            // Teachers are assignable owners of follow-ups, but do not receive CRM/admissions page access.
+            ->whereIn('r.code', array_merge(self::STAFF_ROLES, ['TEACHER']))->exists();
     }
 
     private function roles(int $userId)
