@@ -1,7 +1,7 @@
 # Owner Command Centre, Daily Assurance & Hostel Operations
 
-**Status:** Owner-approved scope addition; discovery and architecture required before implementation.  
-**Added:** 20 November 2026  
+**Status:** Owner-approved scope addition; discovery and architecture required before implementation.
+**Added:** 20 November 2026
 **Execution rule:** Git-first, synthetic data only, no live data, hardware activation, production migration, merge or deployment without explicit approval.
 
 ## 1. Product objective
