@@ -1,7 +1,7 @@
 # Tagore ERP Cashier — Market Gap Review and Delivery Roadmap
 
-**Reviewed:** 28 November 2026  
-**Reference product:** Multi School ERP v3.8 live demo and public product documentation  
+**Reviewed:** 28 November 2026
+**Reference product:** Multi School ERP v3.8 live demo and public product documentation
 **Scope:** Tagore institution-scoped CASHIER role; not the OWNER / ACCOUNTS finance-control role.
 
 ## Executive assessment
