@@ -158,7 +158,7 @@
                 <div><div class="tg-kpi-label">Staff</div><strong>{{ number_format($unit->staff) }}</strong></div>
                 <div><div class="tg-kpi-label">Open leads</div><strong>{{ number_format($unit->pending_leads) }}</strong></div>
               </div>
-              <div class="tg-list-meta">Collected ₹{{ number_format($unit->collected,0) }} · Due ₹{{ number_format($unit->outstanding,0) }} · {{ $unit->active_tasks }} active tasks</div>
+              <div class="tg-list-meta">Collected ₹{{ number_format($unit->collected,0) }} · Due ₹{{ number_format($unit->outstanding,0) }} · {{ $unit->active_tasks }} active tasks<br>Audits today {{ $unit->audits_verified }}/{{ $unit->audits_today }} verified · {{ $unit->open_alerts }} open alerts</div>
             </article>
           @empty
             <div class="tg-empty"><strong>No active institutions</strong><span>Activate an institution from Administration to include it in the group view.</span></div>
@@ -181,6 +181,46 @@
           <a class="tg-module" href="{{ route('tagore.biometric.index') }}"><b>Device registry</b><span>Manage institution-scoped biometric device mappings</span></a>
         </div>
         <p class="tg-list-meta">Global controls are Owner-only. Principals and institution teams retain their assigned institution scope.</p>
+      </div>
+    </div>
+    <div class="tg-two">
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Operational assurance</h3><p>Today's scheduled checks and independent verification</p></div><span class="tg-status {{ $ownerConsole['audit_summary']['failed'] ? 'danger' : ($ownerConsole['audit_summary']['overdue'] ? 'warning' : '') }}">{{ $ownerConsole['audit_summary']['scheduled'] ? 'Daily controls' : 'Not scheduled' }}</span></div>
+        <div class="tg-grid">
+          <div class="tg-kpi"><div class="tg-kpi-label">Scheduled today</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['scheduled']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Independently verified</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['verified']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Awaiting review / submission</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['awaiting']) }}</div></div>
+          <div class="tg-kpi"><div class="tg-kpi-label">Failed / overdue</div><div class="tg-kpi-value">{{ number_format($ownerConsole['audit_summary']['failed'] + $ownerConsole['audit_summary']['overdue']) }}</div></div>
+        </div>
+        @if(!$ownerConsole['audit_summary']['scheduled'])
+          <p class="tg-list-meta">No audit instances are scheduled for today. An empty schedule is not a verified healthy result.</p>
+        @endif
+      </div>
+      <div class="tg-card" style="padding:18px">
+        <div class="tg-section-head"><div><h3>Priority alerts</h3><p>Open high-severity operational exceptions</p></div><span class="tg-status {{ $ownerConsole['critical_alerts'] ? 'danger' : ($ownerConsole['open_alerts'] ? 'warning' : '') }}">{{ $ownerConsole['critical_alerts'] }} critical · {{ $ownerConsole['open_alerts'] }} open</span></div>
+        <div class="tg-list">
+          @forelse($ownerConsole['priority_alerts'] as $alert)
+            <div class="tg-list-item">
+              <div><div class="tg-list-title">{{ $alert->title }}</div><div class="tg-list-meta">{{ $alert->institution ?: 'Group-wide' }} · {{ $alert->assignee ?: 'Unassigned' }} · {{ $alert->status }}</div></div>
+              <span class="tg-status {{ $alert->severity === 'critical' ? 'danger' : 'warning' }}">{{ ucfirst($alert->severity) }}</span>
+            </div>
+          @empty
+            <div class="tg-empty"><strong>No open high or critical alerts recorded</strong><span>This reflects the alert register only; routine controls and data freshness still require review.</span></div>
+          @endforelse
+        </div>
+      </div>
+    </div>
+    <div class="tg-card" style="padding:18px">
+      <div class="tg-section-head"><div><h3>Recent operational activity</h3><p>Append-only audit events from scheduled assurance workflows</p></div></div>
+      <div class="tg-list">
+        @forelse($ownerConsole['recent_activity'] as $event)
+          <div class="tg-list-item">
+            <div><div class="tg-list-title">{{ ucwords(str_replace('_',' ', $event->event_type)) }}</div><div class="tg-list-meta">{{ $event->institution }} · {{ $event->template_code }} · {{ $event->actor ?: 'System' }}</div></div>
+            <span class="tg-status">{{ \Carbon\Carbon::parse($event->occurred_at)->format('d M, h:i A') }}</span>
+          </div>
+        @empty
+          <div class="tg-empty"><strong>No audit activity recorded yet</strong><span>Activity appears here as scheduled controls are generated, submitted and independently reviewed.</span></div>
+        @endforelse
       </div>
     </div>
   </section>
