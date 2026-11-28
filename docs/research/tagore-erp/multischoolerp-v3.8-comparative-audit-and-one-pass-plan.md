@@ -259,3 +259,8 @@ Obtain written answers and a dated manifest:
 3. Update the existing Tagore feature-gap register against current main and open PRs.
 4. Publish the final scope lock and architecture contracts.
 5. Start the coordinated parallel implementation programme only after scope lock; deliver one integrated release candidate and one full acceptance cycle.
+
+
+## Website CMS scope addendum
+
+A dedicated implementation track J, Website CMS & Public Site Platform, is defined in `website-cms-product-scope-and-acceptance.md`. The existing basic CMS page form and generic website records are foundations only, not a completed website builder. All institute websites must be independently editable by authorised institute administrators with strict content, media, preview, publish and hostname isolation.
