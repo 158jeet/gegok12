@@ -39,6 +39,7 @@ class CrmGrowthController extends Controller
         $today = today();
         $roles = DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+            ->where('r.status', 'active')
             ->where('ur.user_id', $userId)
             ->where('ur.status', 'active')
             ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $today))
@@ -51,11 +52,14 @@ class CrmGrowthController extends Controller
             $institutionIds = DB::table('tagore_institutions')->where('status', 'active')
                 ->whereNull('deleted_at')->pluck('id')->map(fn ($id) => (int) $id)->all();
         } else {
-            $institutionIds = DB::table('tagore_user_roles')
-                ->where('user_id', $userId)->where('status', 'active')->whereNotNull('institution_id')
-                ->where(fn ($query) => $query->whereNull('start_date')->orWhereDate('start_date', '<=', $today))
-                ->where(fn ($query) => $query->whereNull('end_date')->orWhereDate('end_date', '>=', $today))
-                ->pluck('institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+            $institutionIds = DB::table('tagore_user_roles as ur')
+                ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
+                ->join('tagore_institutions as i', 'i.id', '=', 'ur.institution_id')
+                ->where('ur.user_id', $userId)->where('ur.status', 'active')->where('r.status', 'active')
+                ->where('i.status', 'active')->whereNull('i.deleted_at')->whereNotNull('ur.institution_id')
+                ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', $today))
+                ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', $today))
+                ->distinct()->pluck('ur.institution_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         }
 
         abort_unless($institutionIds !== [], 403);
@@ -71,6 +75,7 @@ class CrmGrowthController extends Controller
         $staff = DB::table('tagore_user_roles as ur')
             ->join('tagore_roles as r', 'r.id', '=', 'ur.role_id')
             ->join('users as u', 'u.id', '=', 'ur.user_id')
+            ->where('r.status', 'active')
             ->where(function ($query) use ($institutionIds) { $query->whereIn('ur.institution_id', $institutionIds)->orWhere(fn ($global) => $global->whereNull('ur.institution_id')->where('r.code', 'OWNER')); })->where('ur.status', 'active')
             ->where(fn ($query) => $query->whereNull('ur.start_date')->orWhereDate('ur.start_date', '<=', today()))
             ->where(fn ($query) => $query->whereNull('ur.end_date')->orWhereDate('ur.end_date', '>=', today()))
