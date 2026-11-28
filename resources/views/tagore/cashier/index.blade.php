@@ -11,13 +11,19 @@
 .cashier-filter input,.cashier-filter select{width:100%;min-width:0}
 .cashier-mode{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--tg-line);border-radius:12px;background:var(--tg-card)}
 .cashier-mode strong{font-variant-numeric:tabular-nums}
-.cashier-table{min-width:760px}
+.cashier-table{min-width:760px;width:100%}
 .cashier-table td{vertical-align:middle}
+.tg-main{min-width:0;max-width:100%}
+.tg-table-wrap{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.tg-table-wrap table{margin-bottom:0}
+.cashier-filter{min-width:0;max-width:100%}
+.cashier-filter input,.cashier-filter select{max-width:100%;box-sizing:border-box}
 .cashier-collect{display:grid;grid-template-columns:100px 120px minmax(130px,1fr) auto;gap:6px;min-width:390px}
 .cashier-collect input,.cashier-collect select{min-width:0;width:100%}
 .cashier-muted{font-size:11px;color:var(--tg-muted)}
 @media(max-width:900px){.cashier-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.cashier-filter .cashier-submit{grid-column:1/-1}}
-@media(max-width:560px){.cashier-filter{grid-template-columns:1fr}.cashier-filter .cashier-submit{grid-column:auto}.cashier-collect{grid-template-columns:1fr 1fr;min-width:0}.cashier-collect .wide{grid-column:1/-1}}
+@media(max-width:900px){.tg-main{min-width:0;width:100%;max-width:100%}.tg-table-wrap{overflow-x:auto}.cashier-table{min-width:760px}}
+@media(max-width:560px){.cashier-filter{grid-template-columns:1fr}.cashier-filter .cashier-submit{grid-column:auto}.cashier-collect{grid-template-columns:1fr 1fr;min-width:0}.cashier-collect .wide{grid-column:1/-1}.cashier-filter input,.cashier-filter select{width:100%;max-width:100%}}
 </style>
 </head>
 <body class="tg-app">
@@ -35,7 +41,6 @@
   <a class="tg-side-link active" href="{{ route('tagore.cashier.index') }}"><span class="tg-side-icon">⌂</span>Cashier desk</a>
   <a class="tg-side-link" href="{{ route('tagore.cashier.fees') }}"><span class="tg-side-icon">₹</span>Fee assignments</a>
   <a class="tg-side-link" href="{{ route('tagore.fees.accounts') }}"><span class="tg-side-icon">▤</span>Accounts & collections</a>
-  <a class="tg-side-link" href="{{ route('tagore.admissions.index') }}"><span class="tg-side-icon">↗</span>Admissions</a>
   <a class="tg-side-link" href="{{ route('tagore.fees.wallet') }}"><span class="tg-side-icon">◉</span>Fee wallets</a>
   <div class="tg-side-label">Your institution</div>
   @foreach($institutions as $institution)<span class="tg-side-link" style="cursor:default"><span class="tg-side-icon">▦</span>{{ $institution->display_name }}</span>@endforeach
@@ -44,13 +49,12 @@
   <section class="tg-hero">
     <h1>Cashier desk</h1>
     <p>Daily collections, quick fee counter, family dues and receipts — limited to your assigned institution scope.</p>
-    <div class="tg-hero-actions"><a class="tg-btn primary" href="#quick-collect">Collect a fee ↓</a><a class="tg-btn" href="#transactions">Find a receipt ↓</a><a class="tg-btn" href="{{ route('tagore.admissions.create') }}">＋ New admission</a></div>
+    <div class="tg-hero-actions"><a class="tg-btn primary" href="#quick-collect">Collect a fee ↓</a><a class="tg-btn" href="#transactions">Find a receipt ↓</a></div>
   </section>
   <section class="tg-grid" aria-label="Cashier performance">
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Collected today</span><span class="tg-kpi-icon">₹</span></div><div class="tg-kpi-value">₹{{ number_format($summary['today_total'],2) }}</div><div class="tg-kpi-meta">{{ number_format($summary['today_count']) }} successful collections</div></div>
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Collected this month</span><span class="tg-kpi-icon">↗</span></div><div class="tg-kpi-value">₹{{ number_format($summary['month_total'],2) }}</div><div class="tg-kpi-meta">{{ number_format($summary['month_count']) }} successful collections</div></div>
     <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Outstanding fees</span><span class="tg-kpi-icon">!</span></div><div class="tg-kpi-value">₹{{ number_format($summary['outstanding'],2) }}</div><div class="tg-kpi-meta">{{ number_format($summary['students_with_dues']) }} students with dues</div></div>
-    <div class="tg-card tg-kpi"><div class="tg-kpi-top"><span class="tg-kpi-label">Online payments to review</span><span class="tg-kpi-icon">◷</span></div><div class="tg-kpi-value">{{ number_format($summary['online_to_review']) }}</div><div class="tg-kpi-meta">Visible only — reconciliation stays with finance</div></div>
   </section>
   <section class="tg-section">
     <div class="tg-section-head"><div><h2>Today's collection mix</h2><p>Understand how money reached the counter today.</p></div></div>
