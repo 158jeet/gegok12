@@ -236,3 +236,8 @@ Integration baseline verified: `integration/erp-7day` = `af308809e43e6e36b3b5cf8
 - Integrated the parent-selectable fee allocation and checkout reservation implementation. A parent can select partial amounts against one or more fee obligations; server validation enforces exact allocation totals and institution/student ownership.
 - Active checkouts reserve their selected balances; expired/failed orders release reservations. Gateway I/O runs outside fee-row transactions. A captured payment that no longer matches the reserved balances is quarantined for reconciliation instead of over-allocating the fee ledger.
 - Acceptance uses synthetic data and a gateway fake. Live Razorpay credentials and webhook secret are not configured by this code change.
+## 2026-11-28 - Biometric registry and HR/Accounts access integration
+
+- Integrated multi-site T304F registration and institution-scoped employee mapping. Raw punch evidence has restrictive relationships and dedupe keys; no biometric templates are copied into ERP.
+- Central Accounts is group-wide for payroll and device visibility; HR/Principal remain institution-scoped and role dates are enforced.
+- Sync remains disabled pending the exact vendor API/SDK, firmware, auth, network and event semantics. No live device or payroll data has been imported.

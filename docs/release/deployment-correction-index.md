@@ -201,3 +201,9 @@ This index is a deployment memory aid. It does not mean every correction should 
 - Rebuilt CBT on that post-Diary integration head in PR #152. The prior PR #148 was closed as superseded; do not merge it.
 - Expanded regression in run `45110109787` exposed real defect: `persistAttemptRandomization` grouped by `section_code` without selecting it in the query. Added `eq.section_code` to projection and strengthened the regression with two A questions and one B question.
 - PR #152 exact-head ERP CI run `45113041748` queued at record time. Merge remains blocked until all CI and full integration acceptance are green.
+
+## T304F registry and HR/Accounts integration - 2026-11-28
+
+- Integrated a multi-site Realtime T304F device registry, institution-scoped employee-ID mapping, evidence-preserving raw-punch schema and Owner/Central Accounts group-wide access.
+- HR and Principal access remains institution-scoped with date-effective role assignments. Central Accounts receives group-wide payroll scope; Owner retains full group-wide authority.
+- Device sync is intentionally disabled and no endpoint or credentials are assumed. Live polling, punch ingestion, reconciliation and payroll posting remain blocked until the exact model/firmware vendor contract is verified and a read-only synthetic acceptance passes.

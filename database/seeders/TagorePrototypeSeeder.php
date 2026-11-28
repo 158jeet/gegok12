@@ -13,21 +13,22 @@ class TagorePrototypeSeeder extends Seeder
     {
         $now = now();
         $groupId = DB::table('tagore_groups')->where('code', 'TAGORE')->value('id') ?: DB::table('tagore_groups')->insertGetId(['name'=>'Tagore Group','code'=>'TAGORE','status'=>'active','created_at'=>$now,'updated_at'=>$now]);
-        $roles = [['Owner','OWNER'],['Principal','PRINCIPAL'],['Coordinator','COORDINATOR'],['Teacher','TEACHER'],['Parent','PARENT'],['Student','STUDENT'],['Accounts','ACCOUNTS'],['Cashier','CASHIER'],['Fee Editor','FEE_EDITOR']];
+        $roles = [['Owner','OWNER'],['Principal','PRINCIPAL'],['Coordinator','COORDINATOR'],['Teacher','TEACHER'],['Parent','PARENT'],['Student','STUDENT'],['Accounts','ACCOUNTS'],['Cashier','CASHIER'],['HR Manager','HR'],['Fee Editor','FEE_EDITOR']];
         foreach ($roles as [$name,$code]) DB::table('tagore_roles')->updateOrInsert(['code'=>$code],['name'=>$name,'is_system'=>true,'status'=>'active','updated_at'=>$now,'created_at'=>$now]);
-        $permissions = [['dashboard','view'],['student','view'],['parent','view'],['attendance','view'],['attendance','manage'],['fee','view'],['fee','manage'],['payment','view'],['payment','refund'],['payment','reconcile'],['payment','export'],['fee','assign'],['fee','remind'],['result','view'],['result','manage'],['result','publish'],['feedback','view'],['feedback','submit'],['feedback','respond'],['feedback','moderate'],['report','view'],['report','export'],['user','manage'],['scope','manage'],['task','view'],['task','manage'],['fee','edit']];
+        $permissions = [['dashboard','view'],['student','view'],['parent','view'],['attendance','view'],['attendance','manage'],['fee','view'],['fee','manage'],['payment','view'],['payment','refund'],['payment','reconcile'],['payment','export'],['fee','assign'],['fee','remind'],['fee','collect'],['admission','view'],['admission','manage'],['payroll','view'],['payroll','manage'],['leave','view'],['leave','manage'],['result','view'],['result','manage'],['result','publish'],['feedback','view'],['feedback','submit'],['feedback','respond'],['feedback','moderate'],['report','view'],['report','export'],['user','manage'],['scope','manage'],['task','view'],['task','manage'],['fee','edit']];
         foreach ($permissions as [$module,$action]) DB::table('tagore_permissions')->updateOrInsert(['module'=>$module,'action'=>$action],['code'=>$module.'.'.$action,'description'=>ucfirst($action).' '.$module,'created_at'=>$now,'updated_at'=>$now]);
         foreach ($roles as [$name,$code]) {
             $roleId=DB::table('tagore_roles')->where('code',$code)->value('id');
             $codes=match($code){
                 'OWNER'=>DB::table('tagore_permissions')->pluck('code')->all(),
-                'PRINCIPAL'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','fee.view','fee.manage','payment.view','result.view','result.manage','result.publish','feedback.view','feedback.respond','report.view','report.export','task.view','task.manage'],
+                'PRINCIPAL'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','fee.view','fee.manage','payment.view','result.view','result.manage','result.publish','payroll.view','payroll.manage','leave.view','leave.manage','feedback.view','feedback.respond','report.view','report.export','task.view','task.manage'],
                 'COORDINATOR'=>['dashboard.view','student.view','parent.view','attendance.view','attendance.manage','result.view','result.manage','feedback.view','feedback.respond','report.view','task.view','task.manage'],
                 'TEACHER'=>['dashboard.view','student.view','attendance.view','attendance.manage','result.view','result.manage','feedback.view','report.view','task.view','task.manage'],
                 'PARENT'=>['dashboard.view','student.view','attendance.view','fee.view','payment.view','result.view','feedback.view','feedback.submit'],
                 'STUDENT'=>['dashboard.view','attendance.view','result.view','feedback.view'],
-                'ACCOUNTS'=>['dashboard.view','student.view','fee.view','fee.manage','payment.view','payment.reconcile','report.view','report.export','task.view','task.manage'],
+                'ACCOUNTS'=>['dashboard.view','student.view','fee.view','fee.manage','payment.view','payment.reconcile','payroll.view','payroll.manage','report.view','report.export','task.view','task.manage'],
                 'CASHIER'=>['dashboard.view','student.view','parent.view','fee.view','fee.collect','fee.assign','fee.remind','payment.view','payment.export','admission.view','admission.manage'],
+                'HR'=>['dashboard.view','attendance.view','attendance.manage','leave.view','leave.manage','payroll.view','payroll.manage','report.view','task.view','task.manage'],
                 'FEE_EDITOR'=>['dashboard.view','student.view','fee.view','fee.edit','report.view'],
                 default=>[]
             };
