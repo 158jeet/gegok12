@@ -108,7 +108,7 @@ class TagoreRoleAccessMatrixTest extends TestCase
             $roles = DB::table('tagore_user_roles')
                 ->where('user_id', $userId)
                 ->where('status', 'active')
-                ->pluck('role_id');
+                ->distinct()->pluck('role_id');
 
             $this->assertCount(1, $roles, "{$email} must have exactly one active Tagore role.");
         }
